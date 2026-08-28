@@ -138,6 +138,17 @@ export async function deletePipelineColumn(columnId: string, boardType: BoardTyp
   const { supabase, agencyId } = await getAgencyId()
   if (!agencyId) return { error: 'Session expirée, reconnecte-toi.' }
 
+  const { data: target } = await supabase
+    .from('pipeline_columns')
+    .select('is_default')
+    .eq('id', columnId)
+    .eq('agency_id', agencyId)
+    .maybeSingle()
+
+  if (target?.is_default) {
+    return { error: 'Cette étape par défaut ne peut pas être supprimée, pour éviter de mélanger le pipeline.' }
+  }
+
   const { data: siblings } = await supabase
     .from('pipeline_columns')
     .select('id, position')

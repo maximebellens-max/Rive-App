@@ -22,7 +22,7 @@ import {
   type BoardType,
 } from '@/lib/rive/pipelines'
 
-export type PipelineColumn = { id: string; name: string; color: string }
+export type PipelineColumn = { id: string; name: string; color: string; is_default?: boolean }
 export type PipelineCard = {
   id: string
   name: string
@@ -216,7 +216,11 @@ function ColumnHeader({ column, boardType, count }: { column: PipelineColumn; bo
       />
       <span className="shrink-0 text-xs text-neutral-400">{count}</span>
 
-      {!confirmingDelete ? (
+      {column.is_default ? (
+        <span className="shrink-0 text-xs text-neutral-300" title="Étape par défaut — non supprimable">
+          🔒
+        </span>
+      ) : !confirmingDelete ? (
         <button
           type="button"
           onClick={() => setConfirmingDelete(true)}

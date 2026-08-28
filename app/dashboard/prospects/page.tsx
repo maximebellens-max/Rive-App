@@ -8,7 +8,7 @@ export default async function ProspectsPage() {
 
   const { data: columns } = await supabase
     .from('pipeline_columns')
-    .select('id, name, color')
+    .select('id, name, color, is_default')
     .eq('board_type', 'prospects')
     .order('position', { ascending: true })
 
