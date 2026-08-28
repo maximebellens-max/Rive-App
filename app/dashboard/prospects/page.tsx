@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import NewLeadForm from './new-lead-form'
 
@@ -46,8 +47,12 @@ export default async function ProspectsPage() {
               </tr>
             )}
             {leads?.map((lead) => (
-              <tr key={lead.id} className="border-b border-neutral-100 last:border-0">
-                <td className="px-4 py-3 font-medium text-neutral-900">{lead.name}</td>
+              <tr key={lead.id} className="border-b border-neutral-100 last:border-0 hover:bg-neutral-50">
+                <td className="px-4 py-3 font-medium text-neutral-900">
+                  <Link href={`/dashboard/prospects/${lead.id}`} className="hover:underline">
+                    {lead.name}
+                  </Link>
+                </td>
                 <td className="px-4 py-3 text-neutral-600">
                   {CATEGORY_LABEL[lead.category ?? ''] ?? lead.category}
                 </td>
