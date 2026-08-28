@@ -91,14 +91,14 @@ export default function KanbanBoard({
           <button
             type="button"
             onClick={() => setViewMode('kanban')}
-            className={`rounded px-2.5 py-1 font-medium ${viewMode === 'kanban' ? 'bg-neutral-900 text-white' : 'text-neutral-600'}`}
+            className={`rounded px-2.5 py-1 font-medium ${viewMode === 'kanban' ? 'bg-accent text-white' : 'text-neutral-600'}`}
           >
             Kanban
           </button>
           <button
             type="button"
             onClick={() => setViewMode('list')}
-            className={`rounded px-2.5 py-1 font-medium ${viewMode === 'list' ? 'bg-neutral-900 text-white' : 'text-neutral-600'}`}
+            className={`rounded px-2.5 py-1 font-medium ${viewMode === 'list' ? 'bg-accent text-white' : 'text-neutral-600'}`}
           >
             Liste
           </button>
@@ -152,7 +152,7 @@ function ColumnBlock({
       }}
       className={`flex shrink-0 flex-col gap-2 rounded-2xl border bg-neutral-50 p-3 ${
         wide ? 'w-full' : 'w-72'
-      } ${dragOver ? 'border-neutral-900 ring-1 ring-neutral-900' : 'border-neutral-200'}`}
+      } ${dragOver ? 'border-accent ring-1 ring-accent' : 'border-neutral-200'}`}
     >
       <ColumnHeader column={column} boardType={boardType} count={cards.length} />
 
@@ -224,7 +224,7 @@ function ColumnHeader({ column, boardType, count }: { column: PipelineColumn; bo
         <button
           type="button"
           onClick={() => setConfirmingDelete(true)}
-          className="shrink-0 text-xs text-neutral-300 hover:text-red-500"
+          className="shrink-0 text-xs text-neutral-300 hover:text-danger"
           aria-label="Supprimer la colonne"
         >
           ✕
@@ -242,12 +242,12 @@ function ColumnHeader({ column, boardType, count }: { column: PipelineColumn; bo
               setConfirmingDelete(false)
             })
           }}
-          className="shrink-0 rounded bg-red-600 px-1.5 py-0.5 text-xs text-white"
+          className="shrink-0 rounded bg-danger px-1.5 py-0.5 text-xs text-white"
         >
           Confirmer ?
         </button>
       )}
-      {deleteError && <span className="absolute right-0 top-6 text-xs text-red-600">{deleteError}</span>}
+      {deleteError && <span className="absolute right-0 top-6 text-xs text-danger">{deleteError}</span>}
     </div>
   )
 }
@@ -283,10 +283,10 @@ function AddColumnForm({ boardType }: { boardType: BoardType }) {
         name="name"
         autoFocus
         placeholder="Nom de l'étape"
-        className="w-56 rounded-lg border border-neutral-300 px-2.5 py-1.5 text-sm outline-none focus:border-neutral-900"
+        className="w-56 rounded-lg border border-neutral-300 px-2.5 py-1.5 text-sm outline-none focus:border-accent"
         onBlur={() => setTimeout(() => setOpen(false), 150)}
       />
-      <button type="submit" className="w-fit rounded-lg bg-neutral-900 px-3 py-1.5 text-xs font-medium text-white">
+      <button type="submit" className="w-fit rounded-lg bg-accent px-3 py-1.5 text-xs font-medium text-white">
         Ajouter
       </button>
     </form>

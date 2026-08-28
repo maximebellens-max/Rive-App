@@ -16,7 +16,7 @@ export default function Home() {
         </Link>
         <Link
           href="/signup"
-          className="rounded-lg bg-neutral-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-neutral-700"
+          className="rounded-lg bg-accent px-5 py-2.5 text-sm font-medium text-white hover:bg-accent-hover"
         >
           Créer une agence
         </Link>

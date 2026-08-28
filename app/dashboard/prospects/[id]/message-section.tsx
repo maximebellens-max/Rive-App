@@ -72,7 +72,7 @@ export default function MessageSection({
         <select
           value={selectedId}
           onChange={(e) => setSelectedId(e.target.value)}
-          className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-900"
+          className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-accent"
         >
           {templates.map((t) => (
             <option key={t.id} value={t.id}>
@@ -103,7 +103,7 @@ export default function MessageSection({
           <button
             type="button"
             onClick={copy}
-            className="w-fit rounded-lg bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-neutral-700"
+            className="w-fit rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-white hover:bg-accent-hover"
           >
             {copied ? 'Copié ✓' : 'Copier'}
           </button>

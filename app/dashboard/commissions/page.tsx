@@ -122,7 +122,7 @@ export default async function CommissionsPage() {
               <span className="w-12 shrink-0 text-xs text-neutral-500">{b.label}</span>
               <div className="h-2.5 flex-1 rounded-full bg-neutral-100">
                 <div
-                  className="h-2.5 rounded-full bg-neutral-900"
+                  className="h-2.5 rounded-full bg-accent"
                   style={{ width: `${(b.count / maxBar) * 100}%` }}
                 />
               </div>

@@ -108,7 +108,7 @@ export default async function MandateDetailPage({ params }: PageProps<'/dashboar
           <h1 className="mt-1 flex items-center gap-2 text-xl font-semibold tracking-tight">
             {mandate.address || mandate.property_type || 'Mandat sans adresse'}
             {mandate.is_draft && (
-              <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700">
+              <span className="rounded-full bg-warn-soft px-2 py-0.5 text-xs font-medium text-warn">
                 Brouillon — estimation en cours
               </span>
             )}

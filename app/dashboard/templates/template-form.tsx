@@ -24,13 +24,13 @@ export default function TemplateForm() {
           name="name"
           placeholder="Nom du modèle"
           required
-          className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-900"
+          className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-accent"
         />
         <select
           name="channel"
           value={channel}
           onChange={(e) => setChannel(e.target.value as 'sms' | 'email')}
-          className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-900"
+          className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-accent"
         >
           <option value="sms">SMS</option>
           <option value="email">Email</option>
@@ -40,7 +40,7 @@ export default function TemplateForm() {
         <input
           name="subject"
           placeholder="Objet"
-          className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-900"
+          className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-accent"
         />
       )}
       <textarea
@@ -48,13 +48,13 @@ export default function TemplateForm() {
         placeholder="Contenu — variables disponibles : {{prenom}}, {{date}}, {{agent}}"
         rows={4}
         required
-        className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-900"
+        className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-accent"
       />
-      {state?.error && <p className="text-sm text-red-600">{state.error}</p>}
+      {state?.error && <p className="text-sm text-danger">{state.error}</p>}
       <button
         type="submit"
         disabled={pending}
-        className="w-fit rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-700 disabled:opacity-60"
+        className="w-fit rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-60"
       >
         {pending ? 'Ajout…' : 'Ajouter'}
       </button>

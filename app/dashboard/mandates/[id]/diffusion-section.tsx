@@ -2,7 +2,7 @@ import { updateDiffusion } from '@/app/actions/mandate-activity'
 import { DIFFUSION_PORTALS, AD_PLATFORMS } from '@/lib/rive/diffusion'
 
 const inputClass =
-  'rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900'
+  'rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-accent focus:ring-1 focus:ring-accent'
 const labelClass = 'text-sm font-medium text-neutral-700'
 
 export default function DiffusionSection({
@@ -57,7 +57,7 @@ export default function DiffusionSection({
         </div>
       </div>
 
-      <button type="submit" className="w-fit rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-700">
+      <button type="submit" className="w-fit rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover">
         Enregistrer la diffusion
       </button>
     </form>

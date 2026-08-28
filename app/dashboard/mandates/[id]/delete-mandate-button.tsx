@@ -12,7 +12,7 @@ export default function DeleteMandateButton({ mandateId }: { mandateId: string }
       <button
         type="button"
         onClick={() => setConfirming(true)}
-        className="rounded-lg border border-red-200 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50"
+        className="rounded-lg border border-danger px-3 py-1.5 text-sm text-danger hover:bg-danger-soft"
       >
         Supprimer
       </button>
@@ -24,7 +24,7 @@ export default function DeleteMandateButton({ mandateId }: { mandateId: string }
       type="button"
       disabled={pending}
       onClick={() => startTransition(() => deleteMandate(mandateId))}
-      className="rounded-lg border border-red-600 bg-red-600 px-3 py-1.5 text-sm text-white hover:bg-red-700 disabled:opacity-60"
+      className="rounded-lg border border-danger bg-danger px-3 py-1.5 text-sm text-white hover:bg-danger-hover disabled:opacity-60"
     >
       {pending ? 'Suppression…' : 'Confirmer la suppression'}
     </button>

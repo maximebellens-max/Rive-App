@@ -12,8 +12,8 @@ import MandatesView from './mandates-view'
 import type { StageCard } from '../_components/stage-kanban'
 
 const URGENCY_CLASS: Record<string, string> = {
-  overdue: 'bg-red-50 text-red-700',
-  soon: 'bg-amber-50 text-amber-700',
+  overdue: 'bg-danger-soft text-danger',
+  soon: 'bg-warn-soft text-warn',
   ok: 'bg-neutral-100 text-neutral-600',
   none: 'bg-neutral-100 text-neutral-400',
 }
@@ -104,7 +104,7 @@ export default async function MandatesPage() {
         </div>
         <Link
           href="/dashboard/mandates/new"
-          className="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-700"
+          className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover"
         >
           Nouveau mandat
         </Link>

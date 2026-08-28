@@ -106,7 +106,7 @@ export default function MonthCalendar({
             <div
               key={dateStr}
               className={`flex min-h-24 flex-col gap-1 rounded-xl border bg-white p-1.5 ${
-                isToday ? 'border-neutral-900 ring-1 ring-neutral-900' : 'border-neutral-200'
+                isToday ? 'border-accent ring-1 ring-accent' : 'border-neutral-200'
               }`}
             >
               <div className="group flex items-center justify-between">
@@ -115,7 +115,7 @@ export default function MonthCalendar({
                   type="button"
                   onClick={() => setAddingDate(isAdding ? null : dateStr)}
                   aria-label={`Ajouter un rendez-vous le ${day} ${MONTH_FULL_FR[month]}`}
-                  className="h-4 w-4 rounded text-xs font-bold leading-none text-neutral-300 opacity-0 transition hover:bg-neutral-900 hover:text-white group-hover:opacity-100"
+                  className="h-4 w-4 rounded text-xs font-bold leading-none text-neutral-300 opacity-0 transition hover:bg-accent hover:text-white group-hover:opacity-100"
                 >
                   +
                 </button>
@@ -148,7 +148,7 @@ export default function MonthCalendar({
                     name="lead_id"
                     required
                     autoFocus
-                    className="rounded border border-neutral-300 px-1 py-1 text-[11px] outline-none focus:border-neutral-900"
+                    className="rounded border border-neutral-300 px-1 py-1 text-[11px] outline-none focus:border-accent"
                   >
                     <option value="">— Prospect —</option>
                     {leadOptions.map((o) => (
@@ -160,10 +160,10 @@ export default function MonthCalendar({
                   <input
                     name="action_label"
                     placeholder="RDV, appel…"
-                    className="rounded border border-neutral-300 px-1 py-1 text-[11px] outline-none focus:border-neutral-900"
+                    className="rounded border border-neutral-300 px-1 py-1 text-[11px] outline-none focus:border-accent"
                   />
                   <div className="flex gap-1">
-                    <button type="submit" className="flex-1 rounded bg-neutral-900 py-1 text-[11px] font-medium text-white">
+                    <button type="submit" className="flex-1 rounded bg-accent py-1 text-[11px] font-medium text-white">
                       Ajouter
                     </button>
                     <button

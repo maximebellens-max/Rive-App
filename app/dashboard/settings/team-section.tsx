@@ -56,7 +56,7 @@ export default function TeamSection({
                 <button
                   type="button"
                   onClick={() => removeTeamMember(m.id)}
-                  className="text-xs font-medium text-red-600 hover:underline"
+                  className="text-xs font-medium text-danger hover:underline"
                 >
                   Retirer
                 </button>
@@ -82,7 +82,7 @@ export default function TeamSection({
                       <button
                         type="button"
                         onClick={() => cancelInvite(inv.id)}
-                        className="text-xs font-medium text-red-600 hover:underline"
+                        className="text-xs font-medium text-danger hover:underline"
                       >
                         Annuler
                       </button>
@@ -106,18 +106,18 @@ export default function TeamSection({
                   type="email"
                   required
                   placeholder="mandin@hevrest.fr"
-                  className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-900"
+                  className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-accent"
                 />
               </div>
               <button
                 type="submit"
                 disabled={pending}
-                className="rounded-lg bg-neutral-900 px-3 py-2 text-sm font-medium text-white hover:bg-neutral-700 disabled:opacity-60"
+                className="rounded-lg bg-accent px-3 py-2 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-60"
               >
                 {pending ? 'Envoi…' : 'Inviter'}
               </button>
             </form>
-            {state?.error && <p className="text-sm text-red-600">{state.error}</p>}
+            {state?.error && <p className="text-sm text-danger">{state.error}</p>}
             <p className="text-xs text-neutral-400">
               Le lien d&apos;invitation apparaîtra ci-dessus une fois créé — envoie-le toi-même
               par SMS ou email à ton coéquipier.

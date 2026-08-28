@@ -20,14 +20,14 @@ export default function MandatesView({ table, cards }: { table: React.ReactNode;
           <button
             type="button"
             onClick={() => setViewMode('kanban')}
-            className={`rounded px-2.5 py-1 font-medium ${viewMode === 'kanban' ? 'bg-neutral-900 text-white' : 'text-neutral-600'}`}
+            className={`rounded px-2.5 py-1 font-medium ${viewMode === 'kanban' ? 'bg-accent text-white' : 'text-neutral-600'}`}
           >
             Kanban
           </button>
           <button
             type="button"
             onClick={() => setViewMode('list')}
-            className={`rounded px-2.5 py-1 font-medium ${viewMode === 'list' ? 'bg-neutral-900 text-white' : 'text-neutral-600'}`}
+            className={`rounded px-2.5 py-1 font-medium ${viewMode === 'list' ? 'bg-accent text-white' : 'text-neutral-600'}`}
           >
             Liste
           </button>

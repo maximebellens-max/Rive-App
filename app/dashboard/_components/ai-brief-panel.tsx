@@ -56,19 +56,19 @@ export default function AIBriefPanel({
       >
         {pending ? 'Génération…' : `✨ ${generateLabel}`}
       </button>
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-danger">{error}</p>}
       <textarea
         value={value}
         onChange={(e) => setValue(e.target.value)}
         placeholder="Le texte généré apparaîtra ici — modifiable avant enregistrement."
         rows={5}
-        className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-900"
+        className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-accent"
       />
       <button
         type="button"
         onClick={save}
         disabled={pending || !value}
-        className="w-fit rounded-lg bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-neutral-700 disabled:opacity-60"
+        className="w-fit rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-60"
       >
         {saved ? 'Enregistré ✓' : 'Enregistrer'}
       </button>

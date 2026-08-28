@@ -25,7 +25,7 @@ export default function AppointmentForm({ options }: { options: LeadOption[] }) 
         <select
           name="lead_id"
           required
-          className="w-56 rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-900"
+          className="w-56 rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-accent"
         >
           <option value="">— Choisir —</option>
           {options.map((o) => (
@@ -40,7 +40,7 @@ export default function AppointmentForm({ options }: { options: LeadOption[] }) 
         <input
           name="action_label"
           placeholder="RDV, appel…"
-          className="w-40 rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-900"
+          className="w-40 rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-accent"
         />
       </div>
       <div className="flex flex-col gap-1.5">
@@ -48,10 +48,10 @@ export default function AppointmentForm({ options }: { options: LeadOption[] }) 
         <input
           name="action_date"
           type="date"
-          className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-900"
+          className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-accent"
         />
       </div>
-      <button type="submit" className="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-700">
+      <button type="submit" className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover">
         Enregistrer
       </button>
     </form>

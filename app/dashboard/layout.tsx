@@ -122,7 +122,7 @@ export default async function DashboardLayout({
                 name="name"
                 placeholder="Nouveau tableau…"
                 aria-label="Nom du nouveau tableau"
-                className="min-w-0 flex-1 rounded-lg border border-neutral-200 px-2 py-1 text-xs outline-none focus:border-neutral-900"
+                className="min-w-0 flex-1 rounded-lg border border-neutral-200 px-2 py-1 text-xs outline-none focus:border-accent"
               />
               <button
                 type="submit"

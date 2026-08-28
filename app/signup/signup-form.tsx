@@ -14,7 +14,7 @@ export default function SignupForm({ invite = null }: { invite?: Invite | null }
 
   if (state?.info) {
     return (
-      <p className="rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+      <p className="rounded-lg bg-good-soft px-4 py-3 text-sm text-good">
         {state.info}
       </p>
     )
@@ -40,7 +40,7 @@ export default function SignupForm({ invite = null }: { invite?: Invite | null }
             type="text"
             placeholder="Hevrest"
             required
-            className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900"
+            className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-accent focus:ring-1 focus:ring-accent"
           />
         </div>
       )}
@@ -54,7 +54,7 @@ export default function SignupForm({ invite = null }: { invite?: Invite | null }
           name="full_name"
           type="text"
           required
-          className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900"
+          className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-accent focus:ring-1 focus:ring-accent"
         />
       </div>
 
@@ -70,7 +70,7 @@ export default function SignupForm({ invite = null }: { invite?: Invite | null }
           required
           readOnly={!!invite}
           defaultValue={invite?.email ?? undefined}
-          className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900 read-only:bg-neutral-100 read-only:text-neutral-500"
+          className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-accent focus:ring-1 focus:ring-accent read-only:bg-neutral-100 read-only:text-neutral-500"
         />
       </div>
 
@@ -85,13 +85,13 @@ export default function SignupForm({ invite = null }: { invite?: Invite | null }
           autoComplete="new-password"
           minLength={8}
           required
-          className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900"
+          className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-accent focus:ring-1 focus:ring-accent"
         />
         <p className="text-xs text-neutral-400">8 caractères minimum</p>
       </div>
 
       {state?.error && (
-        <p className="text-sm text-red-600" role="alert">
+        <p className="text-sm text-danger" role="alert">
           {state.error}
         </p>
       )}
@@ -99,7 +99,7 @@ export default function SignupForm({ invite = null }: { invite?: Invite | null }
       <button
         type="submit"
         disabled={pending}
-        className="mt-2 rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-neutral-700 disabled:opacity-60"
+        className="mt-2 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition hover:bg-accent-hover disabled:opacity-60"
       >
         {pending ? 'Création…' : invite ? 'Rejoindre l’agence' : 'Créer mon agence'}
       </button>

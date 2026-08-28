@@ -40,7 +40,7 @@ export default function TodayWidgets({
             type="button"
             onClick={() => setActive(i)}
             className={`flex flex-col gap-1 rounded-2xl border p-3 text-left transition ${
-              i === active ? 'border-neutral-900 bg-white shadow-sm' : 'border-neutral-200 bg-white hover:border-neutral-300'
+              i === active ? 'border-accent bg-white shadow-sm' : 'border-neutral-200 bg-white hover:border-neutral-300'
             }`}
           >
             <span className="text-lg">{w.icon}</span>

@@ -27,7 +27,7 @@ export default function BoardHeader({ boardId, name, count }: { boardId: string;
           <button
             type="button"
             onClick={() => setConfirming(true)}
-            className="shrink-0 text-xs text-neutral-400 hover:text-red-500"
+            className="shrink-0 text-xs text-neutral-400 hover:text-danger"
           >
             Supprimer le tableau
           </button>
@@ -44,7 +44,7 @@ export default function BoardHeader({ boardId, name, count }: { boardId: string;
                 }
               })
             }}
-            className="shrink-0 rounded bg-red-600 px-2 py-1 text-xs text-white"
+            className="shrink-0 rounded bg-danger px-2 py-1 text-xs text-white"
           >
             Confirmer la suppression ?
           </button>
@@ -52,7 +52,7 @@ export default function BoardHeader({ boardId, name, count }: { boardId: string;
       </div>
       <p className="text-sm text-neutral-500">
         {count} prospect{count > 1 ? 's' : ''}
-        {error && <span className="ml-2 text-red-600">{error}</span>}
+        {error && <span className="ml-2 text-danger">{error}</span>}
       </p>
     </div>
   )

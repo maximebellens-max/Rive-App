@@ -25,12 +25,12 @@ export default function PartnerForm() {
         name="name"
         placeholder="Nom"
         required
-        className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-900"
+        className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-accent"
       />
       <select
         name="role"
         defaultValue={PARTNER_ROLES[0]}
-        className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-900"
+        className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-accent"
       >
         {PARTNER_ROLES.map((r) => (
           <option key={r} value={r}>
@@ -41,24 +41,24 @@ export default function PartnerForm() {
       <input
         name="phone"
         placeholder="Téléphone"
-        className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-900"
+        className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-accent"
       />
       <input
         name="email"
         type="email"
         placeholder="Email"
-        className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-900"
+        className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-accent"
       />
       <input
         name="notes"
         placeholder="Notes"
-        className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-900 sm:col-span-2"
+        className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-accent sm:col-span-2"
       />
-      {state?.error && <p className="text-sm text-red-600 sm:col-span-2">{state.error}</p>}
+      {state?.error && <p className="text-sm text-danger sm:col-span-2">{state.error}</p>}
       <button
         type="submit"
         disabled={pending}
-        className="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-700 disabled:opacity-60 sm:col-span-2 sm:w-fit"
+        className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-60 sm:col-span-2 sm:w-fit"
       >
         {pending ? 'Ajout…' : 'Ajouter'}
       </button>

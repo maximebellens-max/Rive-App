@@ -66,7 +66,7 @@ export default function BackupSection({ isOwner }: { isOwner: boolean }) {
         )}
       </div>
       {message && (
-        <p className={`text-sm ${message.type === 'error' ? 'text-red-600' : 'text-emerald-700'}`}>{message.text}</p>
+        <p className={`text-sm ${message.type === 'error' ? 'text-danger' : 'text-good'}`}>{message.text}</p>
       )}
     </div>
   )

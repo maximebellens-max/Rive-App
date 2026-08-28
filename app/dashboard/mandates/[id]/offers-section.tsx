@@ -14,12 +14,12 @@ type Offer = {
 type BuyerOption = { id: string; name: string }
 
 const inputClass =
-  'rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900'
+  'rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-accent focus:ring-1 focus:ring-accent'
 
 const STATUS_CLASS: Record<string, string> = {
-  pending: 'bg-amber-50 text-amber-700',
-  accepted: 'bg-emerald-50 text-emerald-700',
-  rejected: 'bg-red-50 text-red-700',
+  pending: 'bg-warn-soft text-warn',
+  accepted: 'bg-good-soft text-good',
+  rejected: 'bg-danger-soft text-danger',
 }
 
 export default function OffersSection({
@@ -52,19 +52,19 @@ export default function OffersSection({
               {o.status === 'pending' && (
                 <>
                   <form action={updateOfferStatus.bind(null, mandateId, o.id, 'accepted')}>
-                    <button type="submit" className="text-emerald-600 hover:underline" title="Accepter">
+                    <button type="submit" className="text-good hover:underline" title="Accepter">
                       ✓
                     </button>
                   </form>
                   <form action={updateOfferStatus.bind(null, mandateId, o.id, 'rejected')}>
-                    <button type="submit" className="text-red-600 hover:underline" title="Refuser">
+                    <button type="submit" className="text-danger hover:underline" title="Refuser">
                       ✕
                     </button>
                   </form>
                 </>
               )}
               <form action={removeMandateOffer.bind(null, mandateId, o.id)}>
-                <button type="submit" className="text-xs text-neutral-400 hover:text-red-600 hover:underline">
+                <button type="submit" className="text-xs text-neutral-400 hover:text-danger hover:underline">
                   Retirer
                 </button>
               </form>

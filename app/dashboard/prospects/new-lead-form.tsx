@@ -32,12 +32,12 @@ export default function NewLeadForm() {
         name="name"
         placeholder="Nom"
         required
-        className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900"
+        className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-accent focus:ring-1 focus:ring-accent"
       />
       <select
         name="category"
         defaultValue="acheteur"
-        className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900"
+        className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-accent focus:ring-1 focus:ring-accent"
       >
         <option value="acheteur">Acheteur</option>
         <option value="vendeur">Vendeur</option>
@@ -46,22 +46,22 @@ export default function NewLeadForm() {
       <input
         name="phone"
         placeholder="Téléphone"
-        className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900"
+        className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-accent focus:ring-1 focus:ring-accent"
       />
       <input
         name="email"
         type="email"
         placeholder="Email"
-        className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900"
+        className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-accent focus:ring-1 focus:ring-accent"
       />
       <input
         name="critere_lieu"
         placeholder="Secteur recherché"
-        className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900 sm:col-span-2"
+        className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-accent focus:ring-1 focus:ring-accent sm:col-span-2"
       />
 
       {state?.error && (
-        <p className="text-sm text-red-600 sm:col-span-2" role="alert">
+        <p className="text-sm text-danger sm:col-span-2" role="alert">
           {state.error}
         </p>
       )}
@@ -69,7 +69,7 @@ export default function NewLeadForm() {
       <button
         type="submit"
         disabled={pending}
-        className="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-neutral-700 disabled:opacity-60 sm:col-span-2 sm:w-fit"
+        className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition hover:bg-accent-hover disabled:opacity-60 sm:col-span-2 sm:w-fit"
       >
         {pending ? 'Ajout…' : 'Ajouter'}
       </button>

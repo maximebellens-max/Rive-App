@@ -5,7 +5,7 @@ import { updateTemplate, deleteTemplate } from '@/app/actions/templates'
 
 type Template = { id: string; name: string; channel: string; subject: string; body: string }
 
-const inputClass = 'rounded-lg border border-neutral-300 px-2.5 py-1.5 text-sm outline-none focus:border-neutral-900'
+const inputClass = 'rounded-lg border border-neutral-300 px-2.5 py-1.5 text-sm outline-none focus:border-accent'
 
 export default function TemplateRow({ template }: { template: Template }) {
   const [editing, setEditing] = useState(false)
@@ -34,7 +34,7 @@ export default function TemplateRow({ template }: { template: Template }) {
         <input name="subject" defaultValue={template.subject} placeholder="Objet (email)" className={inputClass} />
         <textarea name="body" defaultValue={template.body} rows={4} className={inputClass} />
         <div className="flex gap-2">
-          <button type="submit" className="rounded-lg bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white">
+          <button type="submit" className="rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-white">
             Enregistrer
           </button>
           <button type="button" onClick={() => setEditing(false)} className="text-sm text-neutral-500">
@@ -63,7 +63,7 @@ export default function TemplateRow({ template }: { template: Template }) {
             <button
               type="button"
               onClick={() => setConfirmingDelete(true)}
-              className="text-sm text-red-500 hover:underline"
+              className="text-sm text-danger hover:underline"
             >
               Supprimer
             </button>
@@ -71,7 +71,7 @@ export default function TemplateRow({ template }: { template: Template }) {
             <button
               type="button"
               onClick={() => startTransition(() => deleteTemplate(template.id))}
-              className="rounded-lg bg-red-600 px-2 py-1 text-xs text-white"
+              className="rounded-lg bg-danger px-2 py-1 text-xs text-white"
             >
               Confirmer ?
             </button>

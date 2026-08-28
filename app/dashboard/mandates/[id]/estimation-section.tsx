@@ -33,7 +33,7 @@ type Mandate = {
 }
 
 const inputClass =
-  'rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900'
+  'rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-accent focus:ring-1 focus:ring-accent'
 
 export default function EstimationSection({
   mandateId,
@@ -112,7 +112,7 @@ export default function EstimationSection({
                 <span className="text-neutral-400">{formatDate(c.sale_date)}</span>
               </div>
               <form action={removeDvfComparable.bind(null, mandateId, c.id)}>
-                <button type="submit" className="text-xs text-red-600 hover:underline">
+                <button type="submit" className="text-xs text-danger hover:underline">
                   Retirer
                 </button>
               </form>
@@ -167,7 +167,7 @@ export default function EstimationSection({
             <p className="text-sm text-neutral-600">
               Prix ajusté au m² : <span className="font-medium tabular-nums">{formatEUR(estimation.adjustedM2)}</span>
             </p>
-            <div className="rounded-xl bg-neutral-900 px-5 py-4 text-white">
+            <div className="rounded-xl bg-accent px-5 py-4 text-white">
               <p className="text-xs text-neutral-300">Fourchette estimée</p>
               <p className="mt-1 text-2xl font-semibold tabular-nums">
                 {formatEUR(estimation.low)} — {formatEUR(estimation.high)}

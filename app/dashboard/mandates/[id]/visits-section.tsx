@@ -5,7 +5,7 @@ type Visit = { id: string; lead_id: string | null; buyer_name: string; visit_dat
 type BuyerOption = { id: string; name: string }
 
 const inputClass =
-  'rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900'
+  'rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-accent focus:ring-1 focus:ring-accent'
 
 export default function VisitsSection({
   mandateId,
@@ -31,7 +31,7 @@ export default function VisitsSection({
               {v.feedback && <p className="mt-0.5 text-neutral-600">{v.feedback}</p>}
             </div>
             <form action={removeMandateVisit.bind(null, mandateId, v.id)}>
-              <button type="submit" className="text-xs text-red-600 hover:underline">
+              <button type="submit" className="text-xs text-danger hover:underline">
                 Retirer
               </button>
             </form>

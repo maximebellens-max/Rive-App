@@ -6,7 +6,7 @@ import { PARTNER_ROLES } from '@/lib/rive/templates'
 
 type Partner = { id: string; name: string; role: string; phone: string; email: string; notes: string }
 
-const inputClass = 'rounded-lg border border-neutral-300 px-2.5 py-1.5 text-sm outline-none focus:border-neutral-900'
+const inputClass = 'rounded-lg border border-neutral-300 px-2.5 py-1.5 text-sm outline-none focus:border-accent'
 
 export default function PartnerRow({ partner }: { partner: Partner }) {
   const [editing, setEditing] = useState(false)
@@ -34,7 +34,7 @@ export default function PartnerRow({ partner }: { partner: Partner }) {
         <input name="email" defaultValue={partner.email} className={inputClass} />
         <input name="notes" defaultValue={partner.notes} className={`${inputClass} sm:col-span-2`} />
         <div className="flex gap-2 sm:col-span-2">
-          <button type="submit" className="rounded-lg bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white">
+          <button type="submit" className="rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-white">
             Enregistrer
           </button>
           <button type="button" onClick={() => setEditing(false)} className="text-sm text-neutral-500">
@@ -64,7 +64,7 @@ export default function PartnerRow({ partner }: { partner: Partner }) {
           <button
             type="button"
             onClick={() => setConfirmingDelete(true)}
-            className="text-sm text-red-500 hover:underline"
+            className="text-sm text-danger hover:underline"
           >
             Supprimer
           </button>
@@ -72,7 +72,7 @@ export default function PartnerRow({ partner }: { partner: Partner }) {
           <button
             type="button"
             onClick={() => startTransition(() => deletePartner(partner.id))}
-            className="rounded-lg bg-red-600 px-2 py-1 text-xs text-white"
+            className="rounded-lg bg-danger px-2 py-1 text-xs text-white"
           >
             Confirmer ?
           </button>

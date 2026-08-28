@@ -14,7 +14,7 @@ export default async function LoginPage({ searchParams }: PageProps<'/login'>) {
           </p>
         </div>
         {confirmationFailed && (
-          <p className="mb-4 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          <p className="mb-4 rounded-lg bg-warn-soft px-4 py-3 text-sm text-warn">
             Le lien de confirmation est invalide ou a expiré. Réessaie de te
             connecter, ou recrée un compte.
           </p>

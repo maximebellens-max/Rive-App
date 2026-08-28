@@ -87,7 +87,7 @@ function DropZone({
         if (id) onDropCard(id)
       }}
       className={`flex min-h-[3rem] flex-col gap-2 rounded-2xl border bg-neutral-50 p-2 ${
-        dragOver ? 'border-neutral-900 ring-1 ring-neutral-900' : 'border-neutral-200'
+        dragOver ? 'border-accent ring-1 ring-accent' : 'border-neutral-200'
       }`}
     >
       {children}

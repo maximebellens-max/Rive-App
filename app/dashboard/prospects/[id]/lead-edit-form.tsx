@@ -30,7 +30,7 @@ type Lead = {
 }
 
 const inputClass =
-  'rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900'
+  'rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-accent focus:ring-1 focus:ring-accent'
 const labelClass = 'text-sm font-medium text-neutral-700'
 
 export default function LeadEditForm({ lead }: { lead: Lead }) {
@@ -171,7 +171,7 @@ export default function LeadEditForm({ lead }: { lead: Lead }) {
       </section>
 
       {state?.error && (
-        <p className="text-sm text-red-600" role="alert">
+        <p className="text-sm text-danger" role="alert">
           {state.error}
         </p>
       )}
@@ -179,7 +179,7 @@ export default function LeadEditForm({ lead }: { lead: Lead }) {
       <button
         type="submit"
         disabled={pending}
-        className="w-fit rounded-lg bg-neutral-900 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-neutral-700 disabled:opacity-60"
+        className="w-fit rounded-lg bg-accent px-5 py-2.5 text-sm font-medium text-white transition hover:bg-accent-hover disabled:opacity-60"
       >
         {pending ? 'Enregistrement…' : 'Enregistrer'}
       </button>

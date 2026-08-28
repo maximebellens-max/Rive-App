@@ -22,7 +22,7 @@ export default function LoginForm() {
           type="email"
           autoComplete="email"
           required
-          className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900"
+          className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-accent focus:ring-1 focus:ring-accent"
         />
       </div>
 
@@ -36,12 +36,12 @@ export default function LoginForm() {
           type="password"
           autoComplete="current-password"
           required
-          className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900"
+          className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-accent focus:ring-1 focus:ring-accent"
         />
       </div>
 
       {state?.error && (
-        <p className="text-sm text-red-600" role="alert">
+        <p className="text-sm text-danger" role="alert">
           {state.error}
         </p>
       )}
@@ -49,7 +49,7 @@ export default function LoginForm() {
       <button
         type="submit"
         disabled={pending}
-        className="mt-2 rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-neutral-700 disabled:opacity-60"
+        className="mt-2 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition hover:bg-accent-hover disabled:opacity-60"
       >
         {pending ? 'Connexion…' : 'Se connecter'}
       </button>
