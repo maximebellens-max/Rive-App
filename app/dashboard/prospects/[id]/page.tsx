@@ -6,6 +6,7 @@ import { formatEUR } from '@/lib/rive/mandates'
 import LeadEditForm from './lead-edit-form'
 import HistorySection from './history-section'
 import DeleteLeadButton from './delete-lead-button'
+import MessageSection from './message-section'
 
 const CATEGORY_LABEL: Record<string, string> = {
   acheteur: 'Acheteur',
@@ -42,6 +43,18 @@ export default async function ProspectDetailPage({ params }: PageProps<'/dashboa
       .neq('stage', 'vendu')
     matchingBiens = (activeMandates ?? []).filter((m) => leadMatchesBien(lead as MatchLead, m as MatchMandate))
   }
+
+  const { data: templates } = await supabase
+    .from('message_templates')
+    .select('id, name, channel, subject, body')
+    .order('created_at', { ascending: true })
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  const { data: agentProfile } = user
+    ? await supabase.from('profiles').select('full_name').eq('id', user.id).single()
+    : { data: null }
 
   return (
     <div className="flex flex-col gap-6">
@@ -95,6 +108,8 @@ export default async function ProspectDetailPage({ params }: PageProps<'/dashboa
       <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
         <LeadEditForm lead={lead} />
       </div>
+
+      <MessageSection lead={lead} templates={templates ?? []} agentName={agentProfile?.full_name || ''} />
 
       <HistorySection leadId={lead.id} entries={entries ?? []} />
     </div>

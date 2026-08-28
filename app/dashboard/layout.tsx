@@ -28,6 +28,13 @@ const NAV_GROUPS: { label: string; links: { href: string; label: string }[] }[] 
       { href: '/dashboard/commissions', label: 'Commissions' },
     ],
   },
+  {
+    label: 'Outils',
+    links: [
+      { href: '/dashboard/partners', label: 'Contacts pro' },
+      { href: '/dashboard/templates', label: 'Modèles' },
+    ],
+  },
 ]
 
 export default async function DashboardLayout({
