@@ -5,7 +5,7 @@ export default async function NewMandatePage() {
   const supabase = await createClient()
   const { data: leads } = await supabase
     .from('leads')
-    .select('id, name, category')
+    .select('id, name, category, critere_type, critere_lieu, budget, surface_min')
     .order('name')
 
   return (

@@ -1,9 +1,20 @@
 'use client'
 
-import { useActionState } from 'react'
+import { useActionState, useState } from 'react'
 import { createMandate, type MandateFormState } from '@/app/actions/mandates'
 
-type Lead = { id: string; name: string; category: string | null }
+type Lead = {
+  id: string
+  name: string
+  category: string | null
+  critere_type: string
+  critere_lieu: string
+  budget: number | null
+  surface_min: number | null
+}
+
+const inputClass =
+  'rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900'
 
 export default function NewMandateForm({ leads }: { leads: Lead[] }) {
   const [state, action, pending] = useActionState<MandateFormState, FormData>(
@@ -11,16 +22,28 @@ export default function NewMandateForm({ leads }: { leads: Lead[] }) {
     undefined
   )
 
+  const [address, setAddress] = useState('')
+  const [propertyType, setPropertyType] = useState('')
+  const [surface, setSurface] = useState('')
+  const [price, setPrice] = useState('')
+
+  function handleLeadChange(leadId: string) {
+    const lead = leads.find((l) => l.id === leadId)
+    if (!lead) return
+    // Pré-remplit depuis les critères déjà saisis sur la fiche du prospect,
+    // pour éviter de ressaisir ce qu'on connaît déjà. Reste modifiable.
+    setAddress(lead.critere_lieu || '')
+    setPropertyType(lead.critere_type || '')
+    setSurface(lead.surface_min ? String(lead.surface_min) : '')
+    setPrice(lead.budget ? String(lead.budget) : '')
+  }
+
   return (
     <form action={action} className="flex flex-col gap-5">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-1.5">
           <label className="text-sm font-medium text-neutral-700">Type de mandat</label>
-          <select
-            name="kind"
-            defaultValue="vente_exclusif"
-            className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900"
-          >
+          <select name="kind" defaultValue="vente_exclusif" className={inputClass}>
             <option value="vente_exclusif">Vente — Exclusif</option>
             <option value="vente_simple">Vente — Simple</option>
             <option value="recherche">Recherche (mandat acheteur)</option>
@@ -28,11 +51,12 @@ export default function NewMandateForm({ leads }: { leads: Lead[] }) {
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium text-neutral-700">Client lié (optionnel)</label>
+          <label className="text-sm font-medium text-neutral-700">Client lié</label>
           <select
             name="lead_id"
             defaultValue=""
-            className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900"
+            onChange={(e) => handleLeadChange(e.target.value)}
+            className={inputClass}
           >
             <option value="">Aucun</option>
             {leads.map((l) => (
@@ -42,6 +66,10 @@ export default function NewMandateForm({ leads }: { leads: Lead[] }) {
               </option>
             ))}
           </select>
+          <p className="text-xs text-neutral-400">
+            Choisir un prospect pré-remplit l&apos;adresse, le type de bien, la surface et le prix depuis sa
+            fiche.
+          </p>
         </div>
 
         <div className="flex flex-col gap-1.5 sm:col-span-2">
@@ -49,7 +77,9 @@ export default function NewMandateForm({ leads }: { leads: Lead[] }) {
           <input
             name="address"
             placeholder="12 rue de la Paix, Annemasse"
-            className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900"
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            className={inputClass}
           />
         </div>
 
@@ -58,7 +88,21 @@ export default function NewMandateForm({ leads }: { leads: Lead[] }) {
           <input
             name="property_type"
             placeholder="Appartement, maison…"
-            className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900"
+            value={propertyType}
+            onChange={(e) => setPropertyType(e.target.value)}
+            className={inputClass}
+          />
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <label className="text-sm font-medium text-neutral-700">Surface (m²)</label>
+          <input
+            name="surface"
+            type="number"
+            step="0.1"
+            value={surface}
+            onChange={(e) => setSurface(e.target.value)}
+            className={inputClass}
           />
         </div>
 
@@ -68,7 +112,9 @@ export default function NewMandateForm({ leads }: { leads: Lead[] }) {
             name="price"
             type="number"
             step="1"
-            className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900"
+            value={price}
+            onChange={(e) => setPrice(e.target.value)}
+            className={inputClass}
           />
         </div>
       </div>
@@ -87,7 +133,9 @@ export default function NewMandateForm({ leads }: { leads: Lead[] }) {
         {pending ? 'Création…' : 'Créer le mandat'}
       </button>
       <p className="text-xs text-neutral-400">
-        Les autres champs (exclusivité, comparables, estimation…) se renseignent depuis la fiche du mandat.
+        Si un client est lié, ses nom, téléphone et email seront repris automatiquement comme mandant sur le
+        mandat. Les autres champs (exclusivité, comparables, estimation…) se renseignent depuis la fiche du
+        mandat.
       </p>
     </form>
   )

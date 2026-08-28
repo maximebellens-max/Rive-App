@@ -95,6 +95,30 @@ export async function createMandate(
     return { error: 'Impossible de créer le mandat.' }
   }
 
+  // Reprend automatiquement le nom/téléphone/email du prospect lié comme mandant,
+  // pour éviter de ressaisir ce qu'on connaît déjà. Le reste de l'état civil
+  // (naissance, nationalité...) se complète ensuite depuis la fiche du mandat.
+  if (leadId) {
+    const { data: lead } = await supabase
+      .from('leads')
+      .select('name, phone, email')
+      .eq('id', leadId)
+      .single()
+
+    if (lead?.name) {
+      const [firstName, ...rest] = lead.name.trim().split(/\s+/)
+      await supabase.from('mandate_parties').insert({
+        agency_id: agencyId,
+        mandate_id: data.id,
+        position: 0,
+        first_name: firstName || '',
+        last_name: rest.join(' '),
+        phone: lead.phone || '',
+        email: lead.email || '',
+      })
+    }
+  }
+
   revalidatePath('/dashboard/mandates')
   redirect(`/dashboard/mandates/${data.id}`)
 }
