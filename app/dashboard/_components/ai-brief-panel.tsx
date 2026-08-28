@@ -1,36 +1,40 @@
 'use client'
 
 // Panneau "assistant IA" partagé par les 3 usages du prototype (brief
-// d'estimation, briefing pré-RDV, message de relance) : génère un prompt
-// structuré à copier, et garde la réponse collée par l'agent avec la fiche.
+// d'estimation, briefing pré-RDV, message de relance) : génère le texte
+// directement via l'API Claude, depuis Rive — plus de copier/coller vers un
+// chat externe. Le résultat reste éditable et s'enregistre avec la fiche.
 import { useState, useTransition } from 'react'
+import { generateAIText } from '@/app/actions/ai'
 
 export default function AIBriefPanel({
   title,
   prompt,
   initialValue,
   onSave,
-  placeholder = 'Colle ici la réponse de l’IA…',
+  generateLabel = 'Générer avec l’IA',
 }: {
   title: string
   prompt: string
   initialValue: string
   onSave: (text: string) => void | Promise<void>
-  placeholder?: string
+  generateLabel?: string
 }) {
-  const [copied, setCopied] = useState(false)
   const [value, setValue] = useState(initialValue)
   const [saved, setSaved] = useState(false)
-  const [, startTransition] = useTransition()
+  const [error, setError] = useState<string | null>(null)
+  const [pending, startTransition] = useTransition()
 
-  async function copy() {
-    try {
-      await navigator.clipboard.writeText(prompt)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    } catch {
-      setCopied(false)
-    }
+  function generate() {
+    setError(null)
+    startTransition(async () => {
+      const res = await generateAIText(prompt)
+      if (res.error) {
+        setError(res.error)
+        return
+      }
+      if (res.text) setValue(res.text)
+    })
   }
 
   function save() {
@@ -46,22 +50,25 @@ export default function AIBriefPanel({
       <h2 className="text-sm font-semibold text-neutral-900">{title}</h2>
       <button
         type="button"
-        onClick={copy}
-        className="w-fit rounded-lg border border-neutral-300 px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100"
+        onClick={generate}
+        disabled={pending}
+        className="w-fit rounded-lg border border-neutral-300 px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100 disabled:opacity-60"
       >
-        {copied ? 'Copié ✓' : '🤖 Copier le brief pour l’IA'}
+        {pending ? 'Génération…' : `✨ ${generateLabel}`}
       </button>
+      {error && <p className="text-sm text-red-600">{error}</p>}
       <textarea
         value={value}
         onChange={(e) => setValue(e.target.value)}
-        placeholder={placeholder}
+        placeholder="Le texte généré apparaîtra ici — modifiable avant enregistrement."
         rows={5}
         className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-900"
       />
       <button
         type="button"
         onClick={save}
-        className="w-fit rounded-lg bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-neutral-700"
+        disabled={pending || !value}
+        className="w-fit rounded-lg bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-neutral-700 disabled:opacity-60"
       >
         {saved ? 'Enregistré ✓' : 'Enregistrer'}
       </button>

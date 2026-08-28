@@ -99,12 +99,3 @@ export function generateRelanceBrief(leadName: string, address: string, daysSinc
     `Vente conclue il y a ${daysSinceSale} jours, sans nouvelles depuis.`,
   ].join('\n')
 }
-
-export async function copyToClipboard(text: string): Promise<boolean> {
-  try {
-    await navigator.clipboard.writeText(text)
-    return true
-  } catch {
-    return false
-  }
-}

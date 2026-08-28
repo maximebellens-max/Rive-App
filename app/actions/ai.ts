@@ -2,6 +2,13 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { generateWithClaude } from '@/lib/rive/anthropic'
+
+// Génère le texte directement depuis Rive (appel à l'API Claude) — plus de
+// copier/coller vers un chat externe.
+export async function generateAIText(prompt: string): Promise<{ text?: string; error?: string }> {
+  return generateWithClaude(prompt)
+}
 
 async function getAgencyId() {
   const supabase = await createClient()
