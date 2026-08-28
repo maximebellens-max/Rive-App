@@ -47,6 +47,9 @@ export default async function DashboardLayout({
             </nav>
           </div>
           <div className="flex items-center gap-3 text-sm text-neutral-500">
+            <Link href="/dashboard/settings" className="hover:text-neutral-900">
+              Réglages
+            </Link>
             <span>
               {profile?.full_name || user.email}
               {agencyName ? ` · ${agencyName}` : ''}

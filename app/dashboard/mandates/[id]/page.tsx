@@ -10,7 +10,9 @@ import {
 } from '@/lib/rive/mandates'
 import MandateEditForm from './mandate-edit-form'
 import EstimationSection from './estimation-section'
+import PartiesSection from './parties-section'
 import DeleteMandateButton from './delete-mandate-button'
+import GenerateMandateButton from './generate-mandate-button'
 
 export default async function MandateDetailPage({ params }: PageProps<'/dashboard/mandates/[id]'>) {
   const { id } = await params
@@ -24,6 +26,12 @@ export default async function MandateDetailPage({ params }: PageProps<'/dashboar
     .select('id, address, sale_date, surface, price')
     .eq('mandate_id', id)
     .order('sale_date', { ascending: false })
+
+  const { data: parties } = await supabase
+    .from('mandate_parties')
+    .select('*')
+    .eq('mandate_id', id)
+    .order('position', { ascending: true })
 
   const endDate = mandateEndDate(mandate.signed_date, mandate.duration_months)
   const noticeDate = mandateNoticeDate(mandate.signed_date, mandate.duration_months, mandate.renewal_notice_days)
@@ -44,7 +52,10 @@ export default async function MandateDetailPage({ params }: PageProps<'/dashboar
             {exclusivityLabel(mandate.exclusivity) ? ` · ${exclusivityLabel(mandate.exclusivity)}` : ''}
           </p>
         </div>
-        <DeleteMandateButton mandateId={mandate.id} />
+        <div className="flex items-center gap-2">
+          <GenerateMandateButton mandateId={mandate.id} />
+          <DeleteMandateButton mandateId={mandate.id} />
+        </div>
       </div>
 
       {active && endDate && (
@@ -64,6 +75,8 @@ export default async function MandateDetailPage({ params }: PageProps<'/dashboar
           </p>
         </div>
       )}
+
+      <PartiesSection mandateId={mandate.id} parties={parties ?? []} />
 
       <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
         <MandateEditForm mandate={mandate} />

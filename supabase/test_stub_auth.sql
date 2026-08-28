@@ -23,3 +23,9 @@ begin
   end if;
 end
 $$;
+
+-- Sur le vrai Supabase, ces privilèges sont accordés automatiquement au provisioning
+-- du projet ; ici (Postgres nu) on les reproduit à la main pour le rôle de test.
+grant usage on schema public to authenticated;
+grant all on all tables in schema public to authenticated;
+grant all on all sequences in schema public to authenticated;
