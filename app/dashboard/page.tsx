@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { mandateNoticeDate, dateUrgency, formatDate } from '@/lib/rive/mandates'
 import { actionBucket, daysAgo, RECONTACT_THRESHOLD_DAYS, STALE_BIEN_THRESHOLD_DAYS } from '@/lib/rive/today'
 import { computeMatchPairs, bienIsActive, type MatchLead, type MatchMandate } from '@/lib/rive/matching'
+import { earliestPromotionDate } from '@/lib/rive/diffusion'
 import TodayWidgets, { type Widget } from './today-widgets'
 import AppointmentForm from './appointment-form'
 
@@ -17,7 +18,7 @@ export default async function TodayPage() {
   const { data: mandates } = await supabase
     .from('mandates')
     .select(
-      'id, type, stage, is_draft, lead_id, address, property_type, price, surface, pieces, signed_date, sold_date, duration_months, renewal_notice_days'
+      'id, type, stage, is_draft, lead_id, address, property_type, price, surface, pieces, signed_date, sold_date, duration_months, renewal_notice_days, diffusion, ad_date'
     )
 
   const { data: seen } = await supabase.from('seen_match_pairs').select('lead_id, mandate_id')
@@ -54,11 +55,12 @@ export default async function TodayPage() {
     })
 
   // ---------- 6. Biens à relancer (60j+ sans rafraîchissement) ----------
-  // Provisoire : basé sur la date de signature en attendant le suivi de
-  // diffusion portails/campagnes (à venir).
   const stale = mandatesList
     .filter((m) => bienIsActive(m as MatchMandate))
-    .map((m) => ({ mandate: m, days: daysAgo(m.signed_date) ?? 0 }))
+    .map((m) => ({
+      mandate: m,
+      days: daysAgo(earliestPromotionDate(m.diffusion as Record<string, string> | null, m.ad_date, m.signed_date)) ?? 0,
+    }))
     .filter(({ days }) => days >= STALE_BIEN_THRESHOLD_DAYS)
     .sort((a, b) => b.days - a.days)
 

@@ -14,6 +14,9 @@ import EstimationSection from './estimation-section'
 import PartiesSection from './parties-section'
 import DeleteMandateButton from './delete-mandate-button'
 import GenerateMandateButton from './generate-mandate-button'
+import VisitsSection from './visits-section'
+import OffersSection from './offers-section'
+import DiffusionSection from './diffusion-section'
 
 export default async function MandateDetailPage({ params }: PageProps<'/dashboard/mandates/[id]'>) {
   const { id } = await params
@@ -47,6 +50,51 @@ export default async function MandateDetailPage({ params }: PageProps<'/dashboar
     matchingBuyers = (buyers ?? []).filter((l) => leadMatchesBien(l as MatchLead, mandate as MatchMandate))
   }
 
+  let visits: {
+    id: string
+    lead_id: string | null
+    buyer_name: string
+    visit_date: string | null
+    feedback: string
+    lead_name?: string
+  }[] = []
+  let offers: {
+    id: string
+    lead_id: string | null
+    buyer_name: string
+    amount: number | null
+    offer_date: string | null
+    status: string
+    lead_name?: string
+  }[] = []
+  let buyerOptions: { id: string; name: string }[] = []
+
+  if (mandate.type === 'vente') {
+    const [{ data: visitRows }, { data: offerRows }, { data: buyers }] = await Promise.all([
+      supabase
+        .from('mandate_visits')
+        .select('id, lead_id, buyer_name, visit_date, feedback, leads ( name )')
+        .eq('mandate_id', id)
+        .order('visit_date', { ascending: false }),
+      supabase
+        .from('mandate_offers')
+        .select('id, lead_id, buyer_name, amount, offer_date, status, leads ( name )')
+        .eq('mandate_id', id)
+        .order('offer_date', { ascending: false }),
+      supabase.from('leads').select('id, name').eq('category', 'acheteur').order('name', { ascending: true }),
+    ])
+
+    visits = (visitRows ?? []).map((v) => ({
+      ...v,
+      lead_name: (v.leads as unknown as { name: string } | null)?.name,
+    }))
+    offers = (offerRows ?? []).map((o) => ({
+      ...o,
+      lead_name: (o.leads as unknown as { name: string } | null)?.name,
+    }))
+    buyerOptions = buyers ?? []
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-start justify-between gap-4">
@@ -68,6 +116,14 @@ export default async function MandateDetailPage({ params }: PageProps<'/dashboar
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {mandate.type === 'vente' && (
+            <a
+              href={`/dashboard/mandates/${mandate.id}/fiche`}
+              className="rounded-lg border border-neutral-300 px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100"
+            >
+              Fiche bien (.html)
+            </a>
+          )}
           <GenerateMandateButton mandateId={mandate.id} />
           <DeleteMandateButton mandateId={mandate.id} />
         </div>
@@ -124,6 +180,20 @@ export default async function MandateDetailPage({ params }: PageProps<'/dashboar
           comparables={comparables ?? []}
           matchingBuyersCount={matchingBuyers.length}
         />
+      )}
+
+      {mandate.type === 'vente' && (
+        <>
+          <VisitsSection mandateId={mandate.id} visits={visits} buyerOptions={buyerOptions} />
+          <OffersSection mandateId={mandate.id} offers={offers} buyerOptions={buyerOptions} />
+          <DiffusionSection
+            mandateId={mandate.id}
+            diffusion={(mandate.diffusion as Record<string, string>) || {}}
+            adPlatform={mandate.ad_platform}
+            adCampaign={mandate.ad_campaign}
+            adDate={mandate.ad_date}
+          />
+        </>
       )}
     </div>
   )
