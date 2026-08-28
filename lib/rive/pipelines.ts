@@ -16,14 +16,21 @@ export const COLUMN_COLOR_HEX: Record<string, string> = {
 }
 
 export const BOARD_TYPES = ['prospects', 'vendeur', 'acheteur', 'investisseur'] as const
-export type BoardType = (typeof BOARD_TYPES)[number]
 
-export const BOARD_LABELS: Record<BoardType, string> = {
+// Un identifiant de tableau : soit l'un des 4 tableaux fixes ci-dessus, soit
+// l'id d'un tableau personnalisé (table `boards`, ligne kind='custom').
+export type BoardType = string
+
+export const BOARD_LABELS: Record<string, string> = {
   prospects: 'Prospects',
   vendeur: 'Vendeurs',
   acheteur: 'Acheteurs',
   investisseur: 'Investisseurs',
 }
+
+// Tableaux dont le type détermine directement leads.category (les tableaux
+// personnalisés n'affectent jamais la catégorie d'un prospect).
+export const CATEGORY_BOARD_TYPES = new Set(['vendeur', 'acheteur', 'investisseur'])
 
 export const CATEGORY_LABEL: Record<string, string> = {
   acheteur: 'Acheteur',

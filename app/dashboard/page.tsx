@@ -5,6 +5,7 @@ import { computeMatchPairs, bienIsActive, type MatchLead, type MatchMandate } fr
 import { earliestPromotionDate } from '@/lib/rive/diffusion'
 import TodayWidgets, { type Widget } from './today-widgets'
 import AppointmentForm from './appointment-form'
+import MonthCalendar from './month-calendar'
 
 export default async function TodayPage() {
   const supabase = await createClient()
@@ -164,6 +165,9 @@ export default async function TodayPage() {
     .map((l) => ({ id: l.id, name: l.name }))
     .sort((a, b) => a.name.localeCompare(b.name))
 
+  const now = new Date()
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+
   return (
     <div className="flex flex-col gap-6">
       <div>
@@ -174,13 +178,19 @@ export default async function TodayPage() {
       <TodayWidgets widgets={widgets} matchPairs={newMatches} />
 
       <div className="flex flex-col gap-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-neutral-900">Ajouter un rendez-vous</h2>
-          <a href="/dashboard/agenda/ics" className="text-sm text-neutral-500 hover:underline">
-            Exporter l’agenda (.ics) →
-          </a>
-        </div>
+        <h2 className="text-sm font-semibold text-neutral-900">Ajouter un rendez-vous</h2>
         <AppointmentForm options={appointmentOptions} />
+      </div>
+
+      <div className="flex flex-col gap-3">
+        <h2 className="text-sm font-semibold text-neutral-900">Agenda</h2>
+        <MonthCalendar
+          initialYear={now.getFullYear()}
+          initialMonth={now.getMonth()}
+          todayStr={todayStr}
+          leads={leadsList.map((l) => ({ id: l.id, name: l.name, action_date: l.action_date }))}
+          leadOptions={appointmentOptions}
+        />
       </div>
     </div>
   )

@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { firstColumnId } from '@/lib/rive/pipeline-positions'
-import { nextColumnColor, type BoardType } from '@/lib/rive/pipelines'
+import { nextColumnColor, CATEGORY_BOARD_TYPES, type BoardType } from '@/lib/rive/pipelines'
 import { ensureMandateDraftForLead, activateMandateForLead } from '@/lib/rive/automation'
 
 async function getAgencyId() {
@@ -88,7 +88,9 @@ export async function quickAddLead(boardType: BoardType, columnId: string, formD
     agency_id: agencyId,
     assigned_to: userId,
     name,
-    category: boardType === 'prospects' ? null : boardType,
+    // Seuls les 3 tableaux de catégorie fixent leads.category (contrainte en
+    // base) — un tableau personnalisé ne catégorise jamais le prospect.
+    category: CATEGORY_BOARD_TYPES.has(boardType) ? boardType : null,
     positions,
   })
 

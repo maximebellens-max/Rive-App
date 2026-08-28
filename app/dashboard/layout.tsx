@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { logout } from '@/app/actions/auth'
+import { createBoard } from '@/app/actions/boards'
 
 const NAV_GROUPS: { label: string; links: { href: string; label: string }[] }[] = [
   {
@@ -54,11 +55,20 @@ export default async function DashboardLayout({
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('full_name, agencies ( name )')
+    .select('agency_id, full_name, agencies ( name )')
     .eq('id', user.id)
     .single()
 
   const agencyName = (profile?.agencies as unknown as { name: string } | null)?.name
+
+  const { data: customBoards } = profile?.agency_id
+    ? await supabase
+        .from('boards')
+        .select('id, name')
+        .eq('agency_id', profile.agency_id)
+        .eq('kind', 'custom')
+        .order('position', { ascending: true })
+    : { data: [] as { id: string; name: string }[] }
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -104,6 +114,35 @@ export default async function DashboardLayout({
               ))}
             </div>
           ))}
+          <div className="flex flex-col gap-1">
+            <span className="px-2 text-xs font-semibold uppercase tracking-wide text-neutral-400">
+              Tableaux personnalisés
+            </span>
+            {(customBoards ?? []).map((board) => (
+              <Link
+                key={board.id}
+                href={`/dashboard/pipelines/${board.id}`}
+                className="truncate rounded-lg px-2 py-1.5 text-sm text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900"
+              >
+                {board.name}
+              </Link>
+            ))}
+            <form action={createBoard} className="flex gap-1 px-2 pt-1">
+              <input
+                name="name"
+                placeholder="Nouveau tableau…"
+                aria-label="Nom du nouveau tableau"
+                className="min-w-0 flex-1 rounded-lg border border-neutral-200 px-2 py-1 text-xs outline-none focus:border-neutral-900"
+              />
+              <button
+                type="submit"
+                aria-label="Créer le tableau"
+                className="shrink-0 rounded-lg border border-neutral-200 px-2 py-1 text-xs font-medium text-neutral-600 hover:bg-neutral-100"
+              >
+                +
+              </button>
+            </form>
+          </div>
         </aside>
         <main className="min-w-0 flex-1">{children}</main>
       </div>
