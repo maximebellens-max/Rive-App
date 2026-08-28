@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import AgencySettingsForm from './agency-settings-form'
 import TeamSection from './team-section'
+import BackupSection from './backup-section'
 
 export default async function SettingsPage() {
   const supabase = await createClient()
@@ -54,6 +55,9 @@ export default async function SettingsPage() {
           members={members ?? []}
           invites={invites ?? []}
         />
+      </div>
+      <div className="max-w-2xl rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
+        <BackupSection isOwner={profile.role === 'owner'} />
       </div>
     </div>
   )
