@@ -36,8 +36,10 @@ export async function signup(
   const password = String(formData.get('password') || '')
   const fullName = String(formData.get('full_name') || '').trim()
   const agencyName = String(formData.get('agency_name') || '').trim()
+  const inviteToken = String(formData.get('invite_token') || '').trim()
 
-  if (!email || !password || !fullName || !agencyName) {
+  // Avec une invitation, l'agence existe déjà : le nom d'agence n'est pas requis.
+  if (!email || !password || !fullName || (!agencyName && !inviteToken)) {
     return { error: 'Merci de remplir tous les champs.' }
   }
   if (password.length < 8) {
@@ -52,6 +54,7 @@ export async function signup(
       data: {
         full_name: fullName,
         agency_name: agencyName,
+        ...(inviteToken ? { invite_token: inviteToken } : {}),
       },
     },
   })
