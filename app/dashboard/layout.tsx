@@ -18,7 +18,10 @@ const NAV_GROUPS: { label: string; links: { href: string; label: string }[] }[] 
   },
   {
     label: 'Gestion',
-    links: [{ href: '/dashboard/mandates', label: 'Mandats' }],
+    links: [
+      { href: '/dashboard/mandates', label: 'Mandats' },
+      { href: '/dashboard/commissions', label: 'Commissions' },
+    ],
   },
 ]
 

@@ -44,8 +44,13 @@ export default async function MandateDetailPage({ params }: PageProps<'/dashboar
           <Link href="/dashboard/mandates" className="text-sm text-neutral-500 hover:underline">
             ← Mandats
           </Link>
-          <h1 className="mt-1 text-xl font-semibold tracking-tight">
+          <h1 className="mt-1 flex items-center gap-2 text-xl font-semibold tracking-tight">
             {mandate.address || mandate.property_type || 'Mandat sans adresse'}
+            {mandate.is_draft && (
+              <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700">
+                Brouillon — estimation en cours
+              </span>
+            )}
           </h1>
           <p className="mt-1 text-sm text-neutral-500">
             {mandate.type === 'vente' ? 'Mandat de vente' : 'Mandat de recherche'}

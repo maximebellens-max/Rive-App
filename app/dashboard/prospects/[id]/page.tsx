@@ -24,6 +24,12 @@ export default async function ProspectDetailPage({ params }: PageProps<'/dashboa
     .eq('lead_id', id)
     .order('entry_date', { ascending: false })
 
+  const { data: mandate } = await supabase
+    .from('mandates')
+    .select('id, is_draft, type, address')
+    .eq('lead_id', id)
+    .maybeSingle()
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-start justify-between gap-4">
@@ -39,6 +45,19 @@ export default async function ProspectDetailPage({ params }: PageProps<'/dashboa
         </div>
         <DeleteLeadButton leadId={lead.id} />
       </div>
+
+      {mandate && (
+        <Link
+          href={`/dashboard/mandates/${mandate.id}`}
+          className="flex items-center justify-between rounded-2xl border border-neutral-200 bg-white p-4 text-sm shadow-sm hover:border-neutral-300"
+        >
+          <span>
+            {mandate.is_draft ? '📋 Brouillon de mandat en préparation' : '📄 Mandat lié'}
+            {mandate.address ? ` — ${mandate.address}` : ''}
+          </span>
+          <span className="text-neutral-400">Voir le mandat →</span>
+        </Link>
+      )}
 
       <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
         <LeadEditForm lead={lead} />

@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { firstColumnId } from '@/lib/rive/pipeline-positions'
 import { nextColumnColor, type BoardType } from '@/lib/rive/pipelines'
+import { ensureMandateDraftForLead, activateMandateForLead } from '@/lib/rive/automation'
 
 async function getAgencyId() {
   const supabase = await createClient()
@@ -33,11 +34,37 @@ export async function moveLeadCard(leadId: string, boardType: BoardType, columnI
   const { supabase, agencyId } = await getAgencyId()
   if (!agencyId) return
 
-  const { data: lead } = await supabase.from('leads').select('positions').eq('id', leadId).single()
+  const { data: lead } = await supabase
+    .from('leads')
+    .select('id, agency_id, category, name, critere_lieu, critere_type, surface_min, budget, positions')
+    .eq('id', leadId)
+    .single()
   if (!lead) return
 
   const positions = { ...((lead.positions as Record<string, string>) ?? {}), [boardType]: columnId }
   await supabase.from('leads').update({ positions }).eq('id', leadId)
+
+  // Chaîne d'automatisation : entrer dans l'avant-dernière colonne (étape
+  // estimation) crée un brouillon de mandat ; entrer dans la dernière colonne
+  // (mandat signé) l'active. Uniquement sur les pipelines Vendeur/Investisseur.
+  if (boardType === 'vendeur' || boardType === 'investisseur') {
+    const { data: columns } = await supabase
+      .from('pipeline_columns')
+      .select('id')
+      .eq('agency_id', agencyId)
+      .eq('board_type', boardType)
+      .order('position', { ascending: true })
+
+    const ids = (columns ?? []).map((c) => c.id)
+    const idx = ids.indexOf(columnId)
+    if (idx >= 0 && idx === ids.length - 1) {
+      await activateMandateForLead(supabase, lead)
+      revalidatePath('/dashboard/mandates')
+    } else if (idx >= 0 && idx === ids.length - 2) {
+      await ensureMandateDraftForLead(supabase, lead)
+    }
+  }
+
   revalidateBoard(boardType)
 }
 

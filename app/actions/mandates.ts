@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { FEATURE_KEYS, type Features } from '@/lib/rive/mandates'
+import { maybeCreateCommissionForMandate } from '@/lib/rive/automation'
 
 export type MandateFormState = { error?: string } | undefined
 
@@ -136,6 +137,16 @@ export async function updateMandate(
   const { supabase, agencyId } = await getAgencyId()
   if (!agencyId) return { error: 'Session expirée, reconnecte-toi.' }
 
+  const { data: before } = await supabase
+    .from('mandates')
+    .select('stage, type, price, sold_date')
+    .eq('id', mandateId)
+    .single()
+
+  const newStage = str(formData, 'stage') || 'en_cours'
+  const justSold = newStage === 'vendu' && before?.stage !== 'vendu'
+  const soldDate = str(formData, 'sold_date') || (justSold ? before?.sold_date || new Date().toISOString().slice(0, 10) : null)
+
   const { error } = await supabase
     .from('mandates')
     .update({
@@ -146,7 +157,7 @@ export async function updateMandate(
       price: num(formData, 'price'),
       remaining_loan: num(formData, 'remaining_loan'),
       signed_date: str(formData, 'signed_date') || null,
-      sold_date: str(formData, 'sold_date') || null,
+      sold_date: soldDate,
       exclusivity: str(formData, 'exclusivity'),
       duration_months: num(formData, 'duration_months'),
       tacit_renewal: formData.get('tacit_renewal') === 'on',
@@ -161,16 +172,65 @@ export async function updateMandate(
       estimated_rent: num(formData, 'estimated_rent'),
       ai_summary: str(formData, 'ai_summary'),
       notes: str(formData, 'notes'),
-      stage: str(formData, 'stage') || 'en_cours',
+      stage: newStage,
+      is_draft: false,
       updated_at: new Date().toISOString(),
     })
     .eq('id', mandateId)
 
   if (error) return { error: 'Impossible d’enregistrer les modifications.' }
 
+  // Une commission est créée automatiquement la première fois qu'un mandat
+  // passe à l'étape "Vendu" — inutile de la ressaisir à la main.
+  if (justSold && before) {
+    await maybeCreateCommissionForMandate(supabase, {
+      id: mandateId,
+      agency_id: agencyId,
+      type: before.type,
+      price: num(formData, 'price') ?? before.price,
+    })
+    revalidatePath('/dashboard/commissions')
+  }
+
   revalidatePath(`/dashboard/mandates/${mandateId}`)
   revalidatePath('/dashboard/mandates')
   return undefined
+}
+
+// Déplacement rapide depuis le tableau Kanban des mandats (en_cours /
+// compromis_signe / vendu) — même logique de création de commission que
+// updateMandate quand l'étape "Vendu" est atteinte.
+export async function moveMandateStage(mandateId: string, stage: string) {
+  const { supabase, agencyId } = await getAgencyId()
+  if (!agencyId) return
+
+  const { data: before } = await supabase
+    .from('mandates')
+    .select('stage, type, price, sold_date')
+    .eq('id', mandateId)
+    .single()
+  if (!before) return
+
+  const justSold = stage === 'vendu' && before.stage !== 'vendu'
+  const soldDate = justSold ? before.sold_date || new Date().toISOString().slice(0, 10) : before.sold_date
+
+  await supabase
+    .from('mandates')
+    .update({ stage, sold_date: soldDate, is_draft: false, updated_at: new Date().toISOString() })
+    .eq('id', mandateId)
+
+  if (justSold) {
+    await maybeCreateCommissionForMandate(supabase, {
+      id: mandateId,
+      agency_id: agencyId,
+      type: before.type,
+      price: before.price,
+    })
+    revalidatePath('/dashboard/commissions')
+  }
+
+  revalidatePath('/dashboard/mandates')
+  revalidatePath(`/dashboard/mandates/${mandateId}`)
 }
 
 export async function deleteMandate(mandateId: string) {

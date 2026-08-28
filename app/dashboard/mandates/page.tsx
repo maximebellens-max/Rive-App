@@ -8,6 +8,8 @@ import {
   formatEUR,
   formatDate,
 } from '@/lib/rive/mandates'
+import MandatesView from './mandates-view'
+import type { StageCard } from '../_components/stage-kanban'
 
 const URGENCY_CLASS: Record<string, string> = {
   overdue: 'bg-red-50 text-red-700',
@@ -24,27 +26,20 @@ export default async function MandatesPage() {
     .select(
       'id, type, address, property_type, price, stage, exclusivity, signed_date, duration_months, renewal_notice_days'
     )
+    .eq('is_draft', false)
     .order('created_at', { ascending: false })
 
-  return (
-    <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight">Mandats</h1>
-          <p className="mt-1 text-sm text-neutral-500">
-            {mandates?.length ?? 0} mandat{(mandates?.length ?? 0) > 1 ? 's' : ''}
-          </p>
-        </div>
-        <Link
-          href="/dashboard/mandates/new"
-          className="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-700"
-        >
-          Nouveau mandat
-        </Link>
-      </div>
+  const cards: StageCard[] = (mandates ?? []).map((m) => ({
+    id: m.id,
+    title: m.address || m.property_type || 'Mandat sans adresse',
+    subtitle: `${m.type === 'vente' ? 'Vente' : 'Recherche'} · ${formatEUR(m.price)}`,
+    meta: m.stage,
+    href: `/dashboard/mandates/${m.id}`,
+  }))
 
-      <div className="overflow-x-auto rounded-2xl border border-neutral-200 bg-white shadow-sm">
-        <table className="w-full text-left text-sm">
+  const table = (
+    <div className="overflow-x-auto rounded-2xl border border-neutral-200 bg-white shadow-sm">
+      <table className="w-full text-left text-sm">
           <thead className="border-b border-neutral-200 text-neutral-500">
             <tr>
               <th className="px-4 py-3 font-medium">Bien / Client</th>
@@ -94,8 +89,28 @@ export default async function MandatesPage() {
               )
             })}
           </tbody>
-        </table>
+      </table>
+    </div>
+  )
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-semibold tracking-tight">Mandats</h1>
+          <p className="mt-1 text-sm text-neutral-500">
+            {mandates?.length ?? 0} mandat{(mandates?.length ?? 0) > 1 ? 's' : ''}
+          </p>
+        </div>
+        <Link
+          href="/dashboard/mandates/new"
+          className="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-700"
+        >
+          Nouveau mandat
+        </Link>
       </div>
+
+      <MandatesView table={table} cards={cards} />
     </div>
   )
 }
