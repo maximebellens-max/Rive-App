@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { initialPositions, reconcilePositionsOnCategoryChange } from '@/lib/rive/pipeline-positions'
 
 export type LeadFormState = { error?: string } | undefined
 
@@ -40,18 +41,20 @@ export async function createLead(
   const name = str(formData, 'name')
   const phone = str(formData, 'phone')
   const email = str(formData, 'email')
-  const category = str(formData, 'category')
+  const category = str(formData, 'category') || null
   const critereLieu = str(formData, 'critere_lieu')
 
   if (!name) {
     return { error: 'Le nom du prospect est obligatoire.' }
   }
-  if (!['acheteur', 'vendeur', 'investisseur'].includes(category)) {
+  if (category && !['acheteur', 'vendeur', 'investisseur'].includes(category)) {
     return { error: 'Catégorie invalide.' }
   }
 
   const { supabase, agencyId, userId } = await getAgencyId()
   if (!agencyId) return { error: 'Session expirée, reconnecte-toi.' }
+
+  const positions = await initialPositions(supabase, agencyId, category)
 
   const { error: insertError } = await supabase.from('leads').insert({
     agency_id: agencyId,
@@ -61,6 +64,7 @@ export async function createLead(
     email,
     category,
     critere_lieu: critereLieu,
+    positions,
   })
 
   if (insertError) {
@@ -81,10 +85,29 @@ export async function updateLead(
   const name = str(formData, 'name')
   if (!name) return { error: 'Le nom du prospect est obligatoire.' }
 
+  const newCategory = str(formData, 'category') || null
+
+  const { data: existing } = await supabase
+    .from('leads')
+    .select('category, positions')
+    .eq('id', leadId)
+    .single()
+
+  const positions = existing
+    ? await reconcilePositionsOnCategoryChange(
+        supabase,
+        agencyId,
+        (existing.positions as Record<string, string>) ?? {},
+        existing.category,
+        newCategory
+      )
+    : undefined
+
   const { error } = await supabase
     .from('leads')
     .update({
       name,
+      ...(positions ? { positions } : {}),
       phone: str(formData, 'phone'),
       email: str(formData, 'email'),
       category: str(formData, 'category') || null,

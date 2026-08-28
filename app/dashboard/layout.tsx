@@ -3,6 +3,25 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { logout } from '@/app/actions/auth'
 
+const NAV_GROUPS: { label: string; links: { href: string; label: string }[] }[] = [
+  {
+    label: 'Vue d’ensemble',
+    links: [{ href: '/dashboard', label: 'Aperçu' }, { href: '/dashboard/prospects', label: 'Prospects' }],
+  },
+  {
+    label: 'Pipelines',
+    links: [
+      { href: '/dashboard/pipelines/vendeur', label: 'Vendeurs' },
+      { href: '/dashboard/pipelines/acheteur', label: 'Acheteurs' },
+      { href: '/dashboard/pipelines/investisseur', label: 'Investisseurs' },
+    ],
+  },
+  {
+    label: 'Gestion',
+    links: [{ href: '/dashboard/mandates', label: 'Mandats' }],
+  },
+]
+
 export default async function DashboardLayout({
   children,
 }: {
@@ -29,23 +48,10 @@ export default async function DashboardLayout({
   return (
     <div className="flex min-h-screen flex-col">
       <header className="border-b border-neutral-200 bg-white">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
-          <div className="flex items-center gap-6">
-            <Link href="/dashboard" className="text-lg font-semibold tracking-tight">
-              Rive
-            </Link>
-            <nav className="flex items-center gap-4 text-sm text-neutral-600">
-              <Link href="/dashboard" className="hover:text-neutral-900">
-                Aperçu
-              </Link>
-              <Link href="/dashboard/prospects" className="hover:text-neutral-900">
-                Prospects
-              </Link>
-              <Link href="/dashboard/mandates" className="hover:text-neutral-900">
-                Mandats
-              </Link>
-            </nav>
-          </div>
+        <div className="flex items-center justify-between px-4 py-3">
+          <Link href="/dashboard" className="text-lg font-semibold tracking-tight">
+            Rive
+          </Link>
           <div className="flex items-center gap-3 text-sm text-neutral-500">
             <Link href="/dashboard/settings" className="hover:text-neutral-900">
               Réglages
@@ -65,7 +71,27 @@ export default async function DashboardLayout({
           </div>
         </div>
       </header>
-      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">{children}</main>
+      <div className="mx-auto flex w-full max-w-7xl flex-1 gap-8 px-4 py-8">
+        <aside className="hidden w-48 shrink-0 flex-col gap-6 md:flex">
+          {NAV_GROUPS.map((group) => (
+            <div key={group.label} className="flex flex-col gap-1">
+              <span className="px-2 text-xs font-semibold uppercase tracking-wide text-neutral-400">
+                {group.label}
+              </span>
+              {group.links.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className="rounded-lg px-2 py-1.5 text-sm text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900"
+                >
+                  {link.label}
+                </Link>
+              ))}
+            </div>
+          ))}
+        </aside>
+        <main className="min-w-0 flex-1">{children}</main>
+      </div>
     </div>
   )
 }

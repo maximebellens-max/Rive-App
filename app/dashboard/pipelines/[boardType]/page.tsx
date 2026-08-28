@@ -1,15 +1,21 @@
+import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import NewLeadForm from './new-lead-form'
-import KanbanBoard from '../pipelines/kanban-board'
-import { leadPriorityScore } from '@/lib/rive/pipelines'
+import KanbanBoard from '../kanban-board'
+import { leadPriorityScore, BOARD_LABELS, type BoardType } from '@/lib/rive/pipelines'
 
-export default async function ProspectsPage() {
+const VALID: BoardType[] = ['vendeur', 'acheteur', 'investisseur']
+
+export default async function PipelineBoardPage({ params }: PageProps<'/dashboard/pipelines/[boardType]'>) {
+  const { boardType } = await params
+  if (!VALID.includes(boardType as BoardType)) notFound()
+  const bt = boardType as BoardType
+
   const supabase = await createClient()
 
   const { data: columns } = await supabase
     .from('pipeline_columns')
     .select('id, name, color')
-    .eq('board_type', 'prospects')
+    .eq('board_type', bt)
     .order('position', { ascending: true })
 
   const { data: leads } = await supabase
@@ -17,7 +23,7 @@ export default async function ProspectsPage() {
     .select(
       'id, name, category, phone, email, critere_lieu, critere_type, budget, financement, action_date, created_at, positions'
     )
-    .order('created_at', { ascending: false })
+    .eq('category', bt)
 
   const leadIds = (leads ?? []).map((l) => l.id)
   const { data: historyRows } = leadIds.length
@@ -44,7 +50,7 @@ export default async function ProspectsPage() {
     budget: l.budget,
     financement: l.financement,
     action_date: l.action_date,
-    columnId: (l.positions as Record<string, string>)?.prospects ?? null,
+    columnId: (l.positions as Record<string, string>)?.[bt] ?? null,
     score: leadPriorityScore({
       budget: l.budget,
       financement: l.financement,
@@ -59,15 +65,12 @@ export default async function ProspectsPage() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-xl font-semibold tracking-tight">Prospects</h1>
+        <h1 className="text-xl font-semibold tracking-tight">{BOARD_LABELS[bt]}</h1>
         <p className="mt-1 text-sm text-neutral-500">
-          {leads?.length ?? 0} prospect{(leads?.length ?? 0) > 1 ? 's' : ''}
+          {cards.length} prospect{cards.length > 1 ? 's' : ''}
         </p>
       </div>
-
-      <NewLeadForm />
-
-      <KanbanBoard boardType="prospects" columns={columns ?? []} cards={cards} />
+      <KanbanBoard boardType={bt} columns={columns ?? []} cards={cards} />
     </div>
   )
 }
