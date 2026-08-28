@@ -41,6 +41,9 @@ export default async function DashboardLayout({
               <Link href="/dashboard/prospects" className="hover:text-neutral-900">
                 Prospects
               </Link>
+              <Link href="/dashboard/mandates" className="hover:text-neutral-900">
+                Mandats
+              </Link>
             </nav>
           </div>
           <div className="flex items-center gap-3 text-sm text-neutral-500">

@@ -33,12 +33,15 @@ export default async function DashboardPage() {
           </p>
         </Link>
 
-        <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
+        <Link
+          href="/dashboard/mandates"
+          className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm transition hover:border-neutral-300"
+        >
           <p className="text-sm text-neutral-500">Mandats en cours</p>
           <p className="mt-2 text-3xl font-semibold tabular-nums">
             {mandatesCount ?? 0}
           </p>
-        </div>
+        </Link>
       </div>
     </div>
   )
