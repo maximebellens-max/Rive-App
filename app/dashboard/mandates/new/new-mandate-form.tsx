@@ -17,11 +17,12 @@ export default function NewMandateForm({ leads }: { leads: Lead[] }) {
         <div className="flex flex-col gap-1.5">
           <label className="text-sm font-medium text-neutral-700">Type de mandat</label>
           <select
-            name="type"
-            defaultValue="vente"
+            name="kind"
+            defaultValue="vente_exclusif"
             className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900"
           >
-            <option value="vente">Vente (bien à vendre)</option>
+            <option value="vente_exclusif">Vente — Exclusif</option>
+            <option value="vente_simple">Vente — Simple</option>
             <option value="recherche">Recherche (mandat acheteur)</option>
           </select>
         </div>

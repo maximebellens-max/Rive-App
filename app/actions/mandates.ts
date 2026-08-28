@@ -49,7 +49,10 @@ export async function createMandate(
   const { supabase, agencyId, userId } = await getAgencyId()
   if (!agencyId) return { error: 'Session expirée, reconnecte-toi.' }
 
-  const type = str(formData, 'type') || 'vente'
+  const kind = str(formData, 'kind') || 'vente_exclusif'
+  const type = kind === 'recherche' ? 'recherche' : 'vente'
+  const exclusivity = kind === 'vente_simple' ? 'simple' : kind === 'vente_exclusif' ? 'exclusif' : ''
+
   const address = str(formData, 'address')
   if (type === 'vente' && !address) {
     return { error: "L'adresse du bien est obligatoire pour un mandat de vente." }
@@ -71,7 +74,7 @@ export async function createMandate(
       price: num(formData, 'price'),
       remaining_loan: num(formData, 'remaining_loan'),
       signed_date: str(formData, 'signed_date') || null,
-      exclusivity: str(formData, 'exclusivity'),
+      exclusivity,
       duration_months: num(formData, 'duration_months'),
       tacit_renewal: formData.get('tacit_renewal') === 'on',
       renewal_notice_days: num(formData, 'renewal_notice_days') ?? 15,
