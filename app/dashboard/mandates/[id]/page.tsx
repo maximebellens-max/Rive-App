@@ -118,7 +118,12 @@ export default async function MandateDetailPage({ params }: PageProps<'/dashboar
       </div>
 
       {mandate.type === 'vente' && (
-        <EstimationSection mandateId={mandate.id} mandate={mandate} comparables={comparables ?? []} />
+        <EstimationSection
+          mandateId={mandate.id}
+          mandate={mandate}
+          comparables={comparables ?? []}
+          matchingBuyersCount={matchingBuyers.length}
+        />
       )}
     </div>
   )

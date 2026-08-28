@@ -3,6 +3,10 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { leadMatchesBien, type MatchLead, type MatchMandate } from '@/lib/rive/matching'
 import { formatEUR } from '@/lib/rive/mandates'
+import { RECONTACT_THRESHOLD_DAYS, daysAgo } from '@/lib/rive/today'
+import { generateBriefingBrief, generateRelanceBrief } from '@/lib/rive/ai-prompts'
+import { saveAIBriefing, saveAIRelanceDraft } from '@/app/actions/ai'
+import AIBriefPanel from '../../_components/ai-brief-panel'
 import LeadEditForm from './lead-edit-form'
 import HistorySection from './history-section'
 import DeleteLeadButton from './delete-lead-button'
@@ -29,9 +33,18 @@ export default async function ProspectDetailPage({ params }: PageProps<'/dashboa
 
   const { data: mandate } = await supabase
     .from('mandates')
-    .select('id, is_draft, type, address')
+    .select('id, is_draft, type, address, stage, sold_date')
     .eq('lead_id', id)
     .maybeSingle()
+
+  // Éligible à une relance si vendu depuis 300j+ et sans échange récent.
+  const lastHistoryDate = entries?.[0]?.entry_date ?? null
+  const recontactDays =
+    mandate?.stage === 'vendu' && mandate.sold_date && (daysAgo(mandate.sold_date) ?? 0) >= RECONTACT_THRESHOLD_DAYS
+      ? (!lastHistoryDate || (daysAgo(lastHistoryDate) ?? 999) >= RECONTACT_THRESHOLD_DAYS)
+        ? daysAgo(mandate.sold_date)
+        : null
+      : null
 
   let matchingBiens: { id: string; address: string | null; property_type: string | null; price: number | null }[] = []
   if (lead.category === 'acheteur') {
@@ -110,6 +123,22 @@ export default async function ProspectDetailPage({ params }: PageProps<'/dashboa
       </div>
 
       <MessageSection lead={lead} templates={templates ?? []} agentName={agentProfile?.full_name || ''} />
+
+      <AIBriefPanel
+        title="Assistant IA — briefing avant RDV"
+        prompt={generateBriefingBrief(lead, entries ?? [])}
+        initialValue={lead.ai_briefing}
+        onSave={saveAIBriefing.bind(null, lead.id)}
+      />
+
+      {recontactDays !== null && mandate && (
+        <AIBriefPanel
+          title="Assistant IA — message de relance"
+          prompt={generateRelanceBrief(lead.name, mandate.address, recontactDays)}
+          initialValue={lead.ai_relance_draft}
+          onSave={saveAIRelanceDraft.bind(null, lead.id)}
+        />
+      )}
 
       <HistorySection leadId={lead.id} entries={entries ?? []} />
     </div>

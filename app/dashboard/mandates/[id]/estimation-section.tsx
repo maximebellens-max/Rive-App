@@ -1,4 +1,7 @@
 import { addDvfComparable, removeDvfComparable } from '@/app/actions/mandates'
+import { saveAISummary } from '@/app/actions/ai'
+import { generateEstimationBrief } from '@/lib/rive/ai-prompts'
+import AIBriefPanel from '../../_components/ai-brief-panel'
 import {
   estimationEngine,
   feeForPrice,
@@ -12,7 +15,10 @@ import {
 type Comparable = { id: string; address: string; sale_date: string | null; surface: number | null; price: number | null }
 
 type Mandate = {
+  address: string
+  property_type: string
   surface: number | null
+  pieces: number | null
   condition: string
   dpe: string
   floor: number | null
@@ -21,6 +27,9 @@ type Mandate = {
   price: number | null
   remaining_loan: number | null
   estimated_rent: number | null
+  year_built: number | null
+  recent_works: string
+  ai_summary: string
 }
 
 const inputClass =
@@ -30,10 +39,12 @@ export default function EstimationSection({
   mandateId,
   mandate,
   comparables,
+  matchingBuyersCount = 0,
 }: {
   mandateId: string
   mandate: Mandate
   comparables: Comparable[]
+  matchingBuyersCount?: number
 }) {
   const addWithId = addDvfComparable.bind(null, mandateId)
 
@@ -165,6 +176,13 @@ export default function EstimationSection({
           </div>
         )}
       </div>
+
+      <AIBriefPanel
+        title="Assistant IA — avis de valeur"
+        prompt={generateEstimationBrief(mandate, comparables, estimation, matchingBuyersCount)}
+        initialValue={mandate.ai_summary}
+        onSave={saveAISummary.bind(null, mandateId)}
+      />
     </div>
   )
 }
