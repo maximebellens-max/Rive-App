@@ -8,6 +8,7 @@ import {
   exclusivityLabel,
   formatDate,
 } from '@/lib/rive/mandates'
+import { leadMatchesBien, bienIsActive, type MatchLead, type MatchMandate } from '@/lib/rive/matching'
 import MandateEditForm from './mandate-edit-form'
 import EstimationSection from './estimation-section'
 import PartiesSection from './parties-section'
@@ -36,6 +37,15 @@ export default async function MandateDetailPage({ params }: PageProps<'/dashboar
   const endDate = mandateEndDate(mandate.signed_date, mandate.duration_months)
   const noticeDate = mandateNoticeDate(mandate.signed_date, mandate.duration_months, mandate.renewal_notice_days)
   const active = mandateIsActive(mandate.stage)
+
+  let matchingBuyers: { id: string; name: string; budget: number | null }[] = []
+  if (mandate.type === 'vente' && bienIsActive(mandate as MatchMandate)) {
+    const { data: buyers } = await supabase
+      .from('leads')
+      .select('id, name, category, budget, critere_type, critere_lieu, surface_min, pieces_min')
+      .eq('category', 'acheteur')
+    matchingBuyers = (buyers ?? []).filter((l) => leadMatchesBien(l as MatchLead, mandate as MatchMandate))
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -78,6 +88,26 @@ export default async function MandateDetailPage({ params }: PageProps<'/dashboar
               </>
             )}
           </p>
+        </div>
+      )}
+
+      {matchingBuyers.length > 0 && (
+        <div className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm">
+          <h2 className="text-sm font-semibold text-neutral-900">
+            🤝 {matchingBuyers.length} acheteur{matchingBuyers.length > 1 ? 's' : ''} correspondant
+            {matchingBuyers.length > 1 ? 's' : ''}
+          </h2>
+          <div className="mt-3 flex flex-col gap-2">
+            {matchingBuyers.map((b) => (
+              <Link
+                key={b.id}
+                href={`/dashboard/prospects/${b.id}`}
+                className="flex items-center justify-between rounded-lg border border-neutral-200 px-3 py-2 text-sm hover:border-neutral-300 hover:bg-neutral-50"
+              >
+                <span className="font-medium text-neutral-900">{b.name}</span>
+              </Link>
+            ))}
+          </div>
         </div>
       )}
 

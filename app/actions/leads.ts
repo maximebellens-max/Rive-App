@@ -166,6 +166,28 @@ export async function addLeadHistoryEntry(leadId: string, formData: FormData) {
   revalidatePath(`/dashboard/prospects/${leadId}`)
 }
 
+// Ajout/modification rapide d'un rendez-vous depuis la vue Aujourd'hui —
+// réutilise simplement les champs action_label/action_date du lead (il n'y a
+// pas d'entité "rendez-vous" séparée, comme dans le prototype).
+export async function setLeadAppointment(formData: FormData) {
+  const { supabase, agencyId } = await getAgencyId()
+  if (!agencyId) return
+
+  const leadId = str(formData, 'lead_id')
+  if (!leadId) return
+
+  await supabase
+    .from('leads')
+    .update({
+      action_label: str(formData, 'action_label'),
+      action_date: str(formData, 'action_date') || null,
+    })
+    .eq('id', leadId)
+
+  revalidatePath('/dashboard')
+  revalidatePath(`/dashboard/prospects/${leadId}`)
+}
+
 export async function removeLeadHistoryEntry(leadId: string, entryId: string) {
   const { supabase, agencyId } = await getAgencyId()
   if (!agencyId) return

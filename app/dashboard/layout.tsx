@@ -6,7 +6,7 @@ import { logout } from '@/app/actions/auth'
 const NAV_GROUPS: { label: string; links: { href: string; label: string }[] }[] = [
   {
     label: 'Vue d’ensemble',
-    links: [{ href: '/dashboard', label: 'Aperçu' }, { href: '/dashboard/prospects', label: 'Prospects' }],
+    links: [{ href: '/dashboard', label: 'Aujourd’hui' }, { href: '/dashboard/prospects', label: 'Prospects' }],
   },
   {
     label: 'Pipelines',
