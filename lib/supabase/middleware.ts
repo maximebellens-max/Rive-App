@@ -36,7 +36,9 @@ export async function updateSession(request: NextRequest) {
 
   const path = request.nextUrl.pathname
   const isAuthRoute = path === '/login' || path === '/signup'
-  const isPublicRoute = path === '/' || isAuthRoute
+  // /auth/* (ex: /auth/confirm) doit rester accessible sans session : c'est justement
+  // la route qui crée la session après un clic sur le lien de confirmation par email.
+  const isPublicRoute = path === '/' || isAuthRoute || path.startsWith('/auth/')
 
   if (!user && !isPublicRoute) {
     const url = request.nextUrl.clone()
