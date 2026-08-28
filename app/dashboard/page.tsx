@@ -10,21 +10,20 @@ import MonthCalendar from './month-calendar'
 export default async function TodayPage() {
   const supabase = await createClient()
 
-  const { data: leads } = await supabase
-    .from('leads')
-    .select(
-      'id, name, category, action_label, action_date, budget, critere_type, critere_lieu, surface_min, pieces_min, created_at'
-    )
-
-  const { data: mandates } = await supabase
-    .from('mandates')
-    .select(
-      'id, type, stage, is_draft, lead_id, address, property_type, price, surface, pieces, signed_date, sold_date, duration_months, renewal_notice_days, diffusion, ad_date'
-    )
-
-  const { data: seen } = await supabase.from('seen_match_pairs').select('lead_id, mandate_id')
-
-  const { data: historyRows } = await supabase.from('lead_history_entries').select('lead_id, entry_date')
+  const [{ data: leads }, { data: mandates }, { data: seen }, { data: historyRows }] = await Promise.all([
+    supabase
+      .from('leads')
+      .select(
+        'id, name, category, action_label, action_date, budget, critere_type, critere_lieu, surface_min, pieces_min, created_at'
+      ),
+    supabase
+      .from('mandates')
+      .select(
+        'id, type, stage, is_draft, lead_id, address, property_type, price, surface, pieces, signed_date, sold_date, duration_months, renewal_notice_days, diffusion, ad_date'
+      ),
+    supabase.from('seen_match_pairs').select('lead_id, mandate_id'),
+    supabase.from('lead_history_entries').select('lead_id, entry_date'),
+  ])
 
   const leadsList = leads ?? []
   const mandatesList = mandates ?? []

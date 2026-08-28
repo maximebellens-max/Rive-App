@@ -1,45 +1,18 @@
 import { notFound } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { getAuthedProfile } from '@/lib/supabase/session'
 import KanbanBoard from '../kanban-board'
 import BoardHeader from '../board-header'
 import { leadPriorityScore, BOARD_LABELS, CATEGORY_BOARD_TYPES } from '@/lib/rive/pipelines'
 
+type BoardRow = { id: string; name: string; kind: string }
+
 export default async function PipelineBoardPage({ params }: PageProps<'/dashboard/pipelines/[boardType]'>) {
   const { boardType: bt } = await params
 
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) notFound()
-
-  const { data: profile } = await supabase.from('profiles').select('agency_id').eq('id', user.id).single()
-  if (!profile?.agency_id) notFound()
+  const { supabase, user, profile } = await getAuthedProfile()
+  if (!user || !profile?.agency_id) notFound()
 
   const isFixedCategoryBoard = CATEGORY_BOARD_TYPES.has(bt)
-
-  let boardName: string
-  let isCustom = false
-
-  if (isFixedCategoryBoard) {
-    boardName = BOARD_LABELS[bt]
-  } else {
-    const { data: board } = await supabase
-      .from('boards')
-      .select('id, name, kind')
-      .eq('id', bt)
-      .eq('agency_id', profile.agency_id)
-      .maybeSingle()
-    if (!board) notFound()
-    boardName = board.name
-    isCustom = board.kind === 'custom'
-  }
-
-  const { data: columns } = await supabase
-    .from('pipeline_columns')
-    .select('id, name, color, is_default')
-    .eq('board_type', bt)
-    .order('position', { ascending: true })
 
   // Les tableaux de catégorie n'affichent que les prospects de cette
   // catégorie. Les tableaux personnalisés sont une vue additionnelle sur
@@ -58,7 +31,26 @@ export default async function PipelineBoardPage({ params }: PageProps<'/dashboar
           'id, name, category, phone, email, critere_lieu, critere_type, budget, financement, action_date, created_at, positions'
         )
 
-  const { data: leadsRaw } = await leadsQuery
+  // Ces 3 requêtes ne dépendent que de bt/profile.agency_id (déjà connus) —
+  // elles partent en parallèle plutôt qu'à la suite les unes des autres.
+  const [{ data: board }, { data: columns }, { data: leadsRaw }] = await Promise.all([
+    isFixedCategoryBoard
+      ? Promise.resolve({ data: null as BoardRow | null })
+      : supabase.from('boards').select('id, name, kind').eq('id', bt).eq('agency_id', profile.agency_id).maybeSingle(),
+    supabase.from('pipeline_columns').select('id, name, color, is_default').eq('board_type', bt).order('position', { ascending: true }),
+    leadsQuery,
+  ])
+
+  let boardName: string
+  let isCustom = false
+
+  if (isFixedCategoryBoard) {
+    boardName = BOARD_LABELS[bt]
+  } else {
+    if (!board) notFound()
+    boardName = board.name
+    isCustom = board.kind === 'custom'
+  }
 
   const leads = isFixedCategoryBoard
     ? (leadsRaw ?? [])

@@ -6,18 +6,19 @@ import { leadPriorityScore } from '@/lib/rive/pipelines'
 export default async function ProspectsPage() {
   const supabase = await createClient()
 
-  const { data: columns } = await supabase
-    .from('pipeline_columns')
-    .select('id, name, color, is_default')
-    .eq('board_type', 'prospects')
-    .order('position', { ascending: true })
-
-  const { data: leads } = await supabase
-    .from('leads')
-    .select(
-      'id, name, category, phone, email, critere_lieu, critere_type, budget, financement, action_date, created_at, positions'
-    )
-    .order('created_at', { ascending: false })
+  const [{ data: columns }, { data: leads }] = await Promise.all([
+    supabase
+      .from('pipeline_columns')
+      .select('id, name, color, is_default')
+      .eq('board_type', 'prospects')
+      .order('position', { ascending: true }),
+    supabase
+      .from('leads')
+      .select(
+        'id, name, category, phone, email, critere_lieu, critere_type, budget, financement, action_date, created_at, positions'
+      )
+      .order('created_at', { ascending: false }),
+  ])
 
   const leadIds = (leads ?? []).map((l) => l.id)
   const { data: historyRows } = leadIds.length

@@ -22,33 +22,24 @@ export default async function MandateDetailPage({ params }: PageProps<'/dashboar
   const { id } = await params
   const supabase = await createClient()
 
-  const { data: mandate } = await supabase.from('mandates').select('*').eq('id', id).single()
+  // mandate/comparables/parties ne dépendent que de l'id de l'URL : partent
+  // tous les 3 en parallèle plutôt qu'à la suite les uns des autres.
+  const [{ data: mandate }, { data: comparables }, { data: parties }] = await Promise.all([
+    supabase.from('mandates').select('*').eq('id', id).single(),
+    supabase
+      .from('dvf_comparables')
+      .select('id, address, sale_date, surface, price')
+      .eq('mandate_id', id)
+      .order('sale_date', { ascending: false }),
+    supabase.from('mandate_parties').select('*').eq('mandate_id', id).order('position', { ascending: true }),
+  ])
   if (!mandate) notFound()
-
-  const { data: comparables } = await supabase
-    .from('dvf_comparables')
-    .select('id, address, sale_date, surface, price')
-    .eq('mandate_id', id)
-    .order('sale_date', { ascending: false })
-
-  const { data: parties } = await supabase
-    .from('mandate_parties')
-    .select('*')
-    .eq('mandate_id', id)
-    .order('position', { ascending: true })
 
   const endDate = mandateEndDate(mandate.signed_date, mandate.duration_months)
   const noticeDate = mandateNoticeDate(mandate.signed_date, mandate.duration_months, mandate.renewal_notice_days)
   const active = mandateIsActive(mandate.stage)
 
   let matchingBuyers: { id: string; name: string; budget: number | null }[] = []
-  if (mandate.type === 'vente' && bienIsActive(mandate as MatchMandate)) {
-    const { data: buyers } = await supabase
-      .from('leads')
-      .select('id, name, category, budget, critere_type, critere_lieu, surface_min, pieces_min')
-      .eq('category', 'acheteur')
-    matchingBuyers = (buyers ?? []).filter((l) => leadMatchesBien(l as MatchLead, mandate as MatchMandate))
-  }
 
   let visits: {
     id: string
@@ -70,6 +61,10 @@ export default async function MandateDetailPage({ params }: PageProps<'/dashboar
   let buyerOptions: { id: string; name: string }[] = []
 
   if (mandate.type === 'vente') {
+    // Une seule requête "acheteurs" (avec les colonnes de correspondance),
+    // réutilisée à la fois pour la liste déroulante (buyerOptions) et pour
+    // le calcul des acheteurs correspondants — au lieu de 2 requêtes quasi
+    // identiques comme avant.
     const [{ data: visitRows }, { data: offerRows }, { data: buyers }] = await Promise.all([
       supabase
         .from('mandate_visits')
@@ -81,7 +76,11 @@ export default async function MandateDetailPage({ params }: PageProps<'/dashboar
         .select('id, lead_id, buyer_name, amount, offer_date, status, leads ( name )')
         .eq('mandate_id', id)
         .order('offer_date', { ascending: false }),
-      supabase.from('leads').select('id, name').eq('category', 'acheteur').order('name', { ascending: true }),
+      supabase
+        .from('leads')
+        .select('id, name, category, budget, critere_type, critere_lieu, surface_min, pieces_min')
+        .eq('category', 'acheteur')
+        .order('name', { ascending: true }),
     ])
 
     visits = (visitRows ?? []).map((v) => ({
@@ -92,7 +91,11 @@ export default async function MandateDetailPage({ params }: PageProps<'/dashboar
       ...o,
       lead_name: (o.leads as unknown as { name: string } | null)?.name,
     }))
-    buyerOptions = buyers ?? []
+    buyerOptions = (buyers ?? []).map((b) => ({ id: b.id, name: b.name }))
+
+    if (bienIsActive(mandate as MatchMandate)) {
+      matchingBuyers = (buyers ?? []).filter((l) => leadMatchesBien(l as MatchLead, mandate as MatchMandate))
+    }
   }
 
   return (

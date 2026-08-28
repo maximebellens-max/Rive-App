@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
+import { getAuthedProfile } from '@/lib/supabase/session'
 import { leadMatchesBien, type MatchLead, type MatchMandate } from '@/lib/rive/matching'
 import { formatEUR } from '@/lib/rive/mandates'
 import { RECONTACT_THRESHOLD_DAYS, daysAgo } from '@/lib/rive/today'
@@ -20,22 +20,19 @@ const CATEGORY_LABEL: Record<string, string> = {
 
 export default async function ProspectDetailPage({ params }: PageProps<'/dashboard/prospects/[id]'>) {
   const { id } = await params
-  const supabase = await createClient()
+  // Réutilise l'utilisateur/profil déjà résolus par le layout (même requête,
+  // grâce à React.cache) au lieu de refaire un aller-retour getUser().
+  const { supabase, profile } = await getAuthedProfile()
 
-  const { data: lead } = await supabase.from('leads').select('*').eq('id', id).single()
+  // lead/entries/mandate/templates ne dépendent pas les uns des autres :
+  // partent tous en parallèle plutôt qu'à la suite.
+  const [{ data: lead }, { data: entries }, { data: mandate }, { data: templates }] = await Promise.all([
+    supabase.from('leads').select('*').eq('id', id).single(),
+    supabase.from('lead_history_entries').select('id, entry_date, text').eq('lead_id', id).order('entry_date', { ascending: false }),
+    supabase.from('mandates').select('id, is_draft, type, address, stage, sold_date').eq('lead_id', id).maybeSingle(),
+    supabase.from('message_templates').select('id, name, channel, subject, body').order('created_at', { ascending: true }),
+  ])
   if (!lead) notFound()
-
-  const { data: entries } = await supabase
-    .from('lead_history_entries')
-    .select('id, entry_date, text')
-    .eq('lead_id', id)
-    .order('entry_date', { ascending: false })
-
-  const { data: mandate } = await supabase
-    .from('mandates')
-    .select('id, is_draft, type, address, stage, sold_date')
-    .eq('lead_id', id)
-    .maybeSingle()
 
   // Éligible à une relance si vendu depuis 300j+ et sans échange récent.
   const lastHistoryDate = entries?.[0]?.entry_date ?? null
@@ -56,18 +53,6 @@ export default async function ProspectDetailPage({ params }: PageProps<'/dashboa
       .neq('stage', 'vendu')
     matchingBiens = (activeMandates ?? []).filter((m) => leadMatchesBien(lead as MatchLead, m as MatchMandate))
   }
-
-  const { data: templates } = await supabase
-    .from('message_templates')
-    .select('id, name, channel, subject, body')
-    .order('created_at', { ascending: true })
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  const { data: agentProfile } = user
-    ? await supabase.from('profiles').select('full_name').eq('id', user.id).single()
-    : { data: null }
 
   return (
     <div className="flex flex-col gap-6">
@@ -122,7 +107,7 @@ export default async function ProspectDetailPage({ params }: PageProps<'/dashboa
         <LeadEditForm lead={lead} />
       </div>
 
-      <MessageSection lead={lead} templates={templates ?? []} agentName={agentProfile?.full_name || ''} />
+      <MessageSection lead={lead} templates={templates ?? []} agentName={profile?.full_name || ''} />
 
       <AIBriefPanel
         title="Assistant IA — briefing avant RDV"

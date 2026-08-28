@@ -169,9 +169,14 @@ export async function deletePipelineColumn(columnId: string, boardType: BoardTyp
     .eq('agency_id', agencyId)
     .contains('positions', { [boardType]: columnId })
 
-  for (const lead of affected ?? []) {
-    const positions = { ...((lead.positions as Record<string, string>) ?? {}), [boardType]: fallbackId }
-    await supabase.from('leads').update({ positions }).eq('id', lead.id)
+  if (affected && affected.length > 0) {
+    // Un seul aller-retour pour tous les prospects concernés, au lieu d'un
+    // update par prospect.
+    const updates = affected.map((lead) => ({
+      id: lead.id,
+      positions: { ...((lead.positions as Record<string, string>) ?? {}), [boardType]: fallbackId },
+    }))
+    await supabase.from('leads').upsert(updates)
   }
 
   await supabase.from('pipeline_columns').delete().eq('id', columnId).eq('agency_id', agencyId)

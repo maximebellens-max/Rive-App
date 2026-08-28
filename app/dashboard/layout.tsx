@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { getAuthedProfile } from '@/lib/supabase/session'
 import { logout } from '@/app/actions/auth'
 import { createBoard } from '@/app/actions/boards'
 
@@ -43,21 +43,11 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode
 }) {
-  const supabase = await createClient()
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const { supabase, user, profile } = await getAuthedProfile()
 
   if (!user) {
     redirect('/login')
   }
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('agency_id, full_name, agencies ( name )')
-    .eq('id', user.id)
-    .single()
 
   const agencyName = (profile?.agencies as unknown as { name: string } | null)?.name
 

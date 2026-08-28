@@ -4,18 +4,19 @@ import { sectorStats } from '@/lib/rive/analytics'
 export default async function SectorsPage() {
   const supabase = await createClient()
 
-  const { data: mandates } = await supabase
-    .from('mandates')
-    .select('address')
-    .eq('type', 'vente')
-    .eq('is_draft', false)
-    .neq('stage', 'vendu')
-
-  const { data: leads } = await supabase
-    .from('leads')
-    .select('critere_lieu')
-    .in('category', ['acheteur', 'investisseur'])
-    .not('critere_lieu', 'eq', '')
+  const [{ data: mandates }, { data: leads }] = await Promise.all([
+    supabase
+      .from('mandates')
+      .select('address')
+      .eq('type', 'vente')
+      .eq('is_draft', false)
+      .neq('stage', 'vendu'),
+    supabase
+      .from('leads')
+      .select('critere_lieu')
+      .in('category', ['acheteur', 'investisseur'])
+      .not('critere_lieu', 'eq', ''),
+  ])
 
   const stats = sectorStats(mandates ?? [], leads ?? [])
 

@@ -5,9 +5,11 @@ import { sourcePerformance } from '@/lib/rive/analytics'
 export default async function PerformancePage() {
   const supabase = await createClient()
 
-  const { data: leads } = await supabase.from('leads').select('id, source')
-  const { data: mandates } = await supabase.from('mandates').select('lead_id, stage, is_draft')
-  const { data: commissions } = await supabase.from('commissions').select('amount, mandates ( lead_id )')
+  const [{ data: leads }, { data: mandates }, { data: commissions }] = await Promise.all([
+    supabase.from('leads').select('id, source'),
+    supabase.from('mandates').select('lead_id, stage, is_draft'),
+    supabase.from('commissions').select('amount, mandates ( lead_id )'),
+  ])
 
   const commissionsByLead = new Map<string, number>()
   for (const c of commissions ?? []) {
