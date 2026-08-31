@@ -1,0 +1,138 @@
+@import "tailwindcss";
+
+/* Polices auto-hébergées via les paquets npm @fontsource (importés dans
+   app/layout.tsx) plutôt que next/font/google : évite toute dépendance à
+   fonts.googleapis.com au build (bloqué dans certains environnements) et
+   au runtime (aucune requête externe). */
+@theme {
+  --font-sans: 'Manrope', ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-display: 'Archivo', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+/* Palette reprise du prototype (rive.html) : on remplace la valeur des
+   nuances neutral-* de Tailwind par la teinte sauge du prototype, plus les
+   tokens accent/good/warn/danger. Comme ce sont des utilitaires déjà
+   utilisés partout dans l'app (bg-neutral-50, text-neutral-900,
+   border-neutral-200, ...), ce seul bloc reskinne tout le site sans
+   toucher aux composants. */
+@theme {
+  --color-neutral-50: #F1F4F3;
+  --color-neutral-100: #E6ECEA;
+  --color-neutral-200: #DCE4E1;
+  --color-neutral-300: #D2DBD8;
+  --color-neutral-400: #B6C2BD;
+  --color-neutral-500: #8B978F;
+  --color-neutral-600: #56655F;
+  --color-neutral-700: #3D4A44;
+  --color-neutral-800: #26332D;
+  --color-neutral-900: #16231F;
+  --color-neutral-950: #0D1512;
+
+  --color-surface: #FFFFFF;
+
+  --color-accent: #1F5C55;
+  --color-accent-hover: #17453F;
+  --color-accent-ink: #FFFFFF;
+  --color-accent-soft: #DCEAE7;
+
+  --color-good: #3A7D44;
+  --color-good-soft: #E1EEE1;
+  --color-warn: #B9862A;
+  --color-warn-soft: #F3E7D1;
+  --color-danger: #B24A34;
+  --color-danger-hover: #98392A;
+  --color-danger-soft: #F3DFD8;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-pill: 999px;
+
+  --shadow-soft: 0 1px 2px rgba(22, 35, 31, 0.06), 0 4px 12px rgba(22, 35, 31, 0.06);
+  --shadow-hover: 0 2px 4px rgba(22, 35, 31, 0.08), 0 8px 20px rgba(22, 35, 31, 0.1);
+}
+
+/* Mode sombre : même logique que le prototype, on ne redéfinit que les
+   valeurs des tokens (jamais de couleur posée directement dans ce bloc),
+   pour que chaque composant qui consomme un token neutral, accent, good,
+   warn ou danger bascule automatiquement. Couvre le cas "système" (aucun
+   data-theme posé) ET le cas "choix explicite sombre" (data-theme="dark"). */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --color-neutral-50: #0D1512;
+    --color-neutral-100: #16231F;
+    --color-neutral-200: #1E2B26;
+    --color-neutral-300: #29372F;
+    --color-neutral-400: #3D4A44;
+    --color-neutral-500: #6C7A73;
+    --color-neutral-600: #8B978F;
+    --color-neutral-700: #B6C2BD;
+    --color-neutral-800: #DCE4E1;
+    --color-neutral-900: #F1F4F3;
+    --color-neutral-950: #FFFFFF;
+
+    --color-surface: #16231F;
+
+    --color-accent: #4FA396;
+    --color-accent-hover: #6BB5A9;
+    --color-accent-ink: #06120F;
+    --color-accent-soft: #163832;
+
+    --color-good: #6FBE7A;
+    --color-good-soft: #1B3220;
+    --color-warn: #E0AC55;
+    --color-warn-soft: #3A2C14;
+    --color-danger: #E08067;
+    --color-danger-hover: #EC9A83;
+    --color-danger-soft: #3A2016;
+  }
+}
+
+:root[data-theme="dark"] {
+  --color-neutral-50: #0D1512;
+  --color-neutral-100: #16231F;
+  --color-neutral-200: #1E2B26;
+  --color-neutral-300: #29372F;
+  --color-neutral-400: #3D4A44;
+  --color-neutral-500: #6C7A73;
+  --color-neutral-600: #8B978F;
+  --color-neutral-700: #B6C2BD;
+  --color-neutral-800: #DCE4E1;
+  --color-neutral-900: #F1F4F3;
+  --color-neutral-950: #FFFFFF;
+
+  --color-surface: #16231F;
+
+  --color-accent: #4FA396;
+  --color-accent-hover: #6BB5A9;
+  --color-accent-ink: #06120F;
+  --color-accent-soft: #163832;
+
+  --color-good: #6FBE7A;
+  --color-good-soft: #1B3220;
+  --color-warn: #E0AC55;
+  --color-warn-soft: #3A2C14;
+  --color-danger: #E08067;
+  --color-danger-hover: #EC9A83;
+  --color-danger-soft: #3A2016;
+}
+
+body {
+  background-color: var(--color-neutral-50);
+  color: var(--color-neutral-900);
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+/* Chiffres alignés (tableaux de perf, montants) : rendu net avec la mono. */
+.tabular-figures {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
