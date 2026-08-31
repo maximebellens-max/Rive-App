@@ -29,6 +29,8 @@
   --color-neutral-900: #16231F;
   --color-neutral-950: #0D1512;
 
+  --color-surface: #FFFFFF;
+
   --color-accent: #1F5C55;
   --color-accent-hover: #17453F;
   --color-accent-ink: #FFFFFF;
@@ -70,6 +72,8 @@
     --color-neutral-900: #F1F4F3;
     --color-neutral-950: #FFFFFF;
 
+    --color-surface: #16231F;
+
     --color-accent: #4FA396;
     --color-accent-hover: #6BB5A9;
     --color-accent-ink: #06120F;
@@ -97,6 +101,8 @@
   --color-neutral-800: #DCE4E1;
   --color-neutral-900: #F1F4F3;
   --color-neutral-950: #FFFFFF;
+
+  --color-surface: #16231F;
 
   --color-accent: #4FA396;
   --color-accent-hover: #6BB5A9;
