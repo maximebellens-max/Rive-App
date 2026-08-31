@@ -90,7 +90,7 @@ export default function EstimationSection({
         <h2 className="text-sm font-semibold text-neutral-900">Comparables DVF</h2>
         <p className="mt-1 text-xs text-neutral-500">
           Relève les transactions comparables sur{' '}
-          
+          <a
             href="https://app.dvf.etalab.gouv.fr/"
             target="_blank"
             rel="noreferrer"
