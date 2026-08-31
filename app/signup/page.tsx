@@ -27,7 +27,7 @@ export default async function SignupPage({ searchParams }: PageProps<'/signup'>)
               : "Crée l'espace de ton agence"}
           </p>
         </div>
-        <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
+        <div className="rounded-2xl border border-neutral-200 bg-surface p-6 shadow-sm">
           {inviteToken && !invite?.valid ? (
             <p className="rounded-lg bg-warn-soft px-4 py-3 text-sm text-warn">
               Ce lien d&apos;invitation est invalide ou a déjà été utilisé.

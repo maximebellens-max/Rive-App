@@ -133,7 +133,7 @@ export default async function MandateDetailPage({ params }: PageProps<'/dashboar
       </div>
 
       {active && endDate && (
-        <div className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm">
+        <div className="rounded-2xl border border-neutral-200 bg-surface p-5 shadow-sm">
           <h2 className="text-sm font-semibold text-neutral-900">Échéance du mandat</h2>
           <p className="mt-2 text-sm text-neutral-600">
             Le mandat se termine le <span className="font-medium">{formatDate(endDate)}</span>.
@@ -151,7 +151,7 @@ export default async function MandateDetailPage({ params }: PageProps<'/dashboar
       )}
 
       {matchingBuyers.length > 0 && (
-        <div className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm">
+        <div className="rounded-2xl border border-neutral-200 bg-surface p-5 shadow-sm">
           <h2 className="text-sm font-semibold text-neutral-900">
             🤝 {matchingBuyers.length} acheteur{matchingBuyers.length > 1 ? 's' : ''} correspondant
             {matchingBuyers.length > 1 ? 's' : ''}
@@ -172,7 +172,7 @@ export default async function MandateDetailPage({ params }: PageProps<'/dashboar
 
       <PartiesSection mandateId={mandate.id} parties={parties ?? []} />
 
-      <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
+      <div className="rounded-2xl border border-neutral-200 bg-surface p-6 shadow-sm">
         <MandateEditForm mandate={mandate} />
       </div>
 

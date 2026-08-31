@@ -185,7 +185,7 @@ function ColumnHeader({ column, boardType, count }: { column: PipelineColumn; bo
           aria-label="Changer la couleur"
         />
         {pickerOpen && (
-          <div className="absolute left-0 top-4 z-10 flex gap-1 rounded-lg border border-neutral-200 bg-white p-1.5 shadow-md">
+          <div className="absolute left-0 top-4 z-10 flex gap-1 rounded-lg border border-neutral-200 bg-surface p-1.5 shadow-md">
             {COLUMN_COLORS.map((c) => (
               <button
                 key={c}
@@ -277,7 +277,7 @@ function AddColumnForm({ boardType }: { boardType: BoardType }) {
         if (name) startTransition(() => addPipelineColumn(boardType, name))
         setOpen(false)
       }}
-      className="flex h-fit shrink-0 flex-col gap-2 rounded-2xl border border-neutral-200 bg-white p-3"
+      className="flex h-fit shrink-0 flex-col gap-2 rounded-2xl border border-neutral-200 bg-surface p-3"
     >
       <input
         name="name"
@@ -310,7 +310,7 @@ function QuickAddForm({ boardType, columnId }: { boardType: BoardType; columnId:
       <input
         name="name"
         placeholder="+ Ajouter un prospect…"
-        className="w-full rounded-lg border border-transparent bg-white px-2.5 py-1.5 text-sm outline-none placeholder:text-neutral-400 focus:border-neutral-300"
+        className="w-full rounded-lg border border-transparent bg-surface px-2.5 py-1.5 text-sm outline-none placeholder:text-neutral-400 focus:border-neutral-300"
       />
     </form>
   )
@@ -323,7 +323,7 @@ function CardItem({ card }: { card: PipelineCard }) {
       href={`/dashboard/prospects/${card.id}`}
       draggable
       onDragStart={(e) => e.dataTransfer.setData('text/plain', card.id)}
-      className="flex cursor-grab flex-col gap-1.5 rounded-xl border border-neutral-200 bg-white p-3 text-sm shadow-sm active:cursor-grabbing"
+      className="flex cursor-grab flex-col gap-1.5 rounded-xl border border-neutral-200 bg-surface p-3 text-sm shadow-sm active:cursor-grabbing"
     >
       <div className="flex items-start justify-between gap-2">
         <span className="font-medium text-neutral-900">{card.name}</span>

@@ -38,7 +38,7 @@ export default async function MandatesPage() {
   }))
 
   const table = (
-    <div className="overflow-x-auto rounded-2xl border border-neutral-200 bg-white shadow-sm">
+    <div className="overflow-x-auto rounded-2xl border border-neutral-200 bg-surface shadow-sm">
       <table className="w-full text-left text-sm">
           <thead className="border-b border-neutral-200 text-neutral-500">
             <tr>

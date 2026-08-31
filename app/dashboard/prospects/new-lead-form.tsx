@@ -20,7 +20,7 @@ export default function NewLeadForm() {
     <form
       ref={formRef}
       action={action}
-      className="grid grid-cols-1 gap-3 rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm sm:grid-cols-2"
+      className="grid grid-cols-1 gap-3 rounded-2xl border border-neutral-200 bg-surface p-5 shadow-sm sm:grid-cols-2"
     >
       <div className="sm:col-span-2">
         <h2 className="text-sm font-medium text-neutral-700">

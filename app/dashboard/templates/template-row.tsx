@@ -22,7 +22,7 @@ export default function TemplateRow({ template }: { template: Template }) {
           })
           setEditing(false)
         }}
-        className="flex flex-col gap-2 rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm"
+        className="flex flex-col gap-2 rounded-2xl border border-neutral-200 bg-surface p-4 shadow-sm"
       >
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           <input name="name" defaultValue={template.name} className={inputClass} required />
@@ -46,7 +46,7 @@ export default function TemplateRow({ template }: { template: Template }) {
   }
 
   return (
-    <div className="flex flex-col gap-2 rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm">
+    <div className="flex flex-col gap-2 rounded-2xl border border-neutral-200 bg-surface p-4 shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="font-medium text-neutral-900">

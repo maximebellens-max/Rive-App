@@ -28,14 +28,14 @@ export default async function PerformancePage() {
       </div>
 
       {!stats.length ? (
-        <div className="flex flex-col items-center gap-2 rounded-2xl border border-neutral-200 bg-white py-16 text-center shadow-sm">
+        <div className="flex flex-col items-center gap-2 rounded-2xl border border-neutral-200 bg-surface py-16 text-center shadow-sm">
           <h2 className="text-sm font-semibold text-neutral-900">Pas encore de données</h2>
           <p className="max-w-sm text-sm text-neutral-500">
             Renseigne la source de tes prospects pour voir apparaître les performances par canal.
           </p>
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-2xl border border-neutral-200 bg-white shadow-sm">
+        <div className="overflow-x-auto rounded-2xl border border-neutral-200 bg-surface shadow-sm">
           <table className="w-full text-left text-sm">
             <thead className="border-b border-neutral-200 text-neutral-500">
               <tr>

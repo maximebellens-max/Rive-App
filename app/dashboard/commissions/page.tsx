@@ -56,7 +56,7 @@ export default async function CommissionsPage() {
   })
 
   const table = (
-    <div className="overflow-x-auto rounded-2xl border border-neutral-200 bg-white shadow-sm">
+    <div className="overflow-x-auto rounded-2xl border border-neutral-200 bg-surface shadow-sm">
       <table className="w-full text-left text-sm">
         <thead className="border-b border-neutral-200 text-neutral-500">
           <tr>
@@ -114,7 +114,7 @@ export default async function CommissionsPage() {
         <StatTile label="Taux de conversion" value={`${conversion}%`} sub="vendeurs → mandats" />
       </div>
 
-      <div className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm">
+      <div className="rounded-2xl border border-neutral-200 bg-surface p-5 shadow-sm">
         <h2 className="text-sm font-semibold text-neutral-900">Mandats signés par mois</h2>
         <div className="mt-4 flex flex-col gap-2">
           {bars.map((b) => (
@@ -141,7 +141,7 @@ export default async function CommissionsPage() {
 
 function StatTile({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
-    <div className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm">
+    <div className="rounded-2xl border border-neutral-200 bg-surface p-4 shadow-sm">
       <p className="text-xs text-neutral-500">{label}</p>
       <p className="mt-1 text-xl font-semibold tabular-nums">{value}</p>
       {sub && <p className="mt-0.5 text-xs text-neutral-400">{sub}</p>}

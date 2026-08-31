@@ -105,7 +105,7 @@ export default function MonthCalendar({
           return (
             <div
               key={dateStr}
-              className={`flex min-h-24 flex-col gap-1 rounded-xl border bg-white p-1.5 ${
+              className={`flex min-h-24 flex-col gap-1 rounded-xl border bg-surface p-1.5 ${
                 isToday ? 'border-accent ring-1 ring-accent' : 'border-neutral-200'
               }`}
             >

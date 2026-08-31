@@ -73,7 +73,7 @@ export default async function ProspectDetailPage({ params }: PageProps<'/dashboa
       {mandate && (
         <Link
           href={`/dashboard/mandates/${mandate.id}`}
-          className="flex items-center justify-between rounded-2xl border border-neutral-200 bg-white p-4 text-sm shadow-sm hover:border-neutral-300"
+          className="flex items-center justify-between rounded-2xl border border-neutral-200 bg-surface p-4 text-sm shadow-sm hover:border-neutral-300"
         >
           <span>
             {mandate.is_draft ? '📋 Brouillon de mandat en préparation' : '📄 Mandat lié'}
@@ -84,7 +84,7 @@ export default async function ProspectDetailPage({ params }: PageProps<'/dashboa
       )}
 
       {lead.category === 'acheteur' && matchingBiens.length > 0 && (
-        <div className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm">
+        <div className="rounded-2xl border border-neutral-200 bg-surface p-5 shadow-sm">
           <h2 className="text-sm font-semibold text-neutral-900">
             🏠 {matchingBiens.length} bien{matchingBiens.length > 1 ? 's' : ''} correspondant{matchingBiens.length > 1 ? 's' : ''}
           </h2>
@@ -103,7 +103,7 @@ export default async function ProspectDetailPage({ params }: PageProps<'/dashboa
         </div>
       )}
 
-      <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
+      <div className="rounded-2xl border border-neutral-200 bg-surface p-6 shadow-sm">
         <LeadEditForm lead={lead} />
       </div>
 

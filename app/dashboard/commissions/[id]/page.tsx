@@ -36,7 +36,7 @@ export default async function CommissionDetailPage({ params }: PageProps<'/dashb
         <DeleteCommissionButton commissionId={commission.id} />
       </div>
 
-      <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
+      <div className="rounded-2xl border border-neutral-200 bg-surface p-6 shadow-sm">
         <CommissionEditForm
           commission={{ id: commission.id, amount: commission.amount, paid_date: commission.paid_date, notes: commission.notes }}
         />

@@ -19,7 +19,7 @@ export default function VisitsSection({
   const addWithId = addMandateVisit.bind(null, mandateId)
 
   return (
-    <div className="flex flex-col gap-4 rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm">
+    <div className="flex flex-col gap-4 rounded-2xl border border-neutral-200 bg-surface p-5 shadow-sm">
       <h2 className="text-sm font-semibold text-neutral-900">Visites</h2>
 
       <div className="flex flex-col gap-2">

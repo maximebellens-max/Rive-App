@@ -16,7 +16,7 @@ export default function TemplateForm() {
     <form
       ref={formRef}
       action={action}
-      className="flex flex-col gap-3 rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm"
+      className="flex flex-col gap-3 rounded-2xl border border-neutral-200 bg-surface p-5 shadow-sm"
     >
       <h2 className="text-sm font-medium text-neutral-700">Nouveau modèle</h2>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">

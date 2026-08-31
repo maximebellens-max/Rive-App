@@ -45,10 +45,10 @@ export default async function SettingsPage() {
           Ces informations servent à générer tes mandats.
         </p>
       </div>
-      <div className="max-w-2xl rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
+      <div className="max-w-2xl rounded-2xl border border-neutral-200 bg-surface p-6 shadow-sm">
         <AgencySettingsForm agency={agency} />
       </div>
-      <div className="max-w-2xl rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
+      <div className="max-w-2xl rounded-2xl border border-neutral-200 bg-surface p-6 shadow-sm">
         <TeamSection
           isOwner={profile.role === 'owner'}
           currentUserId={user.id}
@@ -56,7 +56,7 @@ export default async function SettingsPage() {
           invites={invites ?? []}
         />
       </div>
-      <div className="max-w-2xl rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
+      <div className="max-w-2xl rounded-2xl border border-neutral-200 bg-surface p-6 shadow-sm">
         <BackupSection isOwner={profile.role === 'owner'} />
       </div>
     </div>

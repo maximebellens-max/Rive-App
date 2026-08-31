@@ -19,7 +19,7 @@ export default function NewCommissionForm({ options }: { options: MandateOption[
     <form
       ref={formRef}
       action={action}
-      className="flex flex-wrap items-end gap-3 rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm"
+      className="flex flex-wrap items-end gap-3 rounded-2xl border border-neutral-200 bg-surface p-4 shadow-sm"
     >
       <div className="flex flex-col gap-1.5">
         <label className="text-sm font-medium text-neutral-700">Rattacher une commission à un mandat vendu</label>

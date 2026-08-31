@@ -21,7 +21,7 @@ export default function MessageSection({
 
   if (!templates.length) {
     return (
-      <div className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm">
+      <div className="rounded-2xl border border-neutral-200 bg-surface p-5 shadow-sm">
         <h2 className="text-sm font-semibold text-neutral-900">Message</h2>
         <p className="mt-2 text-sm text-neutral-500">
           Aucun modèle disponible.{' '}
@@ -61,7 +61,7 @@ export default function MessageSection({
   }
 
   return (
-    <div className="flex flex-col gap-3 rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm">
+    <div className="flex flex-col gap-3 rounded-2xl border border-neutral-200 bg-surface p-5 shadow-sm">
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold text-neutral-900">Message</h2>
         <Link href="/dashboard/templates" className="text-xs text-neutral-500 hover:underline">

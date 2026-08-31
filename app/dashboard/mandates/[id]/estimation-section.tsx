@@ -63,7 +63,7 @@ export default function EstimationSection({
   const yield_ = rentalYield(mandate.estimated_rent, mandate.price)
 
   return (
-    <div className="flex flex-col gap-6 rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
+    <div className="flex flex-col gap-6 rounded-2xl border border-neutral-200 bg-surface p-6 shadow-sm">
       <div>
         <h2 className="text-sm font-semibold text-neutral-900">Honoraires & net vendeur</h2>
         <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">

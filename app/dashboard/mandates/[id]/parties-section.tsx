@@ -22,7 +22,7 @@ export default function PartiesSection({ mandateId, parties }: { mandateId: stri
   const addWithId = addMandateParty.bind(null, mandateId)
 
   return (
-    <div className="flex flex-col gap-4 rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
+    <div className="flex flex-col gap-4 rounded-2xl border border-neutral-200 bg-surface p-6 shadow-sm">
       <div>
         <h2 className="text-sm font-semibold text-neutral-900">Mandant(s)</h2>
         <p className="mt-1 text-xs text-neutral-500">

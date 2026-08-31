@@ -62,7 +62,7 @@ export default async function DashboardLayout({
 
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="border-b border-neutral-200 bg-white">
+      <header className="border-b border-neutral-200 bg-surface">
         <div className="flex items-center justify-between px-4 py-3">
           <Link href="/dashboard" className="text-lg font-semibold tracking-tight">
             Rive

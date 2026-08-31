@@ -20,7 +20,7 @@ export default function PartnerRow({ partner }: { partner: Partner }) {
           startTransition(() => updatePartner(partner.id, formData))
           setEditing(false)
         }}
-        className="grid grid-cols-1 gap-2 rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm sm:grid-cols-2"
+        className="grid grid-cols-1 gap-2 rounded-2xl border border-neutral-200 bg-surface p-4 shadow-sm sm:grid-cols-2"
       >
         <input name="name" defaultValue={partner.name} className={inputClass} required />
         <select name="role" defaultValue={partner.role} className={inputClass}>
@@ -46,7 +46,7 @@ export default function PartnerRow({ partner }: { partner: Partner }) {
   }
 
   return (
-    <div className="flex items-center justify-between gap-3 rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm">
+    <div className="flex items-center justify-between gap-3 rounded-2xl border border-neutral-200 bg-surface p-4 shadow-sm">
       <div>
         <p className="font-medium text-neutral-900">{partner.name}</p>
         <p className="text-sm text-neutral-500">

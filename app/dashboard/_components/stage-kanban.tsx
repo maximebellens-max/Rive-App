@@ -50,7 +50,7 @@ export default function StageKanban({
                   href={card.href}
                   draggable
                   onDragStart={(e) => e.dataTransfer.setData('text/plain', card.id)}
-                  className="flex cursor-grab flex-col gap-1 rounded-xl border border-neutral-200 bg-white p-3 text-sm shadow-sm active:cursor-grabbing"
+                  className="flex cursor-grab flex-col gap-1 rounded-xl border border-neutral-200 bg-surface p-3 text-sm shadow-sm active:cursor-grabbing"
                 >
                   <span className="font-medium text-neutral-900">{card.title}</span>
                   {card.subtitle && <span className="text-xs text-neutral-500">{card.subtitle}</span>}

@@ -46,7 +46,7 @@ export default function AIBriefPanel({
   }
 
   return (
-    <div className="flex flex-col gap-3 rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm">
+    <div className="flex flex-col gap-3 rounded-2xl border border-neutral-200 bg-surface p-5 shadow-sm">
       <h2 className="text-sm font-semibold text-neutral-900">{title}</h2>
       <button
         type="button"

@@ -40,7 +40,7 @@ export default function TodayWidgets({
             type="button"
             onClick={() => setActive(i)}
             className={`flex flex-col gap-1 rounded-2xl border p-3 text-left transition ${
-              i === active ? 'border-accent bg-white shadow-sm' : 'border-neutral-200 bg-white hover:border-neutral-300'
+              i === active ? 'border-accent bg-surface shadow-sm' : 'border-neutral-200 bg-surface hover:border-neutral-300'
             }`}
           >
             <span className="text-lg">{w.icon}</span>
@@ -54,7 +54,7 @@ export default function TodayWidgets({
       </div>
 
       {current && (
-        <div className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm">
+        <div className="rounded-2xl border border-neutral-200 bg-surface p-5 shadow-sm">
           <h2 className="text-sm font-semibold text-neutral-900">
             {current.icon} {current.label}
           </h2>

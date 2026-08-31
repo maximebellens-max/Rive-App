@@ -19,7 +19,7 @@ export default function DiffusionSection({
   adDate: string | null
 }) {
   return (
-    <form action={updateDiffusion.bind(null, mandateId)} className="flex flex-col gap-4 rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm">
+    <form action={updateDiffusion.bind(null, mandateId)} className="flex flex-col gap-4 rounded-2xl border border-neutral-200 bg-surface p-5 shadow-sm">
       <h2 className="text-sm font-semibold text-neutral-900">Diffusion</h2>
       <p className="text-xs text-neutral-500">
         Renseigne la date de mise en ligne sur chaque portail — utile pour savoir quels biens n&apos;ont pas été

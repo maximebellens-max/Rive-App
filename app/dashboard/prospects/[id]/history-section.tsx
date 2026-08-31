@@ -10,7 +10,7 @@ export default function HistorySection({ leadId, entries }: { leadId: string; en
   const addWithId = addLeadHistoryEntry.bind(null, leadId)
 
   return (
-    <div className="flex flex-col gap-4 rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
+    <div className="flex flex-col gap-4 rounded-2xl border border-neutral-200 bg-surface p-6 shadow-sm">
       <h2 className="text-sm font-semibold text-neutral-900">Historique des échanges</h2>
 
       <div className="flex flex-col gap-2">

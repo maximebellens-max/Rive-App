@@ -19,7 +19,7 @@ export default async function LoginPage({ searchParams }: PageProps<'/login'>) {
             connecter, ou recrée un compte.
           </p>
         )}
-        <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
+        <div className="rounded-2xl border border-neutral-200 bg-surface p-6 shadow-sm">
           <LoginForm />
         </div>
       </div>
