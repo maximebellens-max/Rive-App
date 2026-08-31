@@ -2,6 +2,7 @@ import { addDvfComparable, removeDvfComparable } from '@/app/actions/mandates'
 import { saveAISummary } from '@/app/actions/ai'
 import { generateEstimationBrief } from '@/lib/rive/ai-prompts'
 import AIBriefPanel from '../../_components/ai-brief-panel'
+import DvfAutoSearch from './dvf-auto-search'
 import {
   estimationEngine,
   feeForPrice,
@@ -61,6 +62,7 @@ export default function EstimationSection({
   const fee = feeForPrice(mandate.price)
   const net = netVendeur(mandate.price, mandate.remaining_loan)
   const yield_ = rentalYield(mandate.estimated_rent, mandate.price)
+  const defaultPostalCode = mandate.address.match(/\b\d{5}\b/)?.[0] ?? ''
 
   return (
     <div className="flex flex-col gap-6 rounded-2xl border border-neutral-200 bg-surface p-6 shadow-sm">
@@ -88,7 +90,7 @@ export default function EstimationSection({
         <h2 className="text-sm font-semibold text-neutral-900">Comparables DVF</h2>
         <p className="mt-1 text-xs text-neutral-500">
           Relève les transactions comparables sur{' '}
-          <a
+          
             href="https://app.dvf.etalab.gouv.fr/"
             target="_blank"
             rel="noreferrer"
@@ -96,8 +98,16 @@ export default function EstimationSection({
           >
             l&apos;explorateur DVF
           </a>{' '}
-          et saisis-les ici.
+          et saisis-les ici, ou lance une recherche automatique ci-dessous.
         </p>
+
+        <div className="mt-4">
+          <DvfAutoSearch
+            mandateId={mandateId}
+            defaultPostalCode={defaultPostalCode}
+            defaultPropertyType={mandate.property_type}
+          />
+        </div>
 
         <div className="mt-4 flex flex-col gap-2">
           {comparables.map((c) => (
