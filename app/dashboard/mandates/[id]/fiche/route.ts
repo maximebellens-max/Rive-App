@@ -81,6 +81,7 @@ export async function GET(_request: Request, ctx: RouteContext<'/dashboard/manda
 
   <table>
     <tr><td>Surface</td><td>${mandate.surface ?? '—'} m²</td></tr>
+    ${mandate.land_surface ? `<tr><td>Terrain</td><td>${mandate.land_surface} m²</td></tr>` : ''}
     <tr><td>Pièces</td><td>${mandate.pieces ?? '—'}</td></tr>
     <tr><td>Étage</td><td>${mandate.floor ?? '—'} ${mandate.has_elevator ? '(avec ascenseur)' : ''}</td></tr>
     <tr><td>DPE</td><td>${esc(mandate.dpe || '—')}</td></tr>

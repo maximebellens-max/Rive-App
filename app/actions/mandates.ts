@@ -106,6 +106,7 @@ export async function createMandate(
       address,
       property_type: str(formData, 'property_type'),
       surface: num(formData, 'surface'),
+      land_surface: num(formData, 'land_surface'),
       pieces: num(formData, 'pieces'),
       price: num(formData, 'price'),
       remaining_loan: num(formData, 'remaining_loan'),
@@ -126,6 +127,8 @@ export async function createMandate(
       property_tax: num(formData, 'property_tax'),
       other_charges: num(formData, 'other_charges'),
       other_charges_note: str(formData, 'other_charges_note'),
+      manual_adjustment_pct: num(formData, 'manual_adjustment_pct'),
+      manual_adjustment_note: str(formData, 'manual_adjustment_note'),
       notes: str(formData, 'notes'),
       is_draft: isDraft,
     })
@@ -195,6 +198,7 @@ export async function updateMandate(
       address: str(formData, 'address'),
       property_type: str(formData, 'property_type'),
       surface: num(formData, 'surface'),
+      land_surface: num(formData, 'land_surface'),
       pieces: num(formData, 'pieces'),
       price: num(formData, 'price'),
       remaining_loan: num(formData, 'remaining_loan'),
@@ -216,6 +220,8 @@ export async function updateMandate(
       property_tax: num(formData, 'property_tax'),
       other_charges: num(formData, 'other_charges'),
       other_charges_note: str(formData, 'other_charges_note'),
+      manual_adjustment_pct: num(formData, 'manual_adjustment_pct'),
+      manual_adjustment_note: str(formData, 'manual_adjustment_note'),
       ai_summary: str(formData, 'ai_summary'),
       notes: str(formData, 'notes'),
       stage: newStage,
@@ -223,7 +229,7 @@ export async function updateMandate(
     })
     .eq('id', mandateId)
 
-  if (error) return { error: 'Impossible d’enregistrer les modifications.' }
+  if (error) return { error: 'Impossible d\u2019enregistrer les modifications.' }
 
   // Une commission est créée automatiquement la première fois qu'un mandat
   // passe à l'étape "Vendu" — inutile de la ressaisir à la main.
@@ -317,6 +323,7 @@ export async function addDvfComparable(mandateId: string, formData: FormData) {
     address: str(formData, 'address'),
     sale_date: str(formData, 'sale_date') || null,
     surface: num(formData, 'surface'),
+    land_surface: num(formData, 'land_surface'),
     price: num(formData, 'price'),
     is_active_listing: formData.get('is_active_listing') === 'on',
   })

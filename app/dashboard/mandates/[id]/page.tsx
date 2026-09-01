@@ -29,7 +29,7 @@ export default async function MandateDetailPage({ params }: PageProps<'/dashboar
     supabase.from('mandates').select('*').eq('id', id).single(),
     supabase
       .from('dvf_comparables')
-      .select('id, address, sale_date, surface, price, is_active_listing')
+      .select('id, address, sale_date, surface, land_surface, price, is_active_listing')
       .eq('mandate_id', id)
       .order('sale_date', { ascending: false }),
     supabase.from('mandate_parties').select('*').eq('mandate_id', id).order('position', { ascending: true }),

@@ -7,6 +7,7 @@ type MandateForBrief = {
   address: string
   property_type: string
   surface: number | null
+  land_surface: number | null
   pieces: number | null
   condition: string
   dpe: string
@@ -36,7 +37,7 @@ export function generateEstimationBrief(
     `Rédige un avis de valeur argumenté pour le bien suivant, à destination d'un propriétaire vendeur.`,
     ``,
     `Bien : ${mandate.property_type || 'non renseigné'}, ${mandate.address || 'adresse non renseignée'}`,
-    `Surface : ${mandate.surface ?? '—'} m² · Pièces : ${mandate.pieces ?? '—'}`,
+    `Surface : ${mandate.surface ?? '—'} m²${mandate.land_surface ? ` · Terrain : ${mandate.land_surface} m²` : ''} · Pièces : ${mandate.pieces ?? '—'}`,
     `État : ${conditionLabel} · DPE : ${mandate.dpe || '—'}`,
     `Étage : ${mandate.floor ?? '—'} ${mandate.has_elevator ? '(avec ascenseur)' : '(sans ascenseur)'}`,
     featuresList ? `Prestations : ${featuresList}` : null,

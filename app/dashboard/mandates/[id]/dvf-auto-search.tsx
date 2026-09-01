@@ -88,6 +88,9 @@ export default function DvfAutoSearch({
                 <div className="flex flex-1 flex-wrap gap-x-4 gap-y-1 text-neutral-700">
                   <span className="font-medium">{r.adresse || r.nomCommune || '—'}</span>
                   <span className="text-neutral-500">{r.surfaceReelleBati ? `${r.surfaceReelleBati} m²` : '—'}</span>
+                  {r.surfaceTerrain !== null && (
+                    <span className="text-neutral-500">Terrain {r.surfaceTerrain} m²</span>
+                  )}
                   <span className="text-neutral-500">{r.valeurFonciere ? formatEUR(r.valeurFonciere) : '—'}</span>
                   {pricePerM2 && <span className="text-neutral-400">{formatEUR(pricePerM2)}/m²</span>}
                   <span className="text-neutral-400">{formatDvfDate(r.dateMutation)}</span>
@@ -96,6 +99,7 @@ export default function DvfAutoSearch({
                   <input type="hidden" name="address" value={r.adresse || r.nomCommune} />
                   <input type="hidden" name="sale_date" value={r.dateMutation || ''} />
                   <input type="hidden" name="surface" value={r.surfaceReelleBati ?? ''} />
+                  <input type="hidden" name="land_surface" value={r.surfaceTerrain ?? ''} />
                   <input type="hidden" name="price" value={r.valeurFonciere ?? ''} />
                   <button
                     type="submit"

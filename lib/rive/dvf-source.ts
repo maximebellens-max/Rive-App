@@ -22,6 +22,7 @@ const GEO_DVF_BASE = 'https://files.data.gouv.fr/geo-dvf/latest/csv'
 const CACHE_SECONDS = 60 * 60 * 24
 
 export type DvfRow = {
+  idMutation: string
   dateMutation: string | null
   valeurFonciere: number | null
   adresse: string
@@ -29,7 +30,9 @@ export type DvfRow = {
   nomCommune: string
   typeLocal: string
   surfaceReelleBati: number | null
+  surfaceTerrain: number | null
   nombrePiecesPrincipales: number | null
+  nombreLots: number | null
 }
 
 export type DvfPropertyType = 'Appartement' | 'Maison' | 'Tous'
@@ -97,6 +100,7 @@ async function fetchDepartmentYear(department: string, year: number): Promise<Dv
   const header = parseCsvLine(lines[0])
   const idx = (name: string) => header.indexOf(name)
 
+  const iMutation = idx('id_mutation')
   const iDate = idx('date_mutation')
   const iValeur = idx('valeur_fonciere')
   const iNumero = idx('adresse_numero')
@@ -105,7 +109,9 @@ async function fetchDepartmentYear(department: string, year: number): Promise<Dv
   const iCommune = idx('nom_commune')
   const iType = idx('type_local')
   const iSurface = idx('surface_reelle_bati')
+  const iTerrain = idx('surface_terrain')
   const iPieces = idx('nombre_pieces_principales')
+  const iLots = idx('nombre_lots')
 
   // Si les colonnes attendues sont absentes, le format du fichier source a
   // changé : on s'arrête proprement plutôt que de renvoyer des données
@@ -120,6 +126,7 @@ async function fetchDepartmentYear(department: string, year: number): Promise<Dv
     const cp = f[iCp]?.trim()
     if (!cp) continue
     rows.push({
+      idMutation: iMutation !== -1 ? f[iMutation]?.trim() || '' : '',
       dateMutation: f[iDate]?.trim() || null,
       valeurFonciere: toNumber(f[iValeur]),
       adresse: [f[iNumero], f[iVoie]].filter(Boolean).join(' ').trim(),
@@ -127,7 +134,9 @@ async function fetchDepartmentYear(department: string, year: number): Promise<Dv
       nomCommune: f[iCommune]?.trim() || '',
       typeLocal: f[iType]?.trim() || '',
       surfaceReelleBati: toNumber(f[iSurface]),
+      surfaceTerrain: iTerrain !== -1 ? toNumber(f[iTerrain]) : null,
       nombrePiecesPrincipales: toNumber(f[iPieces]),
+      nombreLots: iLots !== -1 ? toNumber(f[iLots]) : null,
     })
   }
   return rows
@@ -171,10 +180,26 @@ export async function searchDvf({
     const rows = perYear[i]
     if (!rows.length) return
     yearsQueried.push(year)
+
+    // Le format geo-dvf répète une ligne par lot/local d'une même mutation
+    // (ex. un bien vendu avec une cave et un garage donne 3 lignes, toutes
+    // avec la même valeur_fonciere totale). Sans filtrage, ces lignes sont
+    // comptées comme autant de ventes distinctes au même prix — c'est ce qui
+    // fait apparaître "5 biens identiques vendus à la même adresse" et
+    // fausse complètement la moyenne. On ne garde donc que les mutations à
+    // un seul lot/local, seules fiables pour un prix au m² comparable.
+    const mutationCounts = new Map<string, number>()
+    for (const r of rows) {
+      if (!r.idMutation) continue
+      mutationCounts.set(r.idMutation, (mutationCounts.get(r.idMutation) || 0) + 1)
+    }
+
     for (const r of rows) {
       if (r.codePostal !== cp) continue
       if (!r.valeurFonciere || !r.surfaceReelleBati) continue
       if (propertyType !== 'Tous' && r.typeLocal !== propertyType) continue
+      if (r.idMutation && (mutationCounts.get(r.idMutation) || 0) > 1) continue
+      if (r.nombreLots !== null && r.nombreLots > 1) continue
       matches.push(r)
     }
   })

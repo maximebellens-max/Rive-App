@@ -102,7 +102,21 @@ export function mandateIsActive(stage: string | null | undefined): boolean {
 export type DvfComparable = { address: string; sale_date: string | null; surface: number | null; price: number | null }
 
 export function dvfComparableStats(list: DvfComparable[]) {
-  const priced = list.filter((c) => c.surface && c.price)
+  // Une même vente ne doit compter qu'une fois : deux entrées avec la même
+  // adresse, la même date, le même prix et la même surface sont
+  // très probablement la même transaction saisie deux fois (double ajout, ou
+  // plusieurs lots DVF d'une même mutation ajoutés séparément) — les compter
+  // chacune fausserait la moyenne exactement comme les doublons déjà
+  // filtrés à la source côté recherche DVF automatique.
+  const seen = new Set<string>()
+  const deduped = list.filter((c) => {
+    const key = `${c.address}|${c.sale_date}|${c.price}|${c.surface}`
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+
+  const priced = deduped.filter((c) => c.surface && c.price)
   if (!priced.length) return null
   const pricesPerM2 = priced.map((c) => (c.price as number) / (c.surface as number))
   const avg = pricesPerM2.reduce((a, b) => a + b, 0) / pricesPerM2.length
@@ -122,6 +136,8 @@ export type EstimationInput = {
   floor: number | null
   hasElevator: boolean | null
   features: Features | null
+  manualAdjustmentPct?: number | null
+  manualAdjustmentNote?: string | null
 }
 
 export type EstimationCoefficientLine = { label: string; coeff: number }
@@ -157,6 +173,16 @@ export function estimationEngine(input: EstimationInput): EstimationResult | nul
   if (featureCount > 0) {
     const coeff = Math.min(featureCount * 0.01, 0.06)
     lines.push({ label: `Prestations (${featureCount})`, coeff })
+  }
+
+  // Correction manuelle de l'agent (ex. terrain nettement plus grand que les
+  // comparables, vue dégagée, nuisance...) — vient s'ajouter aux coefficients
+  // automatiques plutôt que les remplacer, pour rester traçable.
+  if (input.manualAdjustmentPct) {
+    lines.push({
+      label: input.manualAdjustmentNote ? `Ajustement manuel : ${input.manualAdjustmentNote}` : 'Ajustement manuel',
+      coeff: input.manualAdjustmentPct / 100,
+    })
   }
 
   const totalCoeff = lines.reduce((sum, l) => sum + l.coeff, 0)

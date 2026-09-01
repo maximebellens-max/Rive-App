@@ -19,6 +19,7 @@ type Comparable = {
   address: string
   sale_date: string | null
   surface: number | null
+  land_surface: number | null
   price: number | null
   is_active_listing: boolean
 }
@@ -27,6 +28,7 @@ type Mandate = {
   address: string
   property_type: string
   surface: number | null
+  land_surface: number | null
   pieces: number | null
   condition: string
   dpe: string
@@ -38,16 +40,21 @@ type Mandate = {
   estimated_rent: number | null
   year_built: number | null
   recent_works: string
+  manual_adjustment_pct: number | null
+  manual_adjustment_note: string
   ai_summary: string
 }
 
 const inputClass =
   'rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-accent focus:ring-1 focus:ring-accent'
 
-// Aucun des trois portails n'a d'API publique : on ouvre simplement leur
-// rubrique vente dans un nouvel onglet, filtrée par type de bien quand le
-// portail le permet par l'URL. Le secteur, lui, se filtre à la main une fois
-// sur place (chaque portail a son propre système de zones/rayon).
+// Aucun des trois portails n'a d'API publique, et aucun n'expose un
+// paramètre d'URL fiable pour filtrer par secteur (chaque portail a son
+// propre système de zones/rayon, à choisir une fois sur place). Le type de
+// bien, en revanche, se reflète bien dans l'URL sur LeBonCoin et PAP —
+// vérifié en direct (real_estate_type:1 = Maison, :2 = Appartement sur
+// LeBonCoin). SeLoger n'a pas d'équivalent stable connu, on ouvre sa page
+// vente générale.
 function portalLinks(propertyType: string): { label: string; href: string }[] {
   const pap =
     propertyType === 'Appartement'
@@ -55,9 +62,13 @@ function portalLinks(propertyType: string): { label: string; href: string }[] {
       : propertyType === 'Maison'
         ? 'https://www.pap.fr/annonce/vente-maisons'
         : 'https://www.pap.fr/annonce/vente-immobiliere'
+  const leboncoinType = propertyType === 'Maison' ? '1' : propertyType === 'Appartement' ? '2' : '1,2'
   return [
     { label: 'SeLoger ↗', href: 'https://www.seloger.com/vente.html' },
-    { label: 'LeBonCoin ↗', href: 'https://www.leboncoin.fr/c/ventes_immobilieres' },
+    {
+      label: 'LeBonCoin ↗',
+      href: `https://www.leboncoin.fr/c/ventes_immobilieres/real_estate_type:${leboncoinType}`,
+    },
     { label: 'PAP ↗', href: pap },
   ]
 }
@@ -104,6 +115,8 @@ export default async function EstimationSection({
       floor: mandate.floor,
       hasElevator: mandate.has_elevator,
       features: mandate.features,
+      manualAdjustmentPct: mandate.manual_adjustment_pct,
+      manualAdjustmentNote: mandate.manual_adjustment_note,
     })
   }
 
@@ -118,6 +131,8 @@ export default async function EstimationSection({
     floor: mandate.floor,
     hasElevator: mandate.has_elevator,
     features: mandate.features,
+    manualAdjustmentPct: mandate.manual_adjustment_pct,
+    manualAdjustmentNote: mandate.manual_adjustment_note,
   })
 
   const fee = feeForPrice(mandate.price)
@@ -211,7 +226,7 @@ export default async function EstimationSection({
           </p>
           <div className="mt-2 flex flex-wrap gap-2">
             {links.map((l) => (
-              <a
+              
                 key={l.label}
                 href={l.href}
                 target="_blank"
@@ -240,6 +255,9 @@ export default async function EstimationSection({
                 </span>
                 <span className="font-medium">{c.address || '—'}</span>
                 <span className="text-neutral-500">{c.surface ? `${c.surface} m²` : '—'}</span>
+                {c.land_surface !== null && (
+                  <span className="text-neutral-500">Terrain {c.land_surface} m²</span>
+                )}
                 <span className="text-neutral-500">{c.price ? formatEUR(c.price) : '—'}</span>
                 <span className="text-neutral-400">{formatDate(c.sale_date)}</span>
               </div>
@@ -255,18 +273,19 @@ export default async function EstimationSection({
           )}
         </div>
 
-        <form action={addWithId} className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-5">
+        <form action={addWithId} className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-6">
           <input name="address" placeholder="Adresse" className={`${inputClass} col-span-2 sm:col-span-2`} />
           <input name="sale_date" type="date" className={inputClass} />
-          <input name="surface" type="number" step="0.1" placeholder="m²" className={inputClass} />
+          <input name="surface" type="number" step="0.1" placeholder="m² bâti" className={inputClass} />
+          <input name="land_surface" type="number" step="0.1" placeholder="m² terrain" className={inputClass} />
           <input name="price" type="number" placeholder="Prix €" className={inputClass} />
-          <label className="col-span-2 flex items-center gap-1.5 text-xs text-neutral-600 sm:col-span-5">
+          <label className="col-span-2 flex items-center gap-1.5 text-xs text-neutral-600 sm:col-span-6">
             <input type="checkbox" name="is_active_listing" className="h-4 w-4" />
             Bien actuellement en vente (pas encore vendu — prix demandé, pas prix DVF)
           </label>
           <button
             type="submit"
-            className="col-span-2 rounded-lg border border-neutral-300 px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100 sm:col-span-5 sm:w-fit"
+            className="col-span-2 rounded-lg border border-neutral-300 px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100 sm:col-span-6 sm:w-fit"
           >
             Ajouter le comparable
           </button>

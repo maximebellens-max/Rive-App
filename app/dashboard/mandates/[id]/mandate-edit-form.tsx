@@ -11,6 +11,7 @@ type Mandate = {
   address: string
   property_type: string
   surface: number | null
+  land_surface: number | null
   pieces: number | null
   price: number | null
   remaining_loan: number | null
@@ -32,6 +33,8 @@ type Mandate = {
   property_tax: number | null
   other_charges: number | null
   other_charges_note: string
+  manual_adjustment_pct: number | null
+  manual_adjustment_note: string
   notes: string
   stage: string
   is_draft: boolean
@@ -72,6 +75,17 @@ export default function MandateEditForm({ mandate }: { mandate: Mandate }) {
           <div className="flex flex-col gap-1.5">
             <label className={labelClass}>Surface (m²)</label>
             <input name="surface" type="number" step="0.1" defaultValue={mandate.surface ?? ''} className={inputClass} />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className={labelClass}>Surface du terrain (m²)</label>
+            <input
+              name="land_surface"
+              type="number"
+              step="0.1"
+              placeholder="Pour une maison"
+              defaultValue={mandate.land_surface ?? ''}
+              className={inputClass}
+            />
           </div>
           <div className="flex flex-col gap-1.5">
             <label className={labelClass}>Pièces</label>
@@ -163,6 +177,39 @@ export default function MandateEditForm({ mandate }: { mandate: Mandate }) {
               name="other_charges_note"
               placeholder="Copropriété, syndic…"
               defaultValue={mandate.other_charges_note}
+              className={inputClass}
+            />
+          </div>
+        </div>
+      </section>
+
+      <section className="flex flex-col gap-4 border-t border-neutral-100 pt-6">
+        <div>
+          <h2 className="text-sm font-semibold text-neutral-900">Ajustement de l&apos;estimation</h2>
+          <p className="mt-1 text-xs text-neutral-500">
+            Vient s&apos;ajouter aux coefficients automatiques (état, DPE, prestations…) — utile si le bien
+            diffère nettement des comparables sur un point qu&apos;ils ne couvrent pas (terrain plus grand,
+            vue, nuisance…). Exemple : +8 si le bien est neuf par rapport aux comparables du secteur.
+          </p>
+        </div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <div className="flex flex-col gap-1.5">
+            <label className={labelClass}>Ajustement (%)</label>
+            <input
+              name="manual_adjustment_pct"
+              type="number"
+              step="0.5"
+              placeholder="ex. 8 ou -5"
+              defaultValue={mandate.manual_adjustment_pct ?? ''}
+              className={inputClass}
+            />
+          </div>
+          <div className="flex flex-col gap-1.5 sm:col-span-2">
+            <label className={labelClass}>Motif</label>
+            <input
+              name="manual_adjustment_note"
+              placeholder="ex. Terrain nettement plus grand que les comparables"
+              defaultValue={mandate.manual_adjustment_note}
               className={inputClass}
             />
           </div>
