@@ -18,6 +18,16 @@ export const DPE_LEVELS = [
   { value: 'G', coeff: -0.08 },
 ] as const
 
+export const PROPERTY_TYPES = [
+  'Appartement',
+  'Maison',
+  'Terrain',
+  'Immeuble',
+  'Local commercial',
+  'Parking / Box',
+  'Autre',
+] as const
+
 export const FEATURE_KEYS = [
   { key: 'balcon', label: 'Balcon' },
   { key: 'terrasse', label: 'Terrasse' },

@@ -124,7 +124,7 @@ export default async function MandateDetailPage({ params }: PageProps<'/dashboar
         </div>
         <div className="flex items-center gap-2">
           {mandate.type === 'vente' && (
-            
+            <a
               href={`/dashboard/mandates/${mandate.id}/fiche`}
               className="rounded-lg border border-neutral-300 px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100"
             >

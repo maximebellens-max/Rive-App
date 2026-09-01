@@ -211,7 +211,7 @@ export default async function EstimationSection({
           </p>
           <div className="mt-2 flex flex-wrap gap-2">
             {links.map((l) => (
-              
+              <a
                 key={l.label}
                 href={l.href}
                 target="_blank"
