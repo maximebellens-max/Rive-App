@@ -1,8 +1,9 @@
 'use client'
 
-import { useActionState } from 'react'
+import { useActionState, useState } from 'react'
 import { updateMandate, type MandateFormState } from '@/app/actions/mandates'
 import { CONDITION_LEVELS, DPE_LEVELS, FEATURE_KEYS } from '@/lib/rive/mandates'
+import AddressAutocomplete from '../../_components/address-autocomplete'
 
 type Mandate = {
   id: string
@@ -41,6 +42,7 @@ export default function MandateEditForm({ mandate }: { mandate: Mandate }) {
     updateWithId,
     undefined
   )
+  const [address, setAddress] = useState(mandate.address)
 
   return (
     <form action={action} className="flex flex-col gap-8">
@@ -49,7 +51,7 @@ export default function MandateEditForm({ mandate }: { mandate: Mandate }) {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="flex flex-col gap-1.5 sm:col-span-2">
             <label className={labelClass}>Adresse</label>
-            <input name="address" defaultValue={mandate.address} className={inputClass} />
+            <AddressAutocomplete name="address" value={address} onChange={setAddress} className={inputClass} />
           </div>
           <div className="flex flex-col gap-1.5">
             <label className={labelClass}>Type de bien</label>

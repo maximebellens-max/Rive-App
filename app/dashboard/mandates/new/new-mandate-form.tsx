@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from 'react'
 import { createMandate, type MandateFormState } from '@/app/actions/mandates'
+import AddressAutocomplete from '../../_components/address-autocomplete'
 
 type Lead = {
   id: string
@@ -41,15 +42,21 @@ export default function NewMandateForm({ leads, draft = false }: { leads: Lead[]
   return (
     <form action={action} className="flex flex-col gap-5">
       {draft && <input type="hidden" name="is_draft" value="true" />}
+      {/* Au stade de l'estimation, l'exclusivité n'est pas encore négociée
+          avec le client — ce choix se fait plus tard, à la signature, depuis
+          la fiche du mandat. On force donc un mandat de vente par défaut. */}
+      {draft && <input type="hidden" name="kind" value="vente" />}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium text-neutral-700">Type de mandat</label>
-          <select name="kind" defaultValue="vente_exclusif" className={inputClass}>
-            <option value="vente_exclusif">Vente — Exclusif</option>
-            <option value="vente_simple">Vente — Simple</option>
-            <option value="recherche">Recherche (mandat acheteur)</option>
-          </select>
-        </div>
+        {!draft && (
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium text-neutral-700">Type de mandat</label>
+            <select name="kind" defaultValue="vente_exclusif" className={inputClass}>
+              <option value="vente_exclusif">Vente — Exclusif</option>
+              <option value="vente_simple">Vente — Simple</option>
+              <option value="recherche">Recherche (mandat acheteur)</option>
+            </select>
+          </div>
+        )}
 
         <div className="flex flex-col gap-1.5">
           <label className="text-sm font-medium text-neutral-700">Client lié</label>
@@ -75,13 +82,16 @@ export default function NewMandateForm({ leads, draft = false }: { leads: Lead[]
 
         <div className="flex flex-col gap-1.5 sm:col-span-2">
           <label className="text-sm font-medium text-neutral-700">Adresse du bien</label>
-          <input
+          <AddressAutocomplete
             name="address"
-            placeholder="12 rue de la Paix, Annemasse"
             value={address}
-            onChange={(e) => setAddress(e.target.value)}
+            onChange={setAddress}
+            placeholder="12 rue de la Paix, Annemasse"
             className={inputClass}
           />
+          <p className="text-xs text-neutral-400">
+            Commence à taper, les suggestions incluent le code postal — utile pour la recherche DVF automatique.
+          </p>
         </div>
 
         <div className="flex flex-col gap-1.5">
