@@ -16,7 +16,7 @@ type Lead = {
 const inputClass =
   'rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-accent focus:ring-1 focus:ring-accent'
 
-export default function NewMandateForm({ leads }: { leads: Lead[] }) {
+export default function NewMandateForm({ leads, draft = false }: { leads: Lead[]; draft?: boolean }) {
   const [state, action, pending] = useActionState<MandateFormState, FormData>(
     createMandate,
     undefined
@@ -40,6 +40,7 @@ export default function NewMandateForm({ leads }: { leads: Lead[] }) {
 
   return (
     <form action={action} className="flex flex-col gap-5">
+      {draft && <input type="hidden" name="is_draft" value="true" />}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-1.5">
           <label className="text-sm font-medium text-neutral-700">Type de mandat</label>
@@ -130,12 +131,12 @@ export default function NewMandateForm({ leads }: { leads: Lead[] }) {
         disabled={pending}
         className="w-fit rounded-lg bg-accent px-5 py-2.5 text-sm font-medium text-white transition hover:bg-accent-hover disabled:opacity-60"
       >
-        {pending ? 'Création…' : 'Créer le mandat'}
+        {pending ? 'Création…' : draft ? "Démarrer l'estimation" : 'Créer le mandat'}
       </button>
       <p className="text-xs text-neutral-400">
-        Si un client est lié, ses nom, téléphone et email seront repris automatiquement comme mandant sur le
-        mandat. Les autres champs (exclusivité, comparables, estimation…) se renseignent depuis la fiche du
-        mandat.
+        {draft
+          ? "Ce brouillon n'engage à rien : tu retrouveras les comparables DVF et le moteur d'estimation sur sa fiche, et tu pourras le transformer en mandat signé plus tard."
+          : 'Si un client est lié, ses nom, téléphone et email seront repris automatiquement comme mandant sur le mandat. Les autres champs (exclusivité, comparables, estimation…) se renseignent depuis la fiche du mandat.'}
       </p>
     </form>
   )

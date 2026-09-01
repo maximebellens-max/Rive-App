@@ -25,6 +25,7 @@ const NAV_GROUPS: { label: string; links: { href: string; label: string }[] }[] 
   {
     label: 'Gestion',
     links: [
+      { href: '/dashboard/estimations', label: 'Estimations' },
       { href: '/dashboard/mandates', label: 'Mandats' },
       { href: '/dashboard/commissions', label: 'Commissions' },
     ],
