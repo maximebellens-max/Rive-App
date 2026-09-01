@@ -3,6 +3,7 @@ import { saveAISummary } from '@/app/actions/ai'
 import { generateEstimationBrief } from '@/lib/rive/ai-prompts'
 import AIBriefPanel from '../../_components/ai-brief-panel'
 import DvfAutoSearch from './dvf-auto-search'
+import { searchDvf, type DvfPropertyType } from '@/lib/rive/dvf-source'
 import {
   estimationEngine,
   feeForPrice,
@@ -13,7 +14,14 @@ import {
   type DvfComparable,
 } from '@/lib/rive/mandates'
 
-type Comparable = { id: string; address: string; sale_date: string | null; surface: number | null; price: number | null }
+type Comparable = {
+  id: string
+  address: string
+  sale_date: string | null
+  surface: number | null
+  price: number | null
+  is_active_listing: boolean
+}
 
 type Mandate = {
   address: string
@@ -36,7 +44,25 @@ type Mandate = {
 const inputClass =
   'rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-accent focus:ring-1 focus:ring-accent'
 
-export default function EstimationSection({
+// Aucun des trois portails n'a d'API publique : on ouvre simplement leur
+// rubrique vente dans un nouvel onglet, filtrée par type de bien quand le
+// portail le permet par l'URL. Le secteur, lui, se filtre à la main une fois
+// sur place (chaque portail a son propre système de zones/rayon).
+function portalLinks(propertyType: string): { label: string; href: string }[] {
+  const pap =
+    propertyType === 'Appartement'
+      ? 'https://www.pap.fr/annonce/vente-appartements'
+      : propertyType === 'Maison'
+        ? 'https://www.pap.fr/annonce/vente-maisons'
+        : 'https://www.pap.fr/annonce/vente-immobiliere'
+  return [
+    { label: 'SeLoger ↗', href: 'https://www.seloger.com/vente.html' },
+    { label: 'LeBonCoin ↗', href: 'https://www.leboncoin.fr/c/ventes_immobilieres' },
+    { label: 'PAP ↗', href: pap },
+  ]
+}
+
+export default async function EstimationSection({
   mandateId,
   mandate,
   comparables,
@@ -48,7 +74,42 @@ export default function EstimationSection({
   matchingBuyersCount?: number
 }) {
   const addWithId = addDvfComparable.bind(null, mandateId)
+  const defaultPostalCode = mandate.address.match(/\b\d{5}\b/)?.[0] ?? ''
 
+  // Fourchette automatique : dès que la surface est connue, on interroge le
+  // secteur (toutes les ventes DVF du code postal) pour sortir une base de
+  // prix/m² sans attendre qu'un seul comparable soit ajouté à la main —
+  // l'étape "caractéristiques + charges → fourchette" attendue avant même de
+  // passer à la comparaison ciblée.
+  let sectorEstimation: ReturnType<typeof estimationEngine> = null
+  let sectorCount = 0
+  if (defaultPostalCode && mandate.surface) {
+    const sectorType: DvfPropertyType =
+      mandate.property_type === 'Maison' || mandate.property_type === 'Appartement' ? mandate.property_type : 'Tous'
+    const { rows } = await searchDvf({ postalCode: defaultPostalCode, propertyType: sectorType, maxResults: 300 })
+    sectorCount = rows.length
+    const sectorComparables: DvfComparable[] = rows
+      .filter((r) => r.valeurFonciere && r.surfaceReelleBati)
+      .map((r) => ({
+        address: r.adresse || r.nomCommune,
+        sale_date: r.dateMutation,
+        surface: r.surfaceReelleBati,
+        price: r.valeurFonciere,
+      }))
+    sectorEstimation = estimationEngine({
+      dvfComparables: sectorComparables,
+      surface: mandate.surface,
+      condition: mandate.condition,
+      dpe: mandate.dpe,
+      floor: mandate.floor,
+      hasElevator: mandate.has_elevator,
+      features: mandate.features,
+    })
+  }
+
+  // Estimation par comparaison : la même mécanique, mais sur la sélection
+  // ciblée de biens (vendus DVF ou en vente actuellement) que l'agent a
+  // choisi d'ajouter ci-dessous — plus fine que la moyenne brute du secteur.
   const estimation = estimationEngine({
     dvfComparables: comparables as DvfComparable[],
     surface: mandate.surface,
@@ -62,43 +123,76 @@ export default function EstimationSection({
   const fee = feeForPrice(mandate.price)
   const net = netVendeur(mandate.price, mandate.remaining_loan)
   const yield_ = rentalYield(mandate.estimated_rent, mandate.price)
-  const defaultPostalCode = mandate.address.match(/\b\d{5}\b/)?.[0] ?? ''
+  const links = portalLinks(mandate.property_type)
 
   return (
     <div className="flex flex-col gap-6 rounded-2xl border border-neutral-200 bg-surface p-6 shadow-sm">
-      <div>
-        <h2 className="text-sm font-semibold text-neutral-900">Honoraires & net vendeur</h2>
-        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <div className="rounded-lg bg-neutral-50 px-4 py-3">
-            <p className="text-xs text-neutral-500">Honoraires estimés</p>
-            <p className="mt-1 text-lg font-semibold tabular-nums">{formatEUR(fee)}</p>
-          </div>
-          <div className="rounded-lg bg-neutral-50 px-4 py-3">
-            <p className="text-xs text-neutral-500">Net vendeur</p>
-            <p className="mt-1 text-lg font-semibold tabular-nums">{net === null ? '—' : formatEUR(net)}</p>
-          </div>
-          {yield_ !== null && (
+      {mandate.price !== null && (
+        <div>
+          <h2 className="text-sm font-semibold text-neutral-900">Honoraires & net vendeur</h2>
+          <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
             <div className="rounded-lg bg-neutral-50 px-4 py-3">
-              <p className="text-xs text-neutral-500">Rendement locatif brut</p>
-              <p className="mt-1 text-lg font-semibold tabular-nums">{yield_}%</p>
+              <p className="text-xs text-neutral-500">Honoraires estimés</p>
+              <p className="mt-1 text-lg font-semibold tabular-nums">{formatEUR(fee)}</p>
             </div>
-          )}
+            <div className="rounded-lg bg-neutral-50 px-4 py-3">
+              <p className="text-xs text-neutral-500">Net vendeur</p>
+              <p className="mt-1 text-lg font-semibold tabular-nums">{net === null ? '—' : formatEUR(net)}</p>
+            </div>
+            {yield_ !== null && (
+              <div className="rounded-lg bg-neutral-50 px-4 py-3">
+                <p className="text-xs text-neutral-500">Rendement locatif brut</p>
+                <p className="mt-1 text-lg font-semibold tabular-nums">{yield_}%</p>
+              </div>
+            )}
+          </div>
         </div>
+      )}
+
+      <div className={mandate.price !== null ? 'border-t border-neutral-100 pt-6' : ''}>
+        <h2 className="text-sm font-semibold text-neutral-900">Fourchette automatique (secteur)</h2>
+        <p className="mt-1 text-xs text-neutral-500">
+          Calculée à partir des ventes DVF du secteur ({defaultPostalCode || 'code postal à renseigner'}) et des
+          caractéristiques du bien — sans rien ajouter à la main.
+        </p>
+
+        {!mandate.surface ? (
+          <p className="mt-3 text-sm text-neutral-400">
+            Renseigne la surface du bien ci-dessus pour calculer une fourchette.
+          </p>
+        ) : !defaultPostalCode ? (
+          <p className="mt-3 text-sm text-neutral-400">
+            Renseigne une adresse avec code postal pour identifier le secteur.
+          </p>
+        ) : !sectorEstimation ? (
+          <p className="mt-3 text-sm text-neutral-400">Aucune vente DVF trouvée sur ce secteur pour l&apos;instant.</p>
+        ) : (
+          <div className="mt-3 flex flex-col gap-3">
+            <p className="text-sm text-neutral-600">
+              Base secteur : {formatEUR(sectorEstimation.baseM2)}/m² sur {sectorCount} vente
+              {sectorCount > 1 ? 's' : ''} DVF
+            </p>
+            <div className="rounded-xl bg-accent-soft px-5 py-4">
+              <p className="text-xs text-neutral-500">Fourchette automatique</p>
+              <p className="mt-1 text-2xl font-semibold tabular-nums text-neutral-900">
+                {formatEUR(sectorEstimation.low)} — {formatEUR(sectorEstimation.high)}
+              </p>
+            </div>
+            <p className="text-xs text-neutral-400">
+              À affiner ci-dessous par comparaison avec des biens précis, vendus ou actuellement en vente.
+            </p>
+          </div>
+        )}
       </div>
 
       <div className="border-t border-neutral-100 pt-6">
-        <h2 className="text-sm font-semibold text-neutral-900">Comparables DVF</h2>
+        <h2 className="text-sm font-semibold text-neutral-900">Comparaison — biens vendus & biens en vente</h2>
         <p className="mt-1 text-xs text-neutral-500">
-          Relève les transactions comparables sur{' '}
-          <a
-            href="https://app.dvf.etalab.gouv.fr/"
-            target="_blank"
-            rel="noreferrer"
-            className="underline"
-          >
+          Relève des transactions comparables sur{' '}
+          <a href="https://app.dvf.etalab.gouv.fr/" target="_blank" rel="noreferrer" className="underline">
             l&apos;explorateur DVF
           </a>{' '}
-          et saisis-les ici, ou lance une recherche automatique ci-dessous.
+          ou lance une recherche automatique ci-dessous.
         </p>
 
         <div className="mt-4">
@@ -109,13 +203,41 @@ export default function EstimationSection({
           />
         </div>
 
+        <div className="mt-4 rounded-xl border border-neutral-200 bg-neutral-50 p-4">
+          <p className="text-xs font-medium text-neutral-700">Biens actuellement en vente</p>
+          <p className="mt-1 text-xs text-neutral-500">
+            Pas d&apos;API publique côté portails (contrairement au DVF) : ouvre-les, repère un bien comparable
+            dans le secteur, puis ajoute-le ci-dessous.
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {links.map((l) => (
+              
+                key={l.label}
+                href={l.href}
+                target="_blank"
+                rel="noreferrer"
+                className="rounded-lg border border-neutral-300 bg-surface px-3 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-100"
+              >
+                {l.label}
+              </a>
+            ))}
+          </div>
+        </div>
+
         <div className="mt-4 flex flex-col gap-2">
           {comparables.map((c) => (
             <div
               key={c.id}
               className="flex items-center justify-between gap-3 rounded-lg border border-neutral-200 px-3 py-2 text-sm"
             >
-              <div className="flex flex-1 flex-wrap gap-x-4 gap-y-1 text-neutral-700">
+              <div className="flex flex-1 flex-wrap items-center gap-x-4 gap-y-1 text-neutral-700">
+                <span
+                  className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                    c.is_active_listing ? 'bg-warn-soft text-warn' : 'bg-good-soft text-good'
+                  }`}
+                >
+                  {c.is_active_listing ? 'En vente' : 'Vendu'}
+                </span>
                 <span className="font-medium">{c.address || '—'}</span>
                 <span className="text-neutral-500">{c.surface ? `${c.surface} m²` : '—'}</span>
                 <span className="text-neutral-500">{c.price ? formatEUR(c.price) : '—'}</span>
@@ -137,9 +259,11 @@ export default function EstimationSection({
           <input name="address" placeholder="Adresse" className={`${inputClass} col-span-2 sm:col-span-2`} />
           <input name="sale_date" type="date" className={inputClass} />
           <input name="surface" type="number" step="0.1" placeholder="m²" className={inputClass} />
-          <div className="flex gap-2">
-            <input name="price" type="number" placeholder="Prix €" className={`${inputClass} flex-1`} />
-          </div>
+          <input name="price" type="number" placeholder="Prix €" className={inputClass} />
+          <label className="col-span-2 flex items-center gap-1.5 text-xs text-neutral-600 sm:col-span-5">
+            <input type="checkbox" name="is_active_listing" className="h-4 w-4" />
+            Bien actuellement en vente (pas encore vendu — prix demandé, pas prix DVF)
+          </label>
           <button
             type="submit"
             className="col-span-2 rounded-lg border border-neutral-300 px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100 sm:col-span-5 sm:w-fit"
@@ -150,16 +274,16 @@ export default function EstimationSection({
       </div>
 
       <div className="border-t border-neutral-100 pt-6">
-        <h2 className="text-sm font-semibold text-neutral-900">Moteur d&apos;estimation</h2>
+        <h2 className="text-sm font-semibold text-neutral-900">Estimation par comparaison</h2>
         {!estimation ? (
           <p className="mt-2 text-sm text-neutral-400">
-            Ajoute au moins un comparable et renseigne la surface du bien pour calculer une fourchette.
+            Ajoute au moins un comparable ci-dessus et renseigne la surface du bien pour affiner la fourchette.
           </p>
         ) : (
           <div className="mt-3 flex flex-col gap-3">
             <p className="text-sm text-neutral-600">
               Base : {formatEUR(estimation.baseM2)}/m² sur {estimation.comparableCount} comparable
-              {estimation.comparableCount > 1 ? 's' : ''}
+              {estimation.comparableCount > 1 ? 's' : ''} sélectionné{estimation.comparableCount > 1 ? 's' : ''}
             </p>
             {estimation.lines.length > 0 && (
               <ul className="flex flex-col gap-1 text-sm text-neutral-600">

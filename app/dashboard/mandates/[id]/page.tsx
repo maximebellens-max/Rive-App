@@ -14,6 +14,7 @@ import EstimationSection from './estimation-section'
 import PartiesSection from './parties-section'
 import DeleteMandateButton from './delete-mandate-button'
 import GenerateMandateButton from './generate-mandate-button'
+import ActivateMandateButton from './activate-mandate-button'
 import VisitsSection from './visits-section'
 import OffersSection from './offers-section'
 import DiffusionSection from './diffusion-section'
@@ -28,7 +29,7 @@ export default async function MandateDetailPage({ params }: PageProps<'/dashboar
     supabase.from('mandates').select('*').eq('id', id).single(),
     supabase
       .from('dvf_comparables')
-      .select('id, address, sale_date, surface, price')
+      .select('id, address, sale_date, surface, price, is_active_listing')
       .eq('mandate_id', id)
       .order('sale_date', { ascending: false }),
     supabase.from('mandate_parties').select('*').eq('mandate_id', id).order('position', { ascending: true }),
@@ -60,7 +61,10 @@ export default async function MandateDetailPage({ params }: PageProps<'/dashboar
   }[] = []
   let buyerOptions: { id: string; name: string }[] = []
 
-  if (mandate.type === 'vente') {
+  // Visites, offres, diffusion et acheteurs correspondants n'ont de sens
+  // qu'une fois le bien réellement en commercialisation — inutile de les
+  // charger tant que le mandat n'est qu'un brouillon d'estimation.
+  if (mandate.type === 'vente' && !mandate.is_draft) {
     // Une seule requête "acheteurs" (avec les colonnes de correspondance),
     // réutilisée à la fois pour la liste déroulante (buyerOptions) et pour
     // le calcul des acheteurs correspondants — au lieu de 2 requêtes quasi
@@ -120,14 +124,15 @@ export default async function MandateDetailPage({ params }: PageProps<'/dashboar
         </div>
         <div className="flex items-center gap-2">
           {mandate.type === 'vente' && (
-            <a
+            
               href={`/dashboard/mandates/${mandate.id}/fiche`}
               className="rounded-lg border border-neutral-300 px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100"
             >
               Fiche bien (.html)
             </a>
           )}
-          <GenerateMandateButton mandateId={mandate.id} />
+          {mandate.is_draft && <ActivateMandateButton mandateId={mandate.id} />}
+          {!mandate.is_draft && <GenerateMandateButton mandateId={mandate.id} />}
           <DeleteMandateButton mandateId={mandate.id} />
         </div>
       </div>
@@ -185,7 +190,7 @@ export default async function MandateDetailPage({ params }: PageProps<'/dashboar
         />
       )}
 
-      {mandate.type === 'vente' && (
+      {mandate.type === 'vente' && !mandate.is_draft && (
         <>
           <VisitsSection mandateId={mandate.id} visits={visits} buyerOptions={buyerOptions} />
           <OffersSection mandateId={mandate.id} offers={offers} buyerOptions={buyerOptions} />
