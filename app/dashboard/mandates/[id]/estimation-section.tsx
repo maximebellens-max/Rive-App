@@ -3,6 +3,7 @@ import { saveAISummary } from '@/app/actions/ai'
 import { generateEstimationBrief } from '@/lib/rive/ai-prompts'
 import AIBriefPanel from '../../_components/ai-brief-panel'
 import DvfAutoSearch from './dvf-auto-search'
+import ClearComparablesButton from './clear-comparables-button'
 import { searchDvf, type DvfPropertyType } from '@/lib/rive/dvf-source'
 import {
   estimationEngine,
@@ -213,6 +214,7 @@ export default async function EstimationSection({
         <div className="mt-4">
           <DvfAutoSearch
             mandateId={mandateId}
+            defaultAddress={mandate.address}
             defaultPostalCode={defaultPostalCode}
             defaultPropertyType={mandate.property_type}
           />
@@ -226,7 +228,7 @@ export default async function EstimationSection({
           </p>
           <div className="mt-2 flex flex-wrap gap-2">
             {links.map((l) => (
-              <a
+              
                 key={l.label}
                 href={l.href}
                 target="_blank"
@@ -239,7 +241,17 @@ export default async function EstimationSection({
           </div>
         </div>
 
-        <div className="mt-4 flex flex-col gap-2">
+        {comparables.length > 0 && (
+          <div className="mt-4 flex items-center justify-between">
+            <p className="text-xs font-medium text-neutral-700">
+              {comparables.length} comparable{comparables.length > 1 ? 's' : ''} sélectionné
+              {comparables.length > 1 ? 's' : ''}
+            </p>
+            <ClearComparablesButton mandateId={mandateId} />
+          </div>
+        )}
+
+        <div className="mt-2 flex flex-col gap-2">
           {comparables.map((c) => (
             <div
               key={c.id}

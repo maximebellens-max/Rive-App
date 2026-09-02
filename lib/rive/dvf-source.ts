@@ -33,7 +33,15 @@ export type DvfRow = {
   surfaceTerrain: number | null
   nombrePiecesPrincipales: number | null
   nombreLots: number | null
+  latitude: number | null
+  longitude: number | null
 }
+
+// Départements du marché de l'agence (frontalier franco-genevois) : sert de
+// base par défaut pour une recherche par rayon, en plus du département
+// déduit de l'adresse recherchée — pour ne pas manquer un comparable juste
+// de l'autre côté d'une frontière départementale toute proche.
+const MARKET_DEPARTMENTS = ['74', '01', '73']
 
 export type DvfPropertyType = 'Appartement' | 'Maison' | 'Tous'
 
@@ -112,6 +120,8 @@ async function fetchDepartmentYear(department: string, year: number): Promise<Dv
   const iTerrain = idx('surface_terrain')
   const iPieces = idx('nombre_pieces_principales')
   const iLots = idx('nombre_lots')
+  const iLat = idx('latitude')
+  const iLon = idx('longitude')
 
   // Si les colonnes attendues sont absentes, le format du fichier source a
   // changé : on s'arrête proprement plutôt que de renvoyer des données
@@ -137,9 +147,65 @@ async function fetchDepartmentYear(department: string, year: number): Promise<Dv
       surfaceTerrain: iTerrain !== -1 ? toNumber(f[iTerrain]) : null,
       nombrePiecesPrincipales: toNumber(f[iPieces]),
       nombreLots: iLots !== -1 ? toNumber(f[iLots]) : null,
+      latitude: iLat !== -1 ? toNumber(f[iLat]) : null,
+      longitude: iLon !== -1 ? toNumber(f[iLon]) : null,
     })
   }
   return rows
+}
+
+// Distance à vol d'oiseau entre deux points WGS-84 (formule de Haversine),
+// en kilomètres — largement suffisant pour comparer des biens dans un rayon
+// de quelques kilomètres, sans dépendance à un service de calcul d'itinéraire.
+function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371
+  const dLat = ((lat2 - lat1) * Math.PI) / 180
+  const dLon = ((lon2 - lon1) * Math.PI) / 180
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) ** 2
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+}
+
+// Géocode une adresse via l'API officielle "Base Adresse Nationale" (la même
+// que l'autocomplétion côté formulaire), pour obtenir le point d'origine
+// d'une recherche par rayon. Appelé côté serveur (pas de clé nécessaire).
+async function geocodeAddress(address: string): Promise<{ lat: number; lng: number; postcode: string } | null> {
+  const trimmed = address.trim()
+  if (!trimmed) return null
+  try {
+    const res = await fetch(`https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(trimmed)}&limit=1`, {
+      next: { revalidate: CACHE_SECONDS },
+    })
+    if (!res.ok) return null
+    const data = await res.json()
+    const feature = data?.features?.[0]
+    const coords = feature?.geometry?.coordinates
+    if (!coords || coords.length < 2) return null
+    return { lat: coords[1], lng: coords[0], postcode: feature?.properties?.postcode || '' }
+  } catch {
+    return null
+  }
+}
+
+// Filtres communs aux deux modes de recherche (postal ou rayon) : ne garde
+// que les lignes exploitables (valeur et surface connues, type demandé) et
+// exclut les mutations à lots multiples — cf. le commentaire détaillé dans
+// searchDvf ci-dessous sur le doublon "5 biens identiques".
+function filterUsableRows(rows: DvfRow[], propertyType: DvfPropertyType): DvfRow[] {
+  const mutationCounts = new Map<string, number>()
+  for (const r of rows) {
+    if (!r.idMutation) continue
+    mutationCounts.set(r.idMutation, (mutationCounts.get(r.idMutation) || 0) + 1)
+  }
+
+  return rows.filter((r) => {
+    if (!r.valeurFonciere || !r.surfaceReelleBati) return false
+    if (propertyType !== 'Tous' && r.typeLocal !== propertyType) return false
+    if (r.idMutation && (mutationCounts.get(r.idMutation) || 0) > 1) return false
+    if (r.nombreLots !== null && r.nombreLots > 1) return false
+    return true
+  })
 }
 
 export type DvfSearchParams = {
@@ -188,18 +254,8 @@ export async function searchDvf({
     // fait apparaître "5 biens identiques vendus à la même adresse" et
     // fausse complètement la moyenne. On ne garde donc que les mutations à
     // un seul lot/local, seules fiables pour un prix au m² comparable.
-    const mutationCounts = new Map<string, number>()
-    for (const r of rows) {
-      if (!r.idMutation) continue
-      mutationCounts.set(r.idMutation, (mutationCounts.get(r.idMutation) || 0) + 1)
-    }
-
-    for (const r of rows) {
+    for (const r of filterUsableRows(rows, propertyType)) {
       if (r.codePostal !== cp) continue
-      if (!r.valeurFonciere || !r.surfaceReelleBati) continue
-      if (propertyType !== 'Tous' && r.typeLocal !== propertyType) continue
-      if (r.idMutation && (mutationCounts.get(r.idMutation) || 0) > 1) continue
-      if (r.nombreLots !== null && r.nombreLots > 1) continue
       matches.push(r)
     }
   })
@@ -215,4 +271,85 @@ export async function searchDvf({
   }
 
   return { rows: matches.slice(0, maxResults), yearsQueried }
+}
+
+export type DvfRowWithDistance = DvfRow & { distanceKm: number }
+
+export type DvfRadiusSearchParams = {
+  address: string
+  propertyType: DvfPropertyType
+  radiusKm: number
+  maxResults?: number
+  yearsBack?: number
+}
+
+export type DvfRadiusSearchResult = {
+  rows: DvfRowWithDistance[]
+  origin: { lat: number; lng: number } | null
+  yearsQueried: number[]
+  error?: string
+}
+
+// Recherche de comparables par rayon autour d'une adresse exacte, plutôt que
+// par simple code postal (qui peut être très étendu, ou au contraire couper
+// des rues limitrophes d'un secteur). On géocode l'adresse, puis on filtre
+// les ventes DVF par distance à vol d'oiseau — sur le département déduit de
+// l'adresse, complété par les départements du marché de l'agence pour ne
+// pas manquer un comparable juste de l'autre côté d'une frontière toute
+// proche (ex. bien en limite Ain/Haute-Savoie).
+export async function searchDvfNearAddress({
+  address,
+  propertyType,
+  radiusKm,
+  maxResults = 40,
+  yearsBack = 4,
+}: DvfRadiusSearchParams): Promise<DvfRadiusSearchResult> {
+  const origin = await geocodeAddress(address)
+  if (!origin) {
+    return {
+      rows: [],
+      origin: null,
+      yearsQueried: [],
+      error: "Adresse introuvable — vérifie qu'elle soit complète (numéro, rue, ville).",
+    }
+  }
+
+  const departments = Array.from(new Set([origin.postcode.slice(0, 2), ...MARKET_DEPARTMENTS].filter(Boolean)))
+  const currentYear = new Date().getFullYear()
+  const years = Array.from({ length: yearsBack }, (_, i) => currentYear - 1 - i)
+  const pairs = departments.flatMap((department) => years.map((year) => ({ department, year })))
+
+  const perPair = await Promise.all(pairs.map(({ department, year }) => fetchDepartmentYear(department, year)))
+
+  const yearsQueried = new Set<number>()
+  const matches: DvfRowWithDistance[] = []
+  pairs.forEach(({ year }, i) => {
+    const rows = perPair[i]
+    if (!rows.length) return
+    yearsQueried.add(year)
+
+    for (const r of filterUsableRows(rows, propertyType)) {
+      if (r.latitude === null || r.longitude === null) continue
+      const distanceKm = haversineKm(origin.lat, origin.lng, r.latitude, r.longitude)
+      if (distanceKm > radiusKm) continue
+      matches.push({ ...r, distanceKm })
+    }
+  })
+
+  matches.sort((a, b) => a.distanceKm - b.distanceKm)
+
+  if (!yearsQueried.size) {
+    return {
+      rows: [],
+      origin: { lat: origin.lat, lng: origin.lng },
+      yearsQueried: [],
+      error: "Impossible de récupérer les données DVF pour ce secteur pour l'instant (source indisponible).",
+    }
+  }
+
+  return {
+    rows: matches.slice(0, maxResults),
+    origin: { lat: origin.lat, lng: origin.lng },
+    yearsQueried: Array.from(yearsQueried).sort((a, b) => b - a),
+  }
 }

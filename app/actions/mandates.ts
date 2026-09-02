@@ -338,3 +338,14 @@ export async function removeDvfComparable(mandateId: string, comparableId: strin
   await supabase.from('dvf_comparables').delete().eq('id', comparableId)
   revalidatePath(`/dashboard/mandates/${mandateId}`)
 }
+
+// Vide la sélection de comparables en un clic, pour repartir d'une liste
+// propre après une recherche automatique trop large plutôt que de retirer
+// chaque bien un par un.
+export async function removeAllDvfComparables(mandateId: string) {
+  const { supabase, agencyId } = await getAgencyId()
+  if (!agencyId) return
+
+  await supabase.from('dvf_comparables').delete().eq('mandate_id', mandateId)
+  revalidatePath(`/dashboard/mandates/${mandateId}`)
+}
