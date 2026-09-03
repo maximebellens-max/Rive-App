@@ -1,0 +1,83 @@
+'use server'
+
+import { revalidatePath } from 'next/cache'
+import { createClient } from '@/lib/supabase/server'
+import { fetchCampaigns } from '@/lib/rive/meta'
+
+async function getAgencyId() {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { supabase, agencyId: null }
+
+  const { data: profile } = await supabase.from('profiles').select('agency_id').eq('id', user.id).single()
+  return { supabase, agencyId: profile?.agency_id ?? null }
+}
+
+export async function disconnectMeta() {
+  const { supabase, agencyId } = await getAgencyId()
+  if (!agencyId) return
+
+  // On garde volontairement les mappings campagne → propriétaire/tableau
+  // (meta_campaigns) : une reconnexion ultérieure les retrouve telles
+  // quelles, pas besoin de tout reconfigurer.
+  await supabase.from('meta_connections').delete().eq('agency_id', agencyId)
+  revalidatePath('/dashboard/settings')
+}
+
+export type MetaSyncState = { error?: string; success?: boolean } | undefined
+
+// Relit la liste des campagnes depuis Meta et les ajoute/actualise en base
+// (nom, statut) sans jamais toucher au propriétaire ou au tableau déjà
+// choisis pour une campagne existante.
+export async function syncMetaCampaigns(_prevState: MetaSyncState, _formData: FormData): Promise<MetaSyncState> {
+  const { supabase, agencyId } = await getAgencyId()
+  if (!agencyId) return { error: 'Session expirée, reconnecte-toi.' }
+
+  const { data: connection } = await supabase
+    .from('meta_connections')
+    .select('ad_account_id, access_token')
+    .eq('agency_id', agencyId)
+    .maybeSingle()
+
+  if (!connection) return { error: 'Aucun compte Meta connecté.' }
+
+  try {
+    const campaigns = await fetchCampaigns(connection.ad_account_id, connection.access_token)
+    if (!campaigns.length) return { error: 'Aucune campagne trouvée sur ce compte publicitaire.' }
+
+    const { error } = await supabase.from('meta_campaigns').upsert(
+      campaigns.map((c) => ({
+        agency_id: agencyId,
+        campaign_id: c.id,
+        campaign_name: c.name,
+        status: c.status,
+        updated_at: new Date().toISOString(),
+      })),
+      { onConflict: 'agency_id,campaign_id' }
+    )
+    if (error) return { error: 'Campagnes récupérées mais échec de l’enregistrement.' }
+
+    revalidatePath('/dashboard/settings')
+    return { success: true }
+  } catch {
+    return { error: 'Impossible de récupérer les campagnes depuis Meta (jeton expiré ? reconnecte le compte).' }
+  }
+}
+
+export async function updateMetaCampaignMapping(campaignRowId: string, formData: FormData) {
+  const { supabase, agencyId } = await getAgencyId()
+  if (!agencyId) return
+
+  const ownerId = String(formData.get('owner_id') || '') || null
+  const targetCategory = String(formData.get('target_category') || '') || null
+
+  await supabase
+    .from('meta_campaigns')
+    .update({ owner_id: ownerId, target_category: targetCategory, updated_at: new Date().toISOString() })
+    .eq('id', campaignRowId)
+    .eq('agency_id', agencyId)
+
+  revalidatePath('/dashboard/settings')
+}

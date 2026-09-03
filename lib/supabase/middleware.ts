@@ -38,7 +38,11 @@ export async function updateSession(request: NextRequest) {
   const isAuthRoute = path === '/login' || path === '/signup'
   // /auth/* (ex: /auth/confirm) doit rester accessible sans session : c'est justement
   // la route qui crée la session après un clic sur le lien de confirmation par email.
-  const isPublicRoute = path === '/' || isAuthRoute || path.startsWith('/auth/')
+  // /api/* gère son propre contrôle d'accès à l'intérieur de chaque route : le
+  // webhook Meta (app/api/webhooks/meta) est appelé par les serveurs de Meta,
+  // sans aucun cookie de session, et serait sinon systématiquement redirigé
+  // vers /login avant même d'atteindre le code de la route.
+  const isPublicRoute = path === '/' || isAuthRoute || path.startsWith('/auth/') || path.startsWith('/api/')
 
   if (!user && !isPublicRoute) {
     const url = request.nextUrl.clone()
