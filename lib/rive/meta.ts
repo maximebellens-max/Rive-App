@@ -112,11 +112,19 @@ export async function subscribePageToLeadgen(pageId: string, pageAccessToken: st
 }
 
 // "status" est le statut CONFIGURÉ de la campagne (marche/arrêt manuel côté
-// annonceur) — "effective_status" est le statut RÉEL de diffusion, qui tient
-// compte en plus des budgets épuisés, des dates de fin d'ad set, de la
-// revue Meta, etc. Une campagne peut être "status: ACTIVE" tout en n'étant
-// plus du tout diffusée (ex. tous ses ad sets sont "ADSET_PAUSED" ou
-// "CAMPAIGN_PAUSED") : c'est effective_status qu'il faut afficher.
+// annonceur). On pourrait croire que "effective_status" (fourni par Meta
+// directement sur l'objet Campaign) suffit à connaître le statut réel de
+// diffusion — mais Meta ne le fait PAS redescendre depuis les ad sets : le
+// effective_status d'une campagne ne reflète que son propre interrupteur
+// (+ les états de revue comme PENDING_REVIEW/DISAPPROVED). Une campagne
+// peut donc rester "effective_status: ACTIVE" au niveau campagne alors
+// qu'aucun de ses ad sets ne délivre réellement (tous mis en pause
+// individuellement, ou plus aucune planification active) — c'est
+// exactement le cas observé chez Hevrest. On calcule donc nous-mêmes le
+// vrai statut de diffusion en regardant l'état de chaque ad set de la
+// campagne, et c'est CETTE valeur recalculée qui est exposée ci-dessous
+// sous le nom effective_status (le champ brut renvoyé par Meta n'est pas
+// utile en soi, seulement comme repli si la campagne n'a aucun ad set).
 export type MetaCampaign = {
   id: string
   name: string
@@ -125,16 +133,60 @@ export type MetaCampaign = {
   created_time: string | null
 }
 
+type RawMetaAdSetStatus = { effective_status: string }
+type RawMetaCampaign = {
+  id: string
+  name: string
+  status: string
+  effective_status: string
+  created_time: string | null
+  adsets?: { data: RawMetaAdSetStatus[] }
+}
+
+// Quand aucun ad set n'est réellement actif, on essaie de remonter le
+// sous-statut le plus parlant plutôt qu'un "en pause" générique — utile
+// pour repérer une campagne bloquée en revue ou refusée par Meta.
+const ADSET_STATUS_PRIORITY = [
+  'WITH_ISSUES',
+  'DISAPPROVED',
+  'PENDING_REVIEW',
+  'PENDING_BILLING_INFO',
+  'IN_PROCESS',
+  'PREAPPROVED',
+]
+
+function resolveCampaignDeliveryStatus(c: RawMetaCampaign): string {
+  const adsets = c.adsets?.data ?? []
+  if (adsets.some((a) => a.effective_status === 'ACTIVE')) return 'ACTIVE'
+  for (const s of ADSET_STATUS_PRIORITY) {
+    if (adsets.some((a) => a.effective_status === s)) return s
+  }
+  if (!adsets.length) {
+    // Aucun ad set du tout : rien ne peut diffuser, quel que soit
+    // l'interrupteur de la campagne — sauf si elle est explicitement
+    // archivée/supprimée, statut qu'on garde tel quel car plus parlant.
+    return c.effective_status === 'ARCHIVED' || c.effective_status === 'DELETED' ? c.effective_status : 'PAUSED'
+  }
+  return 'PAUSED'
+}
+
 export async function fetchCampaigns(adAccountId: string, accessToken: string): Promise<MetaCampaign[]> {
   const params = new URLSearchParams({
     access_token: accessToken,
-    fields: 'id,name,status,effective_status,created_time',
+    fields: 'id,name,status,effective_status,created_time,adsets.limit(500){effective_status}',
     limit: '200',
   })
   const res = await fetch(`${GRAPH_BASE}/${adAccountId}/campaigns?${params.toString()}`)
   if (!res.ok) throw new Error(`Impossible de récupérer les campagnes (${res.status}).`)
   const data = await res.json()
-  return data.data ?? []
+  const rawCampaigns = (data.data ?? []) as RawMetaCampaign[]
+  return rawCampaigns.map((c) => ({
+    id: c.id,
+    name: c.name,
+    status: c.status,
+    effective_status: resolveCampaignDeliveryStatus(c),
+    created_time: c.created_time ?? null,
+  }))
 }
 
 export type MetaLeadData = {
