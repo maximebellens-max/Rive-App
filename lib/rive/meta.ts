@@ -107,10 +107,14 @@ export async function subscribePageToLeadgen(pageId: string, pageAccessToken: st
   if (!res.ok) throw new Error(`Impossible d'abonner la Page aux nouveaux leads (${res.status}).`)
 }
 
-export type MetaCampaign = { id: string; name: string; status: string }
+export type MetaCampaign = { id: string; name: string; status: string; created_time: string | null }
 
 export async function fetchCampaigns(adAccountId: string, accessToken: string): Promise<MetaCampaign[]> {
-  const params = new URLSearchParams({ access_token: accessToken, fields: 'id,name,status', limit: '200' })
+  const params = new URLSearchParams({
+    access_token: accessToken,
+    fields: 'id,name,status,created_time',
+    limit: '200',
+  })
   const res = await fetch(`${GRAPH_BASE}/${adAccountId}/campaigns?${params.toString()}`)
   if (!res.ok) throw new Error(`Impossible de récupérer les campagnes (${res.status}).`)
   const data = await res.json()

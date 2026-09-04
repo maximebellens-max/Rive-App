@@ -44,12 +44,22 @@ export default async function SettingsPage({ searchParams }: PageProps<'/dashboa
         .maybeSingle(),
       supabase
         .from('meta_campaigns')
-        .select('id, campaign_name, status, owner_id, target_category')
+        .select('id, campaign_name, status, owner_id, target_category, created_time')
         .eq('agency_id', profile.agency_id)
-        .order('campaign_name', { ascending: true }),
+        .order('created_time', { ascending: false, nullsFirst: false }),
     ])
 
   if (!agency) notFound()
+
+  // Les campagnes actives passent en premier (ce sont celles qui comptent
+  // au quotidien), puis le reste par ordre chronologique décroissant (déjà
+  // fait par la requête ci-dessus) — tri stable, donc l'ordre chronologique
+  // est préservé à l'intérieur de chaque groupe.
+  const sortedCampaigns = [...(metaCampaigns ?? [])].sort((a, b) => {
+    const aActive = a.status === 'ACTIVE' ? 0 : 1
+    const bActive = b.status === 'ACTIVE' ? 0 : 1
+    return aActive - bActive
+  })
 
   return (
     <div className="flex flex-col gap-6">
@@ -73,7 +83,7 @@ export default async function SettingsPage({ searchParams }: PageProps<'/dashboa
       <div className="max-w-2xl rounded-2xl border border-neutral-200 bg-surface p-6 shadow-sm">
         <MetaSection
           connection={metaConnection ?? null}
-          campaigns={metaCampaigns ?? []}
+          campaigns={sortedCampaigns}
           members={members ?? []}
           successMessage={typeof params?.meta === 'string' ? params.meta : undefined}
           errorMessage={typeof params?.meta_error === 'string' ? params.meta_error : undefined}

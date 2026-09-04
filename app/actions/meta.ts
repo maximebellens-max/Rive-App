@@ -60,6 +60,7 @@ export async function syncMetaCampaigns(_prevState: MetaSyncState, _formData: Fo
         campaign_id: c.id,
         campaign_name: c.name,
         status: c.status,
+        created_time: c.created_time,
         updated_at: new Date().toISOString(),
       })),
       { onConflict: 'agency_id,campaign_id' }
