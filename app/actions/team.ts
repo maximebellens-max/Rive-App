@@ -85,6 +85,11 @@ export async function updateMyWhatsAppNumber(
   // c'est le format attendu par l'API WhatsApp pour le champ "to".
   const number = String(formData.get('whatsapp_number') || '').replace(/\D/g, '')
   const enabled = formData.get('whatsapp_alerts_enabled') === 'on'
+  // Optionnel : le Phone Number ID (identifiant technique Meta, pas le
+  // numéro lui-même) du numéro professionnel dédié de cet agent, une fois
+  // enregistré sous la WABA de l'agence — si vide, ses alertes partent
+  // depuis le numéro partagé de l'agence.
+  const senderPhoneNumberId = String(formData.get('whatsapp_sender_phone_number_id') || '').trim()
 
   if (enabled && !number) {
     return { error: 'Renseigne ton numéro WhatsApp pour activer les alertes.' }
@@ -92,7 +97,11 @@ export async function updateMyWhatsAppNumber(
 
   const { error } = await supabase
     .from('profiles')
-    .update({ whatsapp_number: number, whatsapp_alerts_enabled: enabled })
+    .update({
+      whatsapp_number: number,
+      whatsapp_alerts_enabled: enabled,
+      whatsapp_sender_phone_number_id: senderPhoneNumberId,
+    })
     .eq('id', user.id)
 
   if (error) return { error: 'Impossible d’enregistrer.' }

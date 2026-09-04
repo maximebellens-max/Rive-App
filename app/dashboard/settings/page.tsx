@@ -17,7 +17,7 @@ export default async function SettingsPage({ searchParams }: PageProps<'/dashboa
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('agency_id, role, whatsapp_number, whatsapp_alerts_enabled')
+    .select('agency_id, role, whatsapp_number, whatsapp_alerts_enabled, whatsapp_sender_phone_number_id')
     .eq('id', user.id)
     .single()
 
@@ -83,6 +83,7 @@ export default async function SettingsPage({ searchParams }: PageProps<'/dashboa
         <WhatsAppSection
           whatsappNumber={profile.whatsapp_number ?? ''}
           whatsappAlertsEnabled={profile.whatsapp_alerts_enabled ?? false}
+          whatsappSenderPhoneNumberId={profile.whatsapp_sender_phone_number_id ?? ''}
         />
       </div>
       <div className="max-w-2xl rounded-2xl border border-neutral-200 bg-surface p-6 shadow-sm">

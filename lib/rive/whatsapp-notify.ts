@@ -8,19 +8,35 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { sendWhatsAppTemplate } from './whatsapp'
 
-async function optedInTeamNumbers(supabase: SupabaseClient, agencyId: string): Promise<string[]> {
+type TeamRecipient = { to: string; senderPhoneNumberId?: string }
+
+// Chaque agent reçoit ses alertes envoyées depuis SON PROPRE numéro
+// professionnel s'il en a configuré un dans Réglages (whatsapp_sender_phone_
+// number_id) — sinon l'envoi retombe sur le numéro partagé de l'agence (voir
+// lib/rive/whatsapp.ts). Les deux cas coexistent tant que tout le monde n'a
+// pas configuré son propre numéro.
+async function optedInTeamRecipients(supabase: SupabaseClient, agencyId: string): Promise<TeamRecipient[]> {
   const { data } = await supabase
     .from('profiles')
-    .select('whatsapp_number')
+    .select('whatsapp_number, whatsapp_sender_phone_number_id')
     .eq('agency_id', agencyId)
     .eq('whatsapp_alerts_enabled', true)
-  return (data ?? []).map((p: { whatsapp_number: string }) => p.whatsapp_number).filter((n): n is string => !!n)
+  return (data ?? [])
+    .filter((p: { whatsapp_number: string }) => !!p.whatsapp_number)
+    .map((p: { whatsapp_number: string; whatsapp_sender_phone_number_id: string }) => ({
+      to: p.whatsapp_number,
+      senderPhoneNumberId: p.whatsapp_sender_phone_number_id || undefined,
+    }))
 }
 
 async function broadcastToTeam(supabase: SupabaseClient, agencyId: string, templateName: string, params: string[]) {
-  const numbers = await optedInTeamNumbers(supabase, agencyId)
-  if (!numbers.length) return
-  await Promise.all(numbers.map((to) => sendWhatsAppTemplate({ to, templateName, params })))
+  const recipients = await optedInTeamRecipients(supabase, agencyId)
+  if (!recipients.length) return
+  await Promise.all(
+    recipients.map(({ to, senderPhoneNumberId }) =>
+      sendWhatsAppTemplate({ to, templateName, params, phoneNumberId: senderPhoneNumberId })
+    )
+  )
 }
 
 const CATEGORY_LABELS: Record<string, string> = {

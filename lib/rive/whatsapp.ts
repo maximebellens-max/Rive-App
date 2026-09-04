@@ -9,23 +9,30 @@
 // l'envoi d'un modèle ("template") pré-approuvé par Meta est autorisé — pas
 // de texte libre. Les modèles utilisés par Rive sont documentés dans le
 // guide de dépôt correspondant.
-function whatsappCredentials(): { accessToken: string; phoneNumberId: string } | null {
+// Le numéro d'expéditeur (Phone Number ID) peut être propre à l'agent qui
+// déclenche l'envoi (voir lib/rive/whatsapp-notify.ts) — s'il n'en a pas
+// configuré un dans Réglages, on retombe sur le numéro partagé de l'agence.
+// Les deux restent rattachés au même compte WhatsApp Business (WABA), donc
+// au même jeton d'accès : pas besoin d'un jeton différent par numéro.
+function whatsappCredentials(phoneNumberId?: string): { accessToken: string; phoneNumberId: string } | null {
   const accessToken = process.env.WHATSAPP_ACCESS_TOKEN
-  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID
-  if (!accessToken || !phoneNumberId) return null
-  return { accessToken, phoneNumberId }
+  const resolvedPhoneNumberId = phoneNumberId || process.env.WHATSAPP_PHONE_NUMBER_ID
+  if (!accessToken || !resolvedPhoneNumberId) return null
+  return { accessToken, phoneNumberId: resolvedPhoneNumberId }
 }
 
 export async function sendWhatsAppTemplate({
   to,
   templateName,
   params,
+  phoneNumberId,
 }: {
   to: string
   templateName: string
   params: string[]
+  phoneNumberId?: string
 }): Promise<void> {
-  const creds = whatsappCredentials()
+  const creds = whatsappCredentials(phoneNumberId)
   if (!creds || !to) {
     console.warn(
       `[whatsapp] Message "${templateName}" non envoyé (identifiants WhatsApp manquants ou destinataire vide).`
