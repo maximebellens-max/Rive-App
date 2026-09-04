@@ -30,12 +30,16 @@ export function appBaseUrl(): string {
 
 // Scopes nécessaires : ads_read (lister campagnes), leads_retrieval
 // (récupérer le détail d'un lead), pages_show_list + pages_manage_metadata
-// (lister les Pages et s'abonner à leur webhook leadgen).
+// (lister les Pages et s'abonner à leur webhook leadgen), pages_read_engagement
+// (exigée par Meta pour la récupération des prospects — sans elle l'outil de
+// diagnostic de Meta signale "Missing 'pages_read_engagement' permission" et
+// bloque la remontée des leads, même avec leads_retrieval déjà présent).
 const OAUTH_SCOPES = [
   'ads_read',
   'leads_retrieval',
   'pages_show_list',
   'pages_manage_metadata',
+  'pages_read_engagement',
   'business_management',
 ].join(',')
 
