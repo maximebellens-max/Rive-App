@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { getAuthedProfile } from '@/lib/supabase/session'
 import { logout } from '@/app/actions/auth'
 import { createBoard } from '@/app/actions/boards'
+import NotificationBell, { type NotificationItem } from './notification-bell'
 
 const NAV_GROUPS: { label: string; links: { href: string; label: string }[] }[] = [
   {
@@ -61,6 +62,24 @@ export default async function DashboardLayout({
         .order('position', { ascending: true })
     : { data: [] as { id: string; name: string }[] }
 
+  const { data: rawNotifications } = profile?.agency_id
+    ? await supabase
+        .from('notifications')
+        .select('id, title, body, lead_id, read_by, created_at')
+        .eq('agency_id', profile.agency_id)
+        .order('created_at', { ascending: false })
+        .limit(20)
+    : { data: [] as { id: string; title: string; body: string; lead_id: string | null; read_by: string[]; created_at: string }[] }
+
+  const notifications: NotificationItem[] = (rawNotifications ?? []).map((n) => ({
+    id: n.id,
+    title: n.title,
+    body: n.body,
+    lead_id: n.lead_id,
+    created_at: n.created_at,
+    read: (n.read_by ?? []).includes(user.id),
+  }))
+
   return (
     <div className="flex min-h-screen flex-col">
       <header className="border-b border-neutral-200 bg-surface">
@@ -69,6 +88,7 @@ export default async function DashboardLayout({
             Rive
           </Link>
           <div className="flex items-center gap-3 text-sm text-neutral-500">
+            <NotificationBell notifications={notifications} />
             <Link href="/dashboard/settings" className="hover:text-neutral-900">
               Réglages
             </Link>
