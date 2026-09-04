@@ -65,3 +65,38 @@ export async function removeTeamMember(profileId: string) {
   await supabase.from('profiles').delete().eq('id', profileId).eq('agency_id', agencyId)
   revalidatePath('/dashboard/settings')
 }
+
+export type WhatsAppFormState = { error?: string; success?: boolean } | undefined
+
+// Chacun gère son propre numéro et son propre opt-in — pas de gestion par le
+// propriétaire pour le compte d'un autre membre, le numéro WhatsApp est
+// personnel.
+export async function updateMyWhatsAppNumber(
+  _prevState: WhatsAppFormState,
+  formData: FormData
+): Promise<WhatsAppFormState> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { error: 'Session expirée, reconnecte-toi.' }
+
+  // Ne garde que les chiffres (indicatif pays inclus, sans + ni espaces) —
+  // c'est le format attendu par l'API WhatsApp pour le champ "to".
+  const number = String(formData.get('whatsapp_number') || '').replace(/\D/g, '')
+  const enabled = formData.get('whatsapp_alerts_enabled') === 'on'
+
+  if (enabled && !number) {
+    return { error: 'Renseigne ton numéro WhatsApp pour activer les alertes.' }
+  }
+
+  const { error } = await supabase
+    .from('profiles')
+    .update({ whatsapp_number: number, whatsapp_alerts_enabled: enabled })
+    .eq('id', user.id)
+
+  if (error) return { error: 'Impossible d’enregistrer.' }
+
+  revalidatePath('/dashboard/settings')
+  return { success: true }
+}

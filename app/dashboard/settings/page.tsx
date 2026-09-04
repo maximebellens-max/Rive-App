@@ -4,6 +4,7 @@ import AgencySettingsForm from './agency-settings-form'
 import TeamSection from './team-section'
 import BackupSection from './backup-section'
 import MetaSection from './meta-section'
+import WhatsAppSection from './whatsapp-section'
 
 export default async function SettingsPage({ searchParams }: PageProps<'/dashboard/settings'>) {
   const supabase = await createClient()
@@ -16,7 +17,7 @@ export default async function SettingsPage({ searchParams }: PageProps<'/dashboa
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('agency_id, role')
+    .select('agency_id, role, whatsapp_number, whatsapp_alerts_enabled')
     .eq('id', user.id)
     .single()
 
@@ -76,6 +77,12 @@ export default async function SettingsPage({ searchParams }: PageProps<'/dashboa
           members={members ?? []}
           successMessage={typeof params?.meta === 'string' ? params.meta : undefined}
           errorMessage={typeof params?.meta_error === 'string' ? params.meta_error : undefined}
+        />
+      </div>
+      <div className="max-w-2xl rounded-2xl border border-neutral-200 bg-surface p-6 shadow-sm">
+        <WhatsAppSection
+          whatsappNumber={profile.whatsapp_number ?? ''}
+          whatsappAlertsEnabled={profile.whatsapp_alerts_enabled ?? false}
         />
       </div>
       <div className="max-w-2xl rounded-2xl border border-neutral-200 bg-surface p-6 shadow-sm">

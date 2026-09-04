@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { initialPositions, reconcilePositionsOnCategoryChange } from '@/lib/rive/pipeline-positions'
 import { notifyMatchesForLeadId } from '@/lib/rive/match-notify'
+import { notifyTeamNewLeadWhatsApp } from '@/lib/rive/whatsapp-notify'
 
 export type LeadFormState = { error?: string } | undefined
 
@@ -78,6 +79,7 @@ export async function createLead(
 
   if (newLead?.id) {
     await notifyMatchesForLeadId(supabase, agencyId, newLead.id)
+    await notifyTeamNewLeadWhatsApp(supabase, agencyId, { name, category, source: 'Saisie manuelle' })
   }
 
   revalidatePath('/dashboard/prospects')

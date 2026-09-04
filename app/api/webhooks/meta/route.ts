@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { initialPositions } from '@/lib/rive/pipeline-positions'
 import { sendLeadAlertEmail } from '@/lib/rive/email'
+import { notifyTeamNewLeadWhatsApp } from '@/lib/rive/whatsapp-notify'
 import { appBaseUrl, fetchLeadData, mapLeadFields, parseWebhookLeadgenChanges, verifyWebhookSignature } from '@/lib/rive/meta'
 
 // Étape de validation initiale de l'abonnement webhook (une seule fois, au
@@ -157,5 +158,11 @@ async function processLeadgenChange(
     ownerName: campaignConfigured ? ownerName : null,
     category,
     leadUrl: `${appBaseUrl()}/dashboard/prospects/${lead.id}`,
+  })
+
+  await notifyTeamNewLeadWhatsApp(supabase, connection.agency_id, {
+    name,
+    category,
+    source: leadData.campaignName || 'Meta Ads',
   })
 }
