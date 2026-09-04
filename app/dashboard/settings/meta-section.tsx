@@ -88,10 +88,7 @@ export default function MetaSection({
                 Plusieurs comptes publicitaires sont accessibles avec ce compte Meta — choisis celui qui contient les
                 vraies campagnes de l&apos;agence.
               </p>
-              <form
-                action={(formData) => selectMetaAdAccount(formData)}
-                className="flex flex-wrap items-center gap-2"
-              >
+                           <form action={selectMetaAdAccount} className="flex flex-wrap items-center gap-2">
                 <select
                   id="ad_account_id"
                   name="ad_account_id"
