@@ -39,7 +39,7 @@ export default async function SettingsPage({ searchParams }: PageProps<'/dashboa
         .order('created_at', { ascending: false }),
       supabase
         .from('meta_connections')
-        .select('ad_account_name, page_name')
+        .select('ad_account_id, ad_account_name, page_name, available_ad_accounts')
         .eq('agency_id', profile.agency_id)
         .maybeSingle(),
       supabase

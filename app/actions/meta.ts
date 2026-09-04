@@ -73,6 +73,36 @@ export async function syncMetaCampaigns(_prevState: MetaSyncState, _formData: Fo
   }
 }
 
+// Permet de corriger le compte publicitaire utilisé sans avoir à
+// reconnecter tout le compte Meta — utile quand la personne qui s'est
+// connectée a accès à plusieurs comptes publicitaires (Rive prend le
+// premier par défaut à la connexion, qui n'est pas toujours le bon).
+export async function selectMetaAdAccount(formData: FormData) {
+  const { supabase, agencyId } = await getAgencyId()
+  if (!agencyId) return
+
+  const adAccountId = String(formData.get('ad_account_id') || '')
+  if (!adAccountId) return
+
+  const { data: connection } = await supabase
+    .from('meta_connections')
+    .select('available_ad_accounts')
+    .eq('agency_id', agencyId)
+    .maybeSingle()
+
+  const match = (connection?.available_ad_accounts as { id: string; name: string }[] | null)?.find(
+    (a) => a.id === adAccountId
+  )
+  if (!match) return
+
+  await supabase
+    .from('meta_connections')
+    .update({ ad_account_id: match.id, ad_account_name: match.name, updated_at: new Date().toISOString() })
+    .eq('agency_id', agencyId)
+
+  revalidatePath('/dashboard/settings')
+}
+
 export async function updateMetaCampaignMapping(campaignRowId: string, formData: FormData) {
   const { supabase, agencyId } = await getAgencyId()
   if (!agencyId) return

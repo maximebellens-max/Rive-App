@@ -64,10 +64,12 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // Hevrest n'a qu'une Page et qu'un compte publicitaire partagés : on
-    // prend le premier de chaque. Si un jour plusieurs existent, le nom
-    // affiché dans les réglages permettra de vérifier que c'est le bon —
-    // sinon il faudra ajouter un choix explicite ici.
+    // Hevrest n'a qu'une seule Page : on la prend directement. Pour le
+    // compte publicitaire en revanche, une personne peut avoir accès à
+    // plusieurs comptes Meta (pro, perso, anciens comptes...) — on ne peut
+    // pas deviner le bon. On prend le premier par défaut (cas le plus
+    // courant : un seul compte), mais on garde la liste complète pour
+    // permettre de corriger le choix depuis Réglages sans reconnexion.
     const page = pages[0]
     const adAccount = adAccounts[0]
 
@@ -79,6 +81,7 @@ export async function GET(request: NextRequest) {
         connected_by: user.id,
         ad_account_id: adAccount.id,
         ad_account_name: adAccount.name,
+        available_ad_accounts: adAccounts.map((a) => ({ id: a.id, name: a.name })),
         page_id: page.id,
         page_name: page.name,
         access_token: page.access_token,

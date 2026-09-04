@@ -1,8 +1,15 @@
-import { disconnectMeta } from '@/app/actions/meta'
+import { disconnectMeta, selectMetaAdAccount } from '@/app/actions/meta'
 import SyncCampaignsButton from './sync-campaigns-button'
 import CampaignMappingRow from './campaign-mapping-row'
 
-type Connection = { ad_account_name: string; page_name: string } | null
+type AdAccountOption = { id: string; name: string }
+
+type Connection = {
+  ad_account_id: string
+  ad_account_name: string
+  page_name: string
+  available_ad_accounts: AdAccountOption[]
+} | null
 
 type Campaign = {
   id: string
@@ -71,6 +78,41 @@ export default function MetaSection({
               </form>
             </div>
           </div>
+
+          {connection.available_ad_accounts.length > 1 && (
+            <div className="flex flex-col gap-1.5 rounded-lg border border-neutral-200 bg-neutral-50 p-3">
+              <label htmlFor="ad_account_id" className="text-xs font-medium text-neutral-700">
+                Compte publicitaire à utiliser
+              </label>
+              <p className="text-xs text-neutral-500">
+                Plusieurs comptes publicitaires sont accessibles avec ce compte Meta — choisis celui qui contient les
+                vraies campagnes de l&apos;agence.
+              </p>
+              <form
+                action={(formData) => selectMetaAdAccount(formData)}
+                className="flex flex-wrap items-center gap-2"
+              >
+                <select
+                  id="ad_account_id"
+                  name="ad_account_id"
+                  defaultValue={connection.ad_account_id}
+                  className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-accent focus:ring-1 focus:ring-accent"
+                >
+                  {connection.available_ad_accounts.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.name}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="submit"
+                  className="rounded-lg border border-neutral-300 px-3 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-100"
+                >
+                  Utiliser ce compte
+                </button>
+              </form>
+            </div>
+          )}
 
           <div>
             <div className="flex items-center justify-between">
