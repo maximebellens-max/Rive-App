@@ -13,11 +13,23 @@ type Campaign = {
   target_category: string | null
 }
 
+// Valeurs possibles du champ effective_status de Meta (statut réel de
+// diffusion, pas juste le statut configuré) — cf. commentaire dans
+// lib/rive/meta.ts. Liste non exhaustive mais couvre les cas courants ;
+// une valeur absente de cette table s'affiche telle quelle en repli.
 const STATUS_LABELS: Record<string, string> = {
   ACTIVE: 'Active',
   PAUSED: 'En pause',
+  CAMPAIGN_PAUSED: 'En pause',
+  ADSET_PAUSED: 'En pause',
   ARCHIVED: 'Archivée',
   DELETED: 'Supprimée',
+  IN_PROCESS: 'En traitement',
+  WITH_ISSUES: 'Problème de diffusion',
+  PENDING_REVIEW: 'En cours de vérification',
+  DISAPPROVED: 'Refusée par Meta',
+  PREAPPROVED: 'Pré-approuvée',
+  PENDING_BILLING_INFO: 'Infos de facturation requises',
 }
 
 export default function CampaignMappingRow({

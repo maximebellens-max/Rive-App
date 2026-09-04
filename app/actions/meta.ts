@@ -55,11 +55,16 @@ export async function syncMetaCampaigns(_prevState: MetaSyncState, _formData: Fo
     if (!campaigns.length) return { error: 'Aucune campagne trouvée sur ce compte publicitaire.' }
 
     const { error } = await supabase.from('meta_campaigns').upsert(
-      campaigns.map((c) => ({
+         campaigns.map((c) => ({
         agency_id: agencyId,
         campaign_id: c.id,
         campaign_name: c.name,
-        status: c.status,
+        // On stocke le statut RÉEL de diffusion (effective_status), pas le
+        // simple statut configuré (status) — voir le commentaire sur
+        // MetaCampaign dans lib/rive/meta.ts. Le mapping propriétaire/tableau
+        // ne dépend jamais de cette valeur, seuls l'affichage et le tri
+        // actives-en-premier l'utilisent.
+        status: c.effective_status,
         created_time: c.created_time,
         updated_at: new Date().toISOString(),
       })),

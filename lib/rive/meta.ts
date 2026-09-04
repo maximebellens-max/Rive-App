@@ -107,12 +107,24 @@ export async function subscribePageToLeadgen(pageId: string, pageAccessToken: st
   if (!res.ok) throw new Error(`Impossible d'abonner la Page aux nouveaux leads (${res.status}).`)
 }
 
-export type MetaCampaign = { id: string; name: string; status: string; created_time: string | null }
+// "status" est le statut CONFIGURÉ de la campagne (marche/arrêt manuel côté
+// annonceur) — "effective_status" est le statut RÉEL de diffusion, qui tient
+// compte en plus des budgets épuisés, des dates de fin d'ad set, de la
+// revue Meta, etc. Une campagne peut être "status: ACTIVE" tout en n'étant
+// plus du tout diffusée (ex. tous ses ad sets sont "ADSET_PAUSED" ou
+// "CAMPAIGN_PAUSED") : c'est effective_status qu'il faut afficher.
+export type MetaCampaign = {
+  id: string
+  name: string
+  status: string
+  effective_status: string
+  created_time: string | null
+}
 
 export async function fetchCampaigns(adAccountId: string, accessToken: string): Promise<MetaCampaign[]> {
   const params = new URLSearchParams({
     access_token: accessToken,
-    fields: 'id,name,status,created_time',
+    fields: 'id,name,status,effective_status,created_time',
     limit: '200',
   })
   const res = await fetch(`${GRAPH_BASE}/${adAccountId}/campaigns?${params.toString()}`)
