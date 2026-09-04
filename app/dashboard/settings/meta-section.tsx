@@ -1,14 +1,17 @@
-import { disconnectMeta, selectMetaAdAccount } from '@/app/actions/meta'
+import { disconnectMeta, selectMetaAdAccount, selectMetaPage } from '@/app/actions/meta'
 import SyncCampaignsButton from './sync-campaigns-button'
 import CampaignMappingRow from './campaign-mapping-row'
 
 type AdAccountOption = { id: string; name: string }
+type PageOption = { id: string; name: string }
 
 type Connection = {
   ad_account_id: string
   ad_account_name: string
+  page_id: string
   page_name: string
   available_ad_accounts: AdAccountOption[]
+  available_pages: PageOption[]
 } | null
 
 type Campaign = {
@@ -79,6 +82,39 @@ export default function MetaSection({
             </div>
           </div>
 
+          {connection.available_pages.length > 1 && (
+            <div className="flex flex-col gap-1.5 rounded-lg border border-neutral-200 bg-neutral-50 p-3">
+              <label htmlFor="page_id" className="text-xs font-medium text-neutral-700">
+                Page Facebook à utiliser
+              </label>
+              <p className="text-xs text-neutral-500">
+                Plusieurs Pages sont accessibles avec ce compte Meta — choisis celle qui reçoit vraiment les
+                prospects de tes publicités (si les leads n&apos;arrivent jamais dans Rive, c&apos;est probablement
+                que la mauvaise Page est sélectionnée ici).
+              </p>
+              <form action={selectMetaPage} className="flex flex-wrap items-center gap-2">
+                <select
+                  id="page_id"
+                  name="page_id"
+                  defaultValue={connection.page_id}
+                  className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-accent focus:ring-1 focus:ring-accent"
+                >
+                  {connection.available_pages.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name} ({p.id})
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="submit"
+                  className="rounded-lg border border-neutral-300 px-3 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-100"
+                >
+                  Utiliser cette Page
+                </button>
+              </form>
+            </div>
+          )}
+
           {connection.available_ad_accounts.length > 1 && (
             <div className="flex flex-col gap-1.5 rounded-lg border border-neutral-200 bg-neutral-50 p-3">
               <label htmlFor="ad_account_id" className="text-xs font-medium text-neutral-700">
@@ -88,7 +124,7 @@ export default function MetaSection({
                 Plusieurs comptes publicitaires sont accessibles avec ce compte Meta — choisis celui qui contient les
                 vraies campagnes de l&apos;agence.
               </p>
-                           <form action={selectMetaAdAccount} className="flex flex-wrap items-center gap-2">
+              <form action={selectMetaAdAccount} className="flex flex-wrap items-center gap-2">
                 <select
                   id="ad_account_id"
                   name="ad_account_id"

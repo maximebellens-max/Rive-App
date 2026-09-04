@@ -64,14 +64,32 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // Hevrest n'a qu'une seule Page : on la prend directement. Pour le
-    // compte publicitaire en revanche, une personne peut avoir accès à
+    // On croyait Hevrest limité à une seule Page, mais rien ne le garantit
+    // (même défaut déjà rencontré côté compte publicitaire, cf. commentaire
+    // adAccount ci-dessous) : si le compte Meta connecté administre plus
+    // d'une Page, prendre pages[0] à l'aveugle peut silencieusement
+    // connecter la mauvaise. On essaie d'abord de repérer "Hevrest" par son
+    // nom, sinon on retombe sur la première — mais on garde la liste
+    // complète (avec le jeton propre à chaque Page) pour permettre de
+    // corriger le choix depuis Réglages sans reconnexion complète.
+    const page = pages.find((p) => p.name.trim().toLowerCase() === 'hevrest') ?? pages[0]
+    // Pour le compte publicitaire, une personne peut avoir accès à
     // plusieurs comptes Meta (pro, perso, anciens comptes...) — on ne peut
     // pas deviner le bon. On prend le premier par défaut (cas le plus
     // courant : un seul compte), mais on garde la liste complète pour
     // permettre de corriger le choix depuis Réglages sans reconnexion.
-    const page = pages[0]
     const adAccount = adAccounts[0]
+
+    // Log diagnostic temporaire : si un jour le page_id enregistré ne
+    // correspond plus à celui reçu par le webhook, ces lignes dans les logs
+    // Vercel montreront immédiatement si Meta a renvoyé plusieurs Pages et
+    // laquelle a été choisie.
+    console.log(
+      '[meta] Pages disponibles à la connexion :',
+      pages.map((p) => `${p.name} (${p.id})`).join(', '),
+      '→ choisie :',
+      `${page.name} (${page.id})`
+    )
 
     await subscribePageToLeadgen(page.id, page.access_token)
 
@@ -84,6 +102,7 @@ export async function GET(request: NextRequest) {
         available_ad_accounts: adAccounts.map((a) => ({ id: a.id, name: a.name })),
         page_id: page.id,
         page_name: page.name,
+        available_pages: pages.map((p) => ({ id: p.id, name: p.name, access_token: p.access_token })),
         access_token: page.access_token,
         // Jeton utilisateur longue durée (~60 jours) — distinct du jeton de
         // Page ci-dessus : c'est lui qui porte la permission ads_read, donc

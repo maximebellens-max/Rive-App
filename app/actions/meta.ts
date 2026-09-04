@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
-import { fetchCampaigns } from '@/lib/rive/meta'
+import { fetchCampaigns, subscribePageToLeadgen } from '@/lib/rive/meta'
 
 async function getAgencyId() {
   const supabase = await createClient()
@@ -55,7 +55,7 @@ export async function syncMetaCampaigns(_prevState: MetaSyncState, _formData: Fo
     if (!campaigns.length) return { error: 'Aucune campagne trouvée sur ce compte publicitaire.' }
 
     const { error } = await supabase.from('meta_campaigns').upsert(
-         campaigns.map((c) => ({
+      campaigns.map((c) => ({
         agency_id: agencyId,
         campaign_id: c.id,
         campaign_name: c.name,
@@ -104,6 +104,52 @@ export async function selectMetaAdAccount(formData: FormData) {
   await supabase
     .from('meta_connections')
     .update({ ad_account_id: match.id, ad_account_name: match.name, updated_at: new Date().toISOString() })
+    .eq('agency_id', agencyId)
+
+  revalidatePath('/dashboard/settings')
+}
+
+// Permet de corriger la Page Facebook utilisée sans reconnexion complète —
+// même logique que selectMetaAdAccount ci-dessus, pour le même défaut :
+// Rive prend la première Page renvoyée par Meta par défaut à la connexion,
+// qui n'est pas forcément la bonne si le compte en administre plusieurs.
+// Contrairement au compte publicitaire, changer de Page exige aussi de
+// réabonner la nouvelle Page aux événements leadgen (l'ancienne y reste
+// abonnée mais ce n'est plus elle qui reçoit les leads du formulaire).
+export async function selectMetaPage(formData: FormData) {
+  const { supabase, agencyId } = await getAgencyId()
+  if (!agencyId) return
+
+  const pageId = String(formData.get('page_id') || '')
+  if (!pageId) return
+
+  const { data: connection } = await supabase
+    .from('meta_connections')
+    .select('available_pages')
+    .eq('agency_id', agencyId)
+    .maybeSingle()
+
+  const match = (
+    connection?.available_pages as { id: string; name: string; access_token: string }[] | null
+  )?.find((p) => p.id === pageId)
+  if (!match) return
+
+  try {
+    await subscribePageToLeadgen(match.id, match.access_token)
+  } catch {
+    // On continue quand même : mieux vaut enregistrer le bon page_id (le
+    // webhook pourra au moins être diagnostiqué correctement) que de rester
+    // bloqué sur l'ancienne Page si l'abonnement échoue ponctuellement.
+  }
+
+  await supabase
+    .from('meta_connections')
+    .update({
+      page_id: match.id,
+      page_name: match.name,
+      access_token: match.access_token,
+      updated_at: new Date().toISOString(),
+    })
     .eq('agency_id', agencyId)
 
   revalidatePath('/dashboard/settings')
