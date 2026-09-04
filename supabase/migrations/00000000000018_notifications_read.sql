@@ -1,19 +1,31 @@
-'use server'
+-- Cloche de notifications dans l'en-tête de Rive : marque toutes les
+-- notifications non lues de l'agence de l'utilisateur courant comme lues par
+-- lui. En security definer pour pouvoir modifier des notifications qui
+-- appartiennent à d'autres membres de l'agence (elles sont partagées, pas
+-- personnelles), en vérifiant nous-mêmes l'appartenance à l'agence puisque
+-- la RLS ne s'applique pas à l'intérieur d'une fonction security definer.
+create or replace function public.mark_notifications_read()
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_agency_id uuid;
+  v_uid uuid;
+begin
+  v_uid := auth.uid();
+  v_agency_id := current_agency_id();
 
-import { revalidatePath } from 'next/cache'
-import { createClient } from '@/lib/supabase/server'
+  if v_agency_id is null then
+    return;
+  end if;
 
-// Marque toutes les notifications de l'agence comme lues par l'utilisateur
-// connecté (appelée à l'ouverture de la cloche de notifications). Le calcul
-// se fait côté base via mark_notifications_read() plutôt qu'en JS pour rester
-// atomique même si plusieurs membres ouvrent la cloche en même temps.
-export async function markNotificationsRead() {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return
+  update notifications
+  set read_by = array_append(read_by, v_uid)
+  where agency_id = v_agency_id
+    and not (read_by @> array[v_uid]);
+end;
+$$;
 
-  await supabase.rpc('mark_notifications_read')
-  revalidatePath('/dashboard', 'layout')
-}
+grant execute on function public.mark_notifications_read() to authenticated;
