@@ -58,3 +58,47 @@ export async function sendLeadAlertEmail({
     console.error(`[meta] Échec de l'envoi de l'email d'alerte (${res.status}).`)
   }
 }
+
+// Alerte email quand un rapprochement acheteur ↔ bien apparaît (voir
+// lib/rive/match-notify.ts) — même politique que sendLeadAlertEmail : pas de
+// clé Resend ou aucun destinataire, on log et on continue sans faire échouer
+// l'action serveur qui a déclenché la notification.
+export async function sendMatchAlertEmail({
+  to,
+  title,
+  body,
+  url,
+}: {
+  to: string[]
+  title: string
+  body: string
+  url: string
+}): Promise<void> {
+  const apiKey = await resendApiKey()
+  if (!apiKey || to.length === 0) {
+    console.warn('[matching] Email d’alerte non envoyé (RESEND_API_KEY manquante ou aucun destinataire).')
+    return
+  }
+
+  const from = process.env.RESEND_FROM_EMAIL || 'Rive <onboarding@resend.dev>'
+
+  const html = `
+    <div style="font-family: -apple-system, sans-serif; color: #2b2b28; max-width: 480px;">
+      <h2 style="margin: 0 0 12px;">${title}</h2>
+      ${body ? `<p style="margin: 0 0 16px; color:#6b6a64;">${body}</p>` : ''}
+      <a href="${url}" style="display:inline-block; background:#1f6f5c; color:white; padding:10px 18px; border-radius:8px; text-decoration:none; font-size:14px;">
+        Voir dans Rive
+      </a>
+    </div>
+  `
+
+  const res = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ from, to, subject: title, html }),
+  })
+
+  if (!res.ok) {
+    console.error(`[matching] Échec de l'envoi de l'email d'alerte (${res.status}).`)
+  }
+}

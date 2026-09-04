@@ -65,17 +65,28 @@ export default async function DashboardLayout({
   const { data: rawNotifications } = profile?.agency_id
     ? await supabase
         .from('notifications')
-        .select('id, title, body, lead_id, read_by, created_at')
+        .select('id, title, body, lead_id, mandate_id, read_by, created_at')
         .eq('agency_id', profile.agency_id)
         .order('created_at', { ascending: false })
         .limit(20)
-    : { data: [] as { id: string; title: string; body: string; lead_id: string | null; read_by: string[]; created_at: string }[] }
+    : {
+        data: [] as {
+          id: string
+          title: string
+          body: string
+          lead_id: string | null
+          mandate_id: string | null
+          read_by: string[]
+          created_at: string
+        }[],
+      }
 
   const notifications: NotificationItem[] = (rawNotifications ?? []).map((n) => ({
     id: n.id,
     title: n.title,
     body: n.body,
     lead_id: n.lead_id,
+    mandate_id: n.mandate_id,
     created_at: n.created_at,
     read: (n.read_by ?? []).includes(user.id),
   }))

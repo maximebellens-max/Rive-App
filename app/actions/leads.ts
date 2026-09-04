@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { initialPositions, reconcilePositionsOnCategoryChange } from '@/lib/rive/pipeline-positions'
+import { notifyMatchesForLeadId } from '@/lib/rive/match-notify'
 
 export type LeadFormState = { error?: string } | undefined
 
@@ -56,19 +57,27 @@ export async function createLead(
 
   const positions = await initialPositions(supabase, agencyId, category)
 
-  const { error: insertError } = await supabase.from('leads').insert({
-    agency_id: agencyId,
-    assigned_to: userId,
-    name,
-    phone,
-    email,
-    category,
-    critere_lieu: critereLieu,
-    positions,
-  })
+  const { data: newLead, error: insertError } = await supabase
+    .from('leads')
+    .insert({
+      agency_id: agencyId,
+      assigned_to: userId,
+      name,
+      phone,
+      email,
+      category,
+      critere_lieu: critereLieu,
+      positions,
+    })
+    .select('id')
+    .single()
 
   if (insertError) {
     return { error: "Impossible d'ajouter le prospect." }
+  }
+
+  if (newLead?.id) {
+    await notifyMatchesForLeadId(supabase, agencyId, newLead.id)
   }
 
   revalidatePath('/dashboard/prospects')
@@ -134,6 +143,8 @@ export async function updateLead(
     .eq('id', leadId)
 
   if (error) return { error: 'Impossible d’enregistrer les modifications.' }
+
+  await notifyMatchesForLeadId(supabase, agencyId, leadId)
 
   revalidatePath(`/dashboard/prospects/${leadId}`)
   revalidatePath('/dashboard/prospects')

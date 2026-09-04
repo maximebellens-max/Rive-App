@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/server'
 import { FEATURE_KEYS, type Features } from '@/lib/rive/mandates'
 import { maybeCreateCommissionForMandate } from '@/lib/rive/automation'
 import { initialPositions } from '@/lib/rive/pipeline-positions'
+import { notifyMatchesForMandateId } from '@/lib/rive/match-notify'
 
 export type MandateFormState = { error?: string } | undefined
 
@@ -169,6 +170,8 @@ export async function createMandate(
     }
   }
 
+  await notifyMatchesForMandateId(supabase, agencyId, data.id)
+
   if (newLeadCreated) revalidatePath('/dashboard/prospects')
   revalidatePath(isDraft ? '/dashboard/estimations' : '/dashboard/mandates')
   redirect(`/dashboard/mandates/${data.id}`)
@@ -229,7 +232,7 @@ export async function updateMandate(
     })
     .eq('id', mandateId)
 
-  if (error) return { error: 'Impossible d\u2019enregistrer les modifications.' }
+  if (error) return { error: 'Impossible d’enregistrer les modifications.' }
 
   // Une commission est créée automatiquement la première fois qu'un mandat
   // passe à l'étape "Vendu" — inutile de la ressaisir à la main.
@@ -242,6 +245,8 @@ export async function updateMandate(
     })
     revalidatePath('/dashboard/commissions')
   }
+
+  await notifyMatchesForMandateId(supabase, agencyId, mandateId)
 
   revalidatePath(`/dashboard/mandates/${mandateId}`)
   revalidatePath('/dashboard/mandates')
@@ -298,6 +303,8 @@ export async function activateMandateDraft(mandateId: string) {
     .from('mandates')
     .update({ is_draft: false, updated_at: new Date().toISOString() })
     .eq('id', mandateId)
+
+  await notifyMatchesForMandateId(supabase, agencyId, mandateId)
 
   revalidatePath(`/dashboard/mandates/${mandateId}`)
   revalidatePath('/dashboard/mandates')

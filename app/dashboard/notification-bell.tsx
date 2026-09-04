@@ -9,6 +9,7 @@ export type NotificationItem = {
   title: string
   body: string
   lead_id: string | null
+  mandate_id: string | null
   created_at: string
   read: boolean
 }
@@ -106,8 +107,13 @@ export default function NotificationBell({ notifications }: { notifications: Not
                     {n.body && <p className="text-xs text-neutral-500">{n.body}</p>}
                   </div>
                 )
-                return n.lead_id ? (
-                  <Link key={n.id} href={`/dashboard/prospects/${n.lead_id}`} onClick={() => setOpen(false)}>
+                const href = n.lead_id
+                  ? `/dashboard/prospects/${n.lead_id}`
+                  : n.mandate_id
+                    ? `/dashboard/mandates/${n.mandate_id}`
+                    : null
+                return href ? (
+                  <Link key={n.id} href={href} onClick={() => setOpen(false)}>
                     {content}
                   </Link>
                 ) : (
