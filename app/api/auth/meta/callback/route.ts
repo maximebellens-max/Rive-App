@@ -82,6 +82,11 @@ export async function GET(request: NextRequest) {
         page_id: page.id,
         page_name: page.name,
         access_token: page.access_token,
+        // Jeton utilisateur longue durée (~60 jours) — distinct du jeton de
+        // Page ci-dessus : c'est lui qui porte la permission ads_read, donc
+        // celui à utiliser pour lister les campagnes d'un compte
+        // publicitaire (voir syncMetaCampaigns dans app/actions/meta.ts).
+        user_access_token: longLived.access_token,
         token_expires_at: null,
         updated_at: new Date().toISOString(),
       },

@@ -37,14 +37,21 @@ export async function syncMetaCampaigns(_prevState: MetaSyncState, _formData: Fo
 
   const { data: connection } = await supabase
     .from('meta_connections')
-    .select('ad_account_id, access_token')
+    .select('ad_account_id, access_token, user_access_token')
     .eq('agency_id', agencyId)
     .maybeSingle()
 
   if (!connection) return { error: 'Aucun compte Meta connecté.' }
 
+  // La lecture des campagnes d'un compte publicitaire exige la permission
+  // ads_read, portée par le jeton UTILISATEUR — pas par le jeton de Page
+  // (access_token), qui ne sert qu'à la récupération des leads via le
+  // webhook. Repli sur access_token pour les connexions faites avant ce
+  // correctif, le temps que l'agence reconnecte son compte Meta.
+  const campaignToken = connection.user_access_token || connection.access_token
+
   try {
-    const campaigns = await fetchCampaigns(connection.ad_account_id, connection.access_token)
+    const campaigns = await fetchCampaigns(connection.ad_account_id, campaignToken)
     if (!campaigns.length) return { error: 'Aucune campagne trouvée sur ce compte publicitaire.' }
 
     const { error } = await supabase.from('meta_campaigns').upsert(
