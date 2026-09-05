@@ -62,14 +62,50 @@ async function processLeadgenChange(
   pageId: string,
   leadgenId: string
 ) {
-  const { data: connection } = await supabase
+  const { data: connection, error: connectionError } = await supabase
     .from('meta_connections')
     .select('agency_id, access_token')
     .eq('page_id', pageId)
     .maybeSingle()
 
   if (!connection) {
+    // Diagnostic temporaire : le code ignorait silencieusement toute erreur
+    // renvoyée par Supabase ici (seul le cas "0 résultat" était géré), donc
+    // une vraie erreur technique (ex. clé de service invalide, RLS mal
+    // contournée) aurait été indiscernable d'un simple page_id qui ne
+    // correspond à aucune ligne. On logue aussi la valeur reçue caractère
+    // par caractère pour écarter un caractère invisible dans le payload de
+    // Meta que l'affichage des logs ne montrerait pas.
     console.warn(`[meta] Aucune agence connectée pour la Page ${pageId} — événement ignoré.`)
+    console.warn(
+      `[meta] Diagnostic — pageId reçu : "${pageId}" (longueur ${pageId.length}), codes caractères : ${Array.from(
+        pageId
+      )
+        .map((c) => c.charCodeAt(0))
+        .join(',')}`
+    )
+    if (connectionError) {
+      console.error('[meta] Diagnostic — erreur Supabase lors de la recherche de connexion :', connectionError)
+    }
+    // Diagnostic temporaire : liste tous les page_id existants (avec leur
+    // longueur et leurs codes caractères) pour comparer directement côté
+    // serveur, sans dépendre de l'affichage de l'éditeur SQL de Supabase
+    // (dont on a découvert qu'il pouvait tronquer visuellement les longues
+    // chaînes de chiffres sans que la vraie donnée soit affectée).
+    const { data: allConnections } = await supabase.from('meta_connections').select('agency_id, page_id')
+    console.warn(
+      '[meta] Diagnostic — page_id en base :',
+      (allConnections ?? [])
+        .map(
+          (c) =>
+            `agency=${c.agency_id} page_id="${c.page_id}" (longueur ${c.page_id.length}, codes ${Array.from(
+              c.page_id as string
+            )
+              .map((ch) => ch.charCodeAt(0))
+              .join(',')})`
+        )
+        .join(' | ')
+    )
     return
   }
 
