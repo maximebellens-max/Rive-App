@@ -1,6 +1,8 @@
 import { disconnectMeta, selectMetaAdAccount, selectMetaPage } from '@/app/actions/meta'
 import SyncCampaignsButton from './sync-campaigns-button'
 import CampaignMappingRow from './campaign-mapping-row'
+import TestEmailButton from './test-email-button'
+import CheckSubscriptionButton from './check-subscription-button'
 
 type AdAccountOption = { id: string; name: string }
 type PageOption = { id: string; name: string }
@@ -79,6 +81,18 @@ export default function MetaSection({
                   Déconnecter
                 </button>
               </form>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2 rounded-lg border border-neutral-200 bg-neutral-50 p-3">
+            <p className="text-xs font-medium text-neutral-700">Diagnostic</p>
+            <p className="text-xs text-neutral-500">
+              À utiliser à tout moment, sans attendre un vrai lead — pour vérifier que les alertes email
+              fonctionnent, et que la Page reste bien abonnée aux nouveaux prospects côté Meta.
+            </p>
+            <div className="flex flex-wrap items-start gap-3">
+              <TestEmailButton />
+              <CheckSubscriptionButton />
             </div>
           </div>
 

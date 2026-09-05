@@ -7,6 +7,37 @@ async function resendApiKey(): Promise<string | null> {
   return process.env.RESEND_API_KEY || null
 }
 
+// Contrairement aux alertes automatiques ci-dessous (qui ne doivent jamais
+// faire échouer le traitement d'un lead), cette fonction sert uniquement au
+// bouton de test dans Réglages : elle renvoie explicitement ce qui a
+// bloqué, pour vérifier la configuration Resend sans attendre un vrai lead
+// Meta.
+export async function sendTestEmail(to: string[]): Promise<{ ok: boolean; error?: string }> {
+  const apiKey = await resendApiKey()
+  if (!apiKey) return { ok: false, error: 'RESEND_API_KEY manquante dans les variables d’environnement Vercel.' }
+  if (to.length === 0) return { ok: false, error: 'Aucun destinataire (aucun membre avec un email enregistré).' }
+
+  const from = process.env.RESEND_FROM_EMAIL || 'Rive <onboarding@resend.dev>'
+  const html = `
+    <div style="font-family: -apple-system, sans-serif; color: #2b2b28; max-width: 480px;">
+      <h2 style="margin: 0 0 12px;">Email de test Rive</h2>
+      <p style="margin: 0;">Si tu reçois cet email, l’envoi des alertes fonctionne correctement.</p>
+    </div>
+  `
+
+  const res = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ from, to, subject: 'Rive — Email de test', html }),
+  })
+
+  if (!res.ok) {
+    const detail = await res.text().catch(() => '')
+    return { ok: false, error: `Resend a refusé l’envoi (${res.status}). ${detail}` }
+  }
+  return { ok: true }
+}
+
 export async function sendLeadAlertEmail({
   to,
   leadName,

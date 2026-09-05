@@ -111,6 +111,21 @@ export async function subscribePageToLeadgen(pageId: string, pageAccessToken: st
   if (!res.ok) throw new Error(`Impossible d'abonner la Page aux nouveaux leads (${res.status}).`)
 }
 
+// Rien dans Rive ne revérifiait jamais après coup que la Page restait
+// abonnée aux événements leadgen (l'abonnement peut se rompre si le jeton
+// de Page est invalidé par Meta après la connexion initiale, sans qu'on en
+// soit prévenu autrement qu'en constatant l'absence de leads). Cette
+// fonction lit l'état réel de l'abonnement côté Meta, pour un bouton de
+// vérification manuelle dans Réglages.
+export async function isPageSubscribedToLeadgen(pageId: string, pageAccessToken: string): Promise<boolean> {
+  const params = new URLSearchParams({ access_token: pageAccessToken })
+  const res = await fetch(`${GRAPH_BASE}/${pageId}/subscribed_apps?${params.toString()}`)
+  if (!res.ok) throw new Error(`Impossible de lire l'état de l'abonnement (${res.status}).`)
+  const data = await res.json()
+  const apps = (data.data ?? []) as { subscribed_fields?: string[] }[]
+  return apps.some((a) => a.subscribed_fields?.includes('leadgen'))
+}
+
 // "status" est le statut CONFIGURÉ de la campagne (marche/arrêt manuel côté
 // annonceur). On pourrait croire que "effective_status" (fourni par Meta
 // directement sur l'objet Campaign) suffit à connaître le statut réel de

@@ -2,7 +2,8 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
-import { fetchCampaigns, subscribePageToLeadgen } from '@/lib/rive/meta'
+import { fetchCampaigns, isPageSubscribedToLeadgen, subscribePageToLeadgen } from '@/lib/rive/meta'
+import { sendTestEmail } from '@/lib/rive/email'
 
 async function getAgencyId() {
   const supabase = await createClient()
@@ -169,4 +170,54 @@ export async function updateMetaCampaignMapping(campaignRowId: string, formData:
     .eq('agency_id', agencyId)
 
   revalidatePath('/dashboard/settings')
+}
+
+export type DiagnosticState = { error?: string; success?: string } | undefined
+
+// Envoie un email de test à toute l'agence, indépendamment de tout lead
+// Meta — permet de vérifier la configuration Resend (clé API, adresse
+// d'expédition) sans attendre un vrai prospect.
+export async function sendTestEmailAction(_prevState: DiagnosticState, _formData: FormData): Promise<DiagnosticState> {
+  const { supabase, agencyId } = await getAgencyId()
+  if (!agencyId) return { error: 'Session expirée, reconnecte-toi.' }
+
+  const { data: members } = await supabase.from('profiles').select('email').eq('agency_id', agencyId).not('email', 'eq', '')
+  const recipients = (members ?? []).map((m) => m.email).filter(Boolean)
+
+  const result = await sendTestEmail(recipients)
+  if (!result.ok) return { error: result.error }
+  return { success: `Email envoyé à : ${recipients.join(', ')}. Vérifie ta boîte de réception (et les spams).` }
+}
+
+// Revérifie que la Page reste bien abonnée aux événements leadgen côté
+// Meta, et se réabonne automatiquement si ce n'est plus le cas — l'un des
+// points de fragilité identifiés : cet abonnement peut se rompre après la
+// connexion initiale sans que Rive en soit prévenu autrement qu'en
+// constatant l'absence de leads.
+export async function checkLeadgenSubscriptionAction(
+  _prevState: DiagnosticState,
+  _formData: FormData
+): Promise<DiagnosticState> {
+  const { supabase, agencyId } = await getAgencyId()
+  if (!agencyId) return { error: 'Session expirée, reconnecte-toi.' }
+
+  const { data: connection } = await supabase
+    .from('meta_connections')
+    .select('page_id, page_name, access_token')
+    .eq('agency_id', agencyId)
+    .maybeSingle()
+  if (!connection) return { error: 'Aucun compte Meta connecté.' }
+
+  try {
+    const subscribed = await isPageSubscribedToLeadgen(connection.page_id, connection.access_token)
+    if (subscribed) {
+      return { success: `La Page "${connection.page_name}" est bien abonnée aux nouveaux leads.` }
+    }
+    await subscribePageToLeadgen(connection.page_id, connection.access_token)
+    return {
+      success: `La Page "${connection.page_name}" n'était plus abonnée — elle vient d'être réabonnée automatiquement.`,
+    }
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Impossible de vérifier l'abonnement." }
+  }
 }
