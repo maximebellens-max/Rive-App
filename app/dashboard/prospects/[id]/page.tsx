@@ -18,6 +18,19 @@ const CATEGORY_LABEL: Record<string, string> = {
   investisseur: 'Investisseur',
 }
 
+// Affichée en toutes lettres sur la fiche (plutôt qu'en relatif type "il y a
+// 2 j") : sert de repère fixe pour caler un rappel ou un suivi, contrairement
+// à un horodatage relatif qui change de sens à chaque relecture.
+function formatReceivedAt(iso: string): string {
+  return new Date(iso).toLocaleString('fr-FR', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
 export default async function ProspectDetailPage({ params }: PageProps<'/dashboard/prospects/[id]'>) {
   const { id } = await params
   // Réutilise l'utilisateur/profil déjà résolus par le layout (même requête,
@@ -66,6 +79,9 @@ export default async function ProspectDetailPage({ params }: PageProps<'/dashboa
             {CATEGORY_LABEL[lead.category ?? ''] ?? lead.category ?? 'Sans catégorie'}
             {lead.critere_lieu ? ` · ${lead.critere_lieu}` : ''}
           </p>
+          {lead.created_at && (
+            <p className="mt-0.5 text-xs text-neutral-400">Reçu le {formatReceivedAt(lead.created_at)}</p>
+          )}
         </div>
         <DeleteLeadButton leadId={lead.id} />
       </div>

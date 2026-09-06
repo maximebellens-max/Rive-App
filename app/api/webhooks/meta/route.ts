@@ -158,6 +158,13 @@ async function processLeadgenChange(
       critere_lieu: criterLieu,
       meta_answers: customAnswers,
       positions,
+      // Meta indique l'heure exacte à laquelle le prospect a soumis le
+      // formulaire (leadData.createdTime) — on s'en sert à la place de
+      // l'heure par défaut (maintenant) pour que "reçu à" reflète le vrai
+      // moment de la demande, pas celui, légèrement plus tardif, où le
+      // webhook a fini par être traité côté Rive. Repli sur le comportement
+      // par défaut si Meta ne la renvoie pas.
+      ...(leadData.createdTime ? { created_at: leadData.createdTime } : {}),
     })
     .select('id')
     .single()

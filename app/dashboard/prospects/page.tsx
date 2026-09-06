@@ -45,6 +45,7 @@ export default async function ProspectsPage() {
     budget: l.budget,
     financement: l.financement,
     action_date: l.action_date,
+    created_at: l.created_at,
     columnId: (l.positions as Record<string, string>)?.prospects ?? null,
     score: leadPriorityScore({
       budget: l.budget,

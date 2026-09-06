@@ -83,6 +83,7 @@ export default async function PipelineBoardPage({ params }: PageProps<'/dashboar
     budget: l.budget,
     financement: l.financement,
     action_date: l.action_date,
+    created_at: l.created_at,
     columnId: (l.positions as Record<string, string>)?.[bt] ?? null,
     score: leadPriorityScore({
       budget: l.budget,

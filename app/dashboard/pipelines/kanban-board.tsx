@@ -34,6 +34,7 @@ export type PipelineCard = {
   budget: number | null
   financement: string
   action_date: string | null
+  created_at: string
   columnId: string | null
   score: number
 }
@@ -41,6 +42,22 @@ export type PipelineCard = {
 function formatBudget(n: number | null): string {
   if (!n) return ''
   return new Intl.NumberFormat('fr-FR').format(n) + ' €'
+}
+
+// Repère au premier coup d'œil un prospect tout juste arrivé (typiquement un
+// lead Meta) sans avoir à ouvrir sa fiche — utile pour le rappeler au plus
+// vite, l'essentiel du taux de transformation se jouant dans les toutes
+// premières minutes.
+function formatLeadAge(iso: string): string {
+  const diffMs = Date.now() - new Date(iso).getTime()
+  const minutes = Math.floor(diffMs / 60_000)
+  if (minutes < 1) return "à l'instant"
+  if (minutes < 60) return `il y a ${minutes} min`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `il y a ${hours} h`
+  const days = Math.floor(hours / 24)
+  if (days < 7) return `il y a ${days} j`
+  return new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
 }
 
 export default function KanbanBoard({
@@ -334,6 +351,7 @@ function CardItem({ card }: { card: PipelineCard }) {
       {card.category && <span className="text-xs text-neutral-500">{CATEGORY_LABEL[card.category]}</span>}
       {card.critere_lieu && <span className="text-xs text-neutral-500">📍 {card.critere_lieu}</span>}
       {card.budget ? <span className="text-xs text-neutral-500">💰 {formatBudget(card.budget)}</span> : null}
+      {card.created_at && <span className="text-xs text-neutral-400">🕓 {formatLeadAge(card.created_at)}</span>}
     </Link>
   )
 }
