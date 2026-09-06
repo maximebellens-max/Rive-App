@@ -110,7 +110,7 @@ async function processLeadgenChange(
   }
 
   const leadData = await fetchLeadData(leadgenId, connection.access_token)
-  const { name, email, phone } = mapLeadFields(leadData.fieldData)
+  const { name, email, phone, criterType, criterLieu, customAnswers } = mapLeadFields(leadData.fieldData)
 
   let ownerId: string | null = null
   let ownerName: string | null = null
@@ -149,6 +149,14 @@ async function processLeadgenChange(
       campaign: leadData.campaignName || '',
       meta_lead_id: leadData.id,
       meta_campaign_id: leadData.campaignId || '',
+      // Type de bien / secteur directement dans les champs Critères déjà
+      // existants sur la fiche prospect (affichés/éditables comme pour un
+      // lead saisi manuellement) ; le reste des réponses (budget indiqué,
+      // bien déjà en vente, délai souhaité…) dans meta_answers, pour ne rien
+      // perdre même si aucun champ existant ne leur correspond.
+      critere_type: criterType,
+      critere_lieu: criterLieu,
+      meta_answers: customAnswers,
       positions,
     })
     .select('id')

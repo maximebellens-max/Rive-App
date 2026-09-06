@@ -235,29 +235,83 @@ export async function fetchLeadData(leadgenId: string, pageAccessToken: string):
 // ("full_name", "email", "phone_number") gardent ce nom technique quelle que
 // soit la langue affichée à l'utilisateur, mais un champ personnalisé peut
 // porter n'importe quel nom. On reconnaît d'abord les clés standard, puis on
-// retombe sur une correspondance approximative par mot-clé.
-function findFieldValue(fieldData: MetaLeadData['fieldData'], exactKeys: string[], keywords: string[]): string {
+// retombe sur une correspondance approximative par mot-clé. On renvoie le
+// champ entier (pas seulement sa valeur) pour pouvoir ensuite l'exclure des
+// réponses "personnalisées" ci-dessous, sans le dupliquer à l'affichage.
+type FieldEntry = MetaLeadData['fieldData'][number]
+
+function findField(fieldData: FieldEntry[], exactKeys: string[], keywords: string[]): FieldEntry | undefined {
   for (const key of exactKeys) {
     const match = fieldData.find((f) => f.name.toLowerCase() === key)
-    if (match?.values?.[0]) return match.values[0]
+    if (match?.values?.[0]) return match
   }
   for (const kw of keywords) {
     const match = fieldData.find((f) => f.name.toLowerCase().includes(kw))
-    if (match?.values?.[0]) return match.values[0]
+    if (match?.values?.[0]) return match
   }
-  return ''
+  return undefined
 }
 
-export function mapLeadFields(fieldData: MetaLeadData['fieldData']): { name: string; email: string; phone: string } {
-  const fullName = findFieldValue(fieldData, ['full_name'], ['full_name', 'nom_complet'])
-  const firstName = findFieldValue(fieldData, ['first_name'], ['first_name', 'prenom', 'prénom'])
-  const lastName = findFieldValue(fieldData, ['last_name'], ['last_name', 'nom_de_famille'])
+// Un champ personnalisé Meta porte souvent un nom technique dérivé de la
+// question (ex. "de_quel_bien_s_agit_il") plutôt que la question elle-même.
+// On le rend lisible du mieux possible pour l'affichage — approximatif, mais
+// ça évite de devoir maintenir une correspondance figée par question, qui
+// casserait dès qu'Hevrest modifie un formulaire existant ou en crée un
+// nouveau (ce qui arrive déjà : deux formulaires différents sont utilisés,
+// avec un ordre et un jeu de questions différents).
+function prettifyFieldName(name: string): string {
+  const spaced = name.replace(/[_-]+/g, ' ').trim().replace(/\s+/g, ' ')
+  if (!spaced) return name
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1)
+}
+
+export type MetaLeadDetails = {
+  name: string
+  email: string
+  phone: string
+  criterType: string
+  criterLieu: string
+  // Toute réponse du formulaire qui n'est ni les coordonnées ni le type/lieu
+  // du bien (ex. budget indiqué, bien déjà en vente ou non, délai souhaité)
+  // — conservée telle quelle, question par question, pour ne perdre aucune
+  // information utile même sur un formulaire jamais vu auparavant.
+  customAnswers: { question: string; answer: string }[]
+}
+
+export function mapLeadFields(fieldData: MetaLeadData['fieldData']): MetaLeadDetails {
+  const fullNameField = findField(fieldData, ['full_name'], ['full_name', 'nom_complet'])
+  const firstNameField = findField(fieldData, ['first_name'], ['first_name', 'prenom', 'prénom'])
+  const lastNameField = findField(fieldData, ['last_name'], ['last_name', 'nom_de_famille'])
+  const emailField = findField(fieldData, ['email'], ['email', 'mail'])
+  const phoneField = findField(fieldData, ['phone_number'], ['phone', 'tel', 'téléphone'])
+  // "de quel bien s'agit-il" / "où est-il situé (ville)" : questions
+  // présentes sur les deux formulaires actuellement utilisés par Hevrest,
+  // reconnues par mot-clé pour alimenter directement les champs Critères
+  // déjà existants sur la fiche prospect (type de bien / secteur).
+  const typeField = findField(fieldData, [], ['type_de_bien', 'quel_bien', 'de_bien', 'bien_s_agit', 'bien_agit'])
+  const lieuField = findField(fieldData, [], ['ville', 'situe', 'localisation', 'secteur'])
+
+  const consumed = new Set(
+    [fullNameField, firstNameField, lastNameField, emailField, phoneField, typeField, lieuField].filter(
+      (f): f is FieldEntry => Boolean(f)
+    )
+  )
+
+  const fullName = fullNameField?.values?.[0] || ''
+  const firstName = firstNameField?.values?.[0] || ''
+  const lastName = lastNameField?.values?.[0] || ''
   const name = fullName || [firstName, lastName].filter(Boolean).join(' ') || 'Lead Meta sans nom'
 
-  const email = findFieldValue(fieldData, ['email'], ['email', 'mail'])
-  const phone = findFieldValue(fieldData, ['phone_number'], ['phone', 'tel', 'téléphone'])
+  const email = emailField?.values?.[0] || ''
+  const phone = phoneField?.values?.[0] || ''
+  const criterType = typeField?.values?.[0] || ''
+  const criterLieu = lieuField?.values?.[0] || ''
 
-  return { name, email, phone }
+  const customAnswers = fieldData
+    .filter((f) => !consumed.has(f) && f.values?.[0])
+    .map((f) => ({ question: prettifyFieldName(f.name), answer: f.values[0] }))
+
+  return { name, email, phone, criterType, criterLieu, customAnswers }
 }
 
 // Vérifie l'en-tête X-Hub-Signature-256 que Meta ajoute à chaque appel

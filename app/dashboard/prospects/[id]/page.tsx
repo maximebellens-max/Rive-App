@@ -103,6 +103,23 @@ export default async function ProspectDetailPage({ params }: PageProps<'/dashboa
         </div>
       )}
 
+      {Array.isArray(lead.meta_answers) && lead.meta_answers.length > 0 && (
+        <div className="rounded-2xl border border-neutral-200 bg-surface p-5 shadow-sm">
+          <h2 className="text-sm font-semibold text-neutral-900">📝 Réponses au formulaire Meta</h2>
+          <p className="mt-1 text-xs text-neutral-500">
+            Récupérées automatiquement depuis le formulaire publicitaire rempli par le prospect.
+          </p>
+          <dl className="mt-3 flex flex-col gap-2.5">
+            {(lead.meta_answers as { question: string; answer: string }[]).map((qa, i) => (
+              <div key={i} className="flex flex-col gap-0.5 border-t border-neutral-100 pt-2.5 first:border-t-0 first:pt-0">
+                <dt className="text-xs font-medium text-neutral-500">{qa.question}</dt>
+                <dd className="text-sm text-neutral-900">{qa.answer}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      )}
+
       <div className="rounded-2xl border border-neutral-200 bg-surface p-6 shadow-sm">
         <LeadEditForm lead={lead} />
       </div>
