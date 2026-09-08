@@ -1,9 +1,22 @@
 'use client'
 
-import { useMemo, useRef, useState, useTransition } from 'react'
+import { useEffect, useMemo, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { createAppointment, deleteAppointment } from '@/app/actions/appointments'
 import { MONTH_FULL_FR, DOW_LABELS_FR, daysInMonth, firstWeekdayMonday0, dateStrOf, addMonths } from '@/lib/rive/calendar'
+
+const DOW_FULL_FR = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche']
+
+// Ex. "2026-08-24" -> "Lundi 24 août 2026" — utilisé dans le titre de la
+// fenêtre d'ajout de RDV, pour que la date soit lisible sans avoir à
+// comparer avec la grille du calendrier.
+function formatDateFrLong(dateStr: string): string {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  const jsDay = new Date(y, m - 1, d).getDay()
+  const dow = DOW_FULL_FR[(jsDay + 6) % 7]
+  const label = `${dow} ${d} ${MONTH_FULL_FR[m - 1]} ${y}`
+  return label.charAt(0).toUpperCase() + label.slice(1)
+}
 
 export type AppointmentItem = {
   id: string
@@ -144,17 +157,131 @@ export default function MonthCalendar({
                 <AppointmentChip key={a.id} appointment={a} />
               ))}
               {items.length > 3 && <span className="px-1 text-[10px] text-neutral-400">+{items.length - 3}</span>}
-
-              {isAdding && (
-                <DayAppointmentForm
-                  dateStr={dateStr}
-                  leadOptions={leadOptions}
-                  onDone={() => setAddingDate(null)}
-                />
-              )}
             </div>
           )
         })}
+      </div>
+
+      {addingDate && (
+        <AppointmentModal
+          dateStr={addingDate}
+          leadOptions={leadOptions}
+          onClose={() => setAddingDate(null)}
+        />
+      )}
+    </div>
+  )
+}
+
+// Fenêtre modale (plutôt qu'un mini-formulaire coincé dans la case du jour,
+// trop petite pour être confortable) pour ajouter un rendez-vous — même
+// logique que l'ancien DayAppointmentForm, juste affichée en grand par-dessus
+// le calendrier.
+function AppointmentModal({
+  dateStr,
+  leadOptions,
+  onClose,
+}: {
+  dateStr: string
+  leadOptions: LeadOption[]
+  onClose: () => void
+}) {
+  const [, startTransition] = useTransition()
+  const [pending, setPending] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [onClose])
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onClose()
+      }}
+    >
+      <div className="w-full max-w-md rounded-2xl border border-neutral-200 bg-surface p-5 shadow-xl">
+        <div className="mb-4 flex items-start justify-between gap-3">
+          <div>
+            <h2 className="text-base font-semibold text-neutral-900">Nouveau rendez-vous</h2>
+            <p className="text-sm text-neutral-500">{formatDateFrLong(dateStr)}</p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Fermer"
+            className="rounded-lg p-1 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600"
+          >
+            ✕
+          </button>
+        </div>
+
+        <form
+          action={(formData: FormData) => {
+            setPending(true)
+            startTransition(async () => {
+              const res = await createAppointment(undefined, formData)
+              setPending(false)
+              if (res?.error) {
+                setError(res.error)
+              } else {
+                setError(null)
+                onClose()
+              }
+            })
+          }}
+          className="flex flex-col gap-3"
+        >
+          <input type="hidden" name="appointment_date" value={dateStr} />
+
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium text-neutral-500">Prospect</label>
+            <LeadCombobox options={leadOptions} large />
+          </div>
+
+          <div className="flex gap-3">
+            <div className="flex flex-1 flex-col gap-1">
+              <label className="text-xs font-medium text-neutral-500">Heure</label>
+              <input
+                name="appointment_time"
+                type="time"
+                className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-accent"
+              />
+            </div>
+            <div className="flex flex-[2] flex-col gap-1">
+              <label className="text-xs font-medium text-neutral-500">Motif</label>
+              <input
+                name="label"
+                placeholder="RDV, appel, visite…"
+                className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-accent"
+              />
+            </div>
+          </div>
+
+          {error && <p className="text-sm text-danger">{error}</p>}
+
+          <div className="mt-1 flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-lg border border-neutral-300 px-4 py-2 text-sm font-medium text-neutral-600 hover:bg-neutral-100"
+            >
+              Annuler
+            </button>
+            <button
+              type="submit"
+              disabled={pending}
+              className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-50"
+            >
+              {pending ? 'Ajout…' : 'Ajouter le rendez-vous'}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   )
@@ -193,70 +320,11 @@ function AppointmentChip({ appointment }: { appointment: AppointmentItem }) {
   )
 }
 
-function DayAppointmentForm({
-  dateStr,
-  leadOptions,
-  onDone,
-}: {
-  dateStr: string
-  leadOptions: LeadOption[]
-  onDone: () => void
-}) {
-  const [, startTransition] = useTransition()
-  const [pending, setPending] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const formRef = useRef<HTMLFormElement>(null)
-
-  return (
-    <form
-      ref={formRef}
-      action={(formData: FormData) => {
-        setPending(true)
-        startTransition(async () => {
-          const res = await createAppointment(undefined, formData)
-          setPending(false)
-          if (res?.error) {
-            setError(res.error)
-          } else {
-            setError(null)
-            onDone()
-          }
-        })
-      }}
-      className="mt-1 flex flex-col gap-1 rounded-lg border border-neutral-200 bg-neutral-50 p-1.5"
-    >
-      <input type="hidden" name="appointment_date" value={dateStr} />
-      <LeadCombobox options={leadOptions} />
-      <div className="flex gap-1">
-        <input
-          name="appointment_time"
-          type="time"
-          className="w-16 rounded border border-neutral-300 px-1 py-1 text-[11px] outline-none focus:border-accent"
-        />
-        <input
-          name="label"
-          placeholder="RDV, appel…"
-          className="min-w-0 flex-1 rounded border border-neutral-300 px-1 py-1 text-[11px] outline-none focus:border-accent"
-        />
-      </div>
-      {error && <span className="text-[10px] text-danger">{error}</span>}
-      <div className="flex gap-1">
-        <button type="submit" disabled={pending} className="flex-1 rounded bg-accent py-1 text-[11px] font-medium text-white disabled:opacity-50">
-          Ajouter
-        </button>
-        <button type="button" onClick={onDone} className="rounded px-1.5 text-[11px] text-neutral-500">
-          ✕
-        </button>
-      </div>
-    </form>
-  )
-}
-
 // Champ prospect avec recherche par nom, à la place d'une liste déroulante
 // classique — celle-ci devenait pénible dès que l'agence a beaucoup de
 // prospects. Le lead choisi est porté par un input caché ("lead_id"), le
 // texte affiché n'est que la recherche/le nom retenu.
-function LeadCombobox({ options }: { options: LeadOption[] }) {
+function LeadCombobox({ options, large }: { options: LeadOption[]; large?: boolean }) {
   const [query, setQuery] = useState('')
   const [selected, setSelected] = useState<LeadOption | null>(null)
   const [open, setOpen] = useState(false)
@@ -267,6 +335,13 @@ function LeadCombobox({ options }: { options: LeadOption[] }) {
     if (!q) return options.slice(0, 8)
     return options.filter((o) => o.name.toLowerCase().includes(q)).slice(0, 8)
   }, [query, selected, options])
+
+  const inputClass = large
+    ? 'w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-accent'
+    : 'w-full rounded border border-neutral-300 px-1 py-1 text-[11px] outline-none focus:border-accent'
+  const itemClass = large
+    ? 'block w-full truncate px-3 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-100'
+    : 'block w-full truncate px-2 py-1 text-left text-[11px] text-neutral-700 hover:bg-neutral-100'
 
   return (
     <div className="relative">
@@ -283,11 +358,15 @@ function LeadCombobox({ options }: { options: LeadOption[] }) {
         autoComplete="off"
         placeholder="Rechercher un prospect…"
         required={!selected}
-        className="w-full rounded border border-neutral-300 px-1 py-1 text-[11px] outline-none focus:border-accent"
+        className={inputClass}
       />
       <input type="hidden" name="lead_id" value={selected?.id ?? ''} />
       {open && filtered.length > 0 && (
-        <div className="absolute left-0 right-0 top-full z-10 mt-0.5 max-h-40 overflow-y-auto rounded-lg border border-neutral-200 bg-surface shadow-md">
+        <div
+          className={`absolute left-0 right-0 top-full z-10 mt-1 overflow-y-auto rounded-lg border border-neutral-200 bg-surface shadow-md ${
+            large ? 'max-h-56' : 'max-h-40'
+          }`}
+        >
           {filtered.map((o) => (
             <button
               key={o.id}
@@ -297,7 +376,7 @@ function LeadCombobox({ options }: { options: LeadOption[] }) {
                 setQuery(o.name)
                 setOpen(false)
               }}
-              className="block w-full truncate px-2 py-1 text-left text-[11px] text-neutral-700 hover:bg-neutral-100"
+              className={itemClass}
             >
               {o.name}
             </button>

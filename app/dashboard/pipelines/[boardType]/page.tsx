@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation'
+import Link from 'next/link'
 import { getAuthedProfile } from '@/lib/supabase/session'
 import KanbanBoard from '../kanban-board'
 import BoardHeader from '../board-header'
@@ -105,11 +106,21 @@ export default async function PipelineBoardPage({ params }: PageProps<'/dashboar
       {isCustom ? (
         <BoardHeader boardId={bt} name={boardName} count={cards.length} />
       ) : (
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight">{boardName}</h1>
-          <p className="mt-1 text-sm text-neutral-500">
-            {cards.length} prospect{cards.length > 1 ? 's' : ''}
-          </p>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-xl font-semibold tracking-tight">{boardName}</h1>
+            <p className="mt-1 text-sm text-neutral-500">
+              {cards.length} prospect{cards.length > 1 ? 's' : ''}
+            </p>
+          </div>
+          {bt === 'investisseur' && (
+            <Link
+              href="/dashboard/investments"
+              className="shrink-0 rounded-lg border border-neutral-300 px-3 py-1.5 text-sm font-medium text-neutral-600 hover:bg-neutral-100"
+            >
+              🏠 Projets en cours →
+            </Link>
+          )}
         </div>
       )}
       <KanbanBoard boardType={bt} columns={columns ?? []} cards={cards} members={members ?? []} />

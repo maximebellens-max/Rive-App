@@ -33,6 +33,14 @@ const NAV_GROUPS: { label: string; links: { href: string; label: string }[] }[] 
     ],
   },
   {
+    label: 'Suivi chantiers',
+    links: [
+      { href: '/dashboard/ameublement', label: 'Ameublement' },
+      { href: '/dashboard/cuisine', label: 'Cuisine' },
+      { href: '/dashboard/travaux', label: 'Travaux' },
+    ],
+  },
+  {
     label: 'Outils',
     links: [
       { href: '/dashboard/partners', label: 'Contacts pro' },
