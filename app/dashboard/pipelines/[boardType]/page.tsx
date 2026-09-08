@@ -22,13 +22,13 @@ export default async function PipelineBoardPage({ params }: PageProps<'/dashboar
     ? supabase
         .from('leads')
         .select(
-          'id, name, category, phone, email, critere_lieu, critere_type, budget, financement, action_date, created_at, positions, ai_priority_score, ai_priority_reasoning'
+          'id, name, category, phone, email, critere_lieu, critere_type, budget, financement, action_date, created_at, positions, assigned_to, ai_priority_score, ai_priority_reasoning'
         )
         .eq('category', bt)
     : supabase
         .from('leads')
         .select(
-          'id, name, category, phone, email, critere_lieu, critere_type, budget, financement, action_date, created_at, positions, ai_priority_score, ai_priority_reasoning'
+          'id, name, category, phone, email, critere_lieu, critere_type, budget, financement, action_date, created_at, positions, assigned_to, ai_priority_score, ai_priority_reasoning'
         )
 
   // Ces 4 requêtes ne dépendent que de bt/profile.agency_id (déjà connus) —
@@ -39,7 +39,7 @@ export default async function PipelineBoardPage({ params }: PageProps<'/dashboar
       : supabase.from('boards').select('id, name, kind').eq('id', bt).eq('agency_id', profile.agency_id).maybeSingle(),
     supabase.from('pipeline_columns').select('id, name, color, is_default').eq('board_type', bt).order('position', { ascending: true }),
     leadsQuery,
-    supabase.from('profiles').select('id, full_name').eq('agency_id', profile.agency_id),
+    supabase.from('profiles').select('id, full_name, avatar_url').eq('agency_id', profile.agency_id),
   ])
 
   let boardName: string
@@ -86,6 +86,7 @@ export default async function PipelineBoardPage({ params }: PageProps<'/dashboar
     action_date: l.action_date,
     created_at: l.created_at,
     columnId: (l.positions as Record<string, string>)?.[bt] ?? null,
+    assignedTo: l.assigned_to,
     score: leadPriorityScore({
       budget: l.budget,
       financement: l.financement,

@@ -111,6 +111,33 @@ export async function updateMyWhatsAppNumber(
   return { success: true }
 }
 
+export type AvatarFormState = { error?: string } | undefined
+
+// Chacun ne peut changer que sa propre photo — pas de gestion par le
+// propriétaire pour le compte d'un autre membre. L'image arrive déjà
+// recadrée en carré et compressée côté client (voir avatar-upload.tsx) ;
+// on ne fait ici qu'une vérification défensive de forme/taille avant
+// d'écrire en base.
+export async function updateOwnAvatar(dataUrl: string): Promise<AvatarFormState> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { error: 'Session expirée, reconnecte-toi.' }
+
+  if (!dataUrl.startsWith('data:image/')) return { error: 'Image invalide.' }
+  if (dataUrl.length > 400_000) return { error: 'Image trop volumineuse.' }
+
+  const { error } = await supabase.from('profiles').update({ avatar_url: dataUrl }).eq('id', user.id)
+  if (error) return { error: 'Impossible d’enregistrer la photo.' }
+
+  revalidatePath('/dashboard/settings')
+  revalidatePath('/dashboard/prospects')
+  revalidatePath('/dashboard/pipelines', 'layout')
+  revalidatePath('/dashboard/mandates')
+  return undefined
+}
+
 export type WhatsAppDiagnosticState = { error?: string; success?: string } | undefined
 
 // Envoie le même gabarit que l'alerte "nouveau lead" à TON propre numéro

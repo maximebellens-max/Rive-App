@@ -29,7 +29,7 @@ export default async function SettingsPage({ searchParams }: PageProps<'/dashboa
       supabase.from('agencies').select('*').eq('id', profile.agency_id).single(),
       supabase
         .from('profiles')
-        .select('id, full_name, role')
+        .select('id, full_name, role, avatar_url')
         .eq('agency_id', profile.agency_id)
         .order('role', { ascending: false }),
       supabase

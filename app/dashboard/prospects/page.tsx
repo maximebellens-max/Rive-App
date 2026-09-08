@@ -22,12 +22,12 @@ export default async function ProspectsPage() {
     supabase
       .from('leads')
       .select(
-        'id, name, category, phone, email, critere_lieu, critere_type, budget, financement, action_date, created_at, positions, ai_priority_score, ai_priority_reasoning'
+        'id, name, category, phone, email, critere_lieu, critere_type, budget, financement, action_date, created_at, positions, assigned_to, ai_priority_score, ai_priority_reasoning'
       )
       .order('created_at', { ascending: false }),
     profile?.agency_id
-      ? supabase.from('profiles').select('id, full_name').eq('agency_id', profile.agency_id)
-      : Promise.resolve({ data: [] as { id: string; full_name: string }[] }),
+      ? supabase.from('profiles').select('id, full_name, avatar_url').eq('agency_id', profile.agency_id)
+      : Promise.resolve({ data: [] as { id: string; full_name: string; avatar_url: string }[] }),
   ])
 
   const leadIds = (leads ?? []).map((l) => l.id)
@@ -57,6 +57,7 @@ export default async function ProspectsPage() {
     action_date: l.action_date,
     created_at: l.created_at,
     columnId: (l.positions as Record<string, string>)?.prospects ?? null,
+    assignedTo: l.assigned_to,
     score: leadPriorityScore({
       budget: l.budget,
       financement: l.financement,

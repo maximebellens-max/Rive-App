@@ -9,6 +9,7 @@ import {
   formatDate,
 } from '@/lib/rive/mandates'
 import MandatesView from './mandates-view'
+import Avatar from '../_components/avatar'
 import type { StageCard } from '../_components/stage-kanban'
 
 const URGENCY_CLASS: Record<string, string> = {
@@ -21,21 +22,33 @@ const URGENCY_CLASS: Record<string, string> = {
 export default async function MandatesPage() {
   const supabase = await createClient()
 
-  const { data: mandates } = await supabase
-    .from('mandates')
-    .select(
-      'id, type, address, property_type, price, stage, exclusivity, signed_date, duration_months, renewal_notice_days'
-    )
-    .eq('is_draft', false)
-    .order('created_at', { ascending: false })
+  const [{ data: mandates }, { data: members }] = await Promise.all([
+    supabase
+      .from('mandates')
+      .select(
+        'id, type, address, property_type, price, stage, exclusivity, signed_date, duration_months, renewal_notice_days, assigned_to'
+      )
+      .eq('is_draft', false)
+      .order('created_at', { ascending: false }),
+    // La RLS ("profiles: select same agency") restreint déjà aux membres de
+    // l'agence courante, pas besoin de filtrer par agency_id ici.
+    supabase.from('profiles').select('id, full_name, avatar_url'),
+  ])
 
-  const cards: StageCard[] = (mandates ?? []).map((m) => ({
-    id: m.id,
-    title: m.address || m.property_type || 'Mandat sans adresse',
-    subtitle: `${m.type === 'vente' ? 'Vente' : 'Recherche'} · ${formatEUR(m.price)}`,
-    meta: m.stage,
-    href: `/dashboard/mandates/${m.id}`,
-  }))
+  const memberById = new Map((members ?? []).map((m) => [m.id, m]))
+
+  const cards: StageCard[] = (mandates ?? []).map((m) => {
+    const agent = m.assigned_to ? memberById.get(m.assigned_to) : undefined
+    return {
+      id: m.id,
+      title: m.address || m.property_type || 'Mandat sans adresse',
+      subtitle: `${m.type === 'vente' ? 'Vente' : 'Recherche'} · ${formatEUR(m.price)}`,
+      meta: m.stage,
+      href: `/dashboard/mandates/${m.id}`,
+      assignedName: agent?.full_name || undefined,
+      assignedAvatarUrl: agent?.avatar_url || undefined,
+    }
+  })
 
   const table = (
     <div className="overflow-x-auto rounded-2xl border border-neutral-200 bg-surface shadow-sm">
@@ -43,6 +56,7 @@ export default async function MandatesPage() {
           <thead className="border-b border-neutral-200 text-neutral-500">
             <tr>
               <th className="px-4 py-3 font-medium">Bien / Client</th>
+              <th className="px-4 py-3 font-medium">Agent</th>
               <th className="px-4 py-3 font-medium">Type</th>
               <th className="px-4 py-3 font-medium">Prix</th>
               <th className="px-4 py-3 font-medium">Exclusivité</th>
@@ -53,7 +67,7 @@ export default async function MandatesPage() {
           <tbody>
             {!mandates?.length && (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-neutral-400">
+                <td colSpan={7} className="px-4 py-8 text-center text-neutral-400">
                   Aucun mandat pour l&apos;instant.
                 </td>
               </tr>
@@ -63,12 +77,20 @@ export default async function MandatesPage() {
                 ? mandateNoticeDate(m.signed_date, m.duration_months, m.renewal_notice_days)
                 : null
               const urgency = dateUrgency(notice)
+              const agent = m.assigned_to ? memberById.get(m.assigned_to) : undefined
               return (
                 <tr key={m.id} className="border-b border-neutral-100 last:border-0 hover:bg-neutral-50">
                   <td className="px-4 py-3">
                     <Link href={`/dashboard/mandates/${m.id}`} className="font-medium text-neutral-900 hover:underline">
                       {m.address || m.property_type || 'Mandat sans adresse'}
                     </Link>
+                  </td>
+                  <td className="px-4 py-3">
+                    {agent ? (
+                      <Avatar name={agent.full_name || 'Agent'} avatarUrl={agent.avatar_url} size={22} />
+                    ) : (
+                      <span className="text-neutral-300">—</span>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-neutral-600 capitalize">{m.type}</td>
                   <td className="px-4 py-3 tabular-nums text-neutral-600">{formatEUR(m.price)}</td>

@@ -6,9 +6,18 @@
 import { useState, useTransition } from 'react'
 import Link from 'next/link'
 import { COLUMN_COLOR_HEX } from '@/lib/rive/pipelines'
+import Avatar from './avatar'
 
 export type StageColumn = { value: string; label: string; color: string }
-export type StageCard = { id: string; title: string; subtitle?: string; meta?: string; href: string }
+export type StageCard = {
+  id: string
+  title: string
+  subtitle?: string
+  meta?: string
+  href: string
+  assignedName?: string
+  assignedAvatarUrl?: string
+}
 
 export default function StageKanban({
   columns,
@@ -52,7 +61,12 @@ export default function StageKanban({
                   onDragStart={(e) => e.dataTransfer.setData('text/plain', card.id)}
                   className="flex cursor-grab flex-col gap-1 rounded-xl border border-neutral-200 bg-surface p-3 text-sm shadow-sm active:cursor-grabbing"
                 >
-                  <span className="font-medium text-neutral-900">{card.title}</span>
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="min-w-0 truncate font-medium text-neutral-900">{card.title}</span>
+                    {card.assignedName && (
+                      <Avatar name={card.assignedName} avatarUrl={card.assignedAvatarUrl} size={18} />
+                    )}
+                  </div>
                   {card.subtitle && <span className="text-xs text-neutral-500">{card.subtitle}</span>}
                 </Link>
               ))}

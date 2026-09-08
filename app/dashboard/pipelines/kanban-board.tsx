@@ -12,6 +12,7 @@ import {
   deletePipelineColumn,
 } from '@/app/actions/pipelines'
 import { bulkDeleteLeads, bulkAssignLeads } from '@/app/actions/leads'
+import Avatar from '../_components/avatar'
 import {
   COLUMN_COLORS,
   COLUMN_COLOR_HEX,
@@ -37,6 +38,7 @@ export type PipelineCard = {
   action_date: string | null
   created_at: string
   columnId: string | null
+  assignedTo: string | null
   score: number
   aiScore: number | null
   aiReasoning: string
@@ -63,7 +65,7 @@ function formatLeadAge(iso: string): string {
   return new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
 }
 
-export type BoardMember = { id: string; full_name: string }
+export type BoardMember = { id: string; full_name: string; avatar_url: string }
 
 export default function KanbanBoard({
   boardType,
@@ -179,6 +181,7 @@ export default function KanbanBoard({
             selectMode={selectMode}
             selected={selected}
             onToggleSelect={toggleSelected}
+            members={members}
           />
         ))}
         <AddColumnForm boardType={boardType} />
@@ -292,6 +295,7 @@ function ColumnBlock({
   selectMode,
   selected,
   onToggleSelect,
+  members,
 }: {
   column: PipelineColumn
   cards: PipelineCard[]
@@ -301,6 +305,7 @@ function ColumnBlock({
   selectMode?: boolean
   selected?: Set<string>
   onToggleSelect?: (id: string) => void
+  members: BoardMember[]
 }) {
   const [dragOver, setDragOver] = useState(false)
 
@@ -331,6 +336,7 @@ function ColumnBlock({
             selectMode={selectMode}
             selected={selected?.has(card.id)}
             onToggleSelect={() => onToggleSelect?.(card.id)}
+            assignedMember={members.find((m) => m.id === card.assignedTo)}
           />
         ))}
         {!cards.length && <p className="px-1 py-2 text-xs text-neutral-400">Aucun prospect ici.</p>}
@@ -500,11 +506,13 @@ function CardItem({
   selectMode,
   selected,
   onToggleSelect,
+  assignedMember,
 }: {
   card: PipelineCard
   selectMode?: boolean
   selected?: boolean
   onToggleSelect?: () => void
+  assignedMember?: BoardMember
 }) {
   const effectiveScore = card.aiScore ?? card.score
   const tier = priorityTier(effectiveScore)
@@ -512,7 +520,12 @@ function CardItem({
   const content = (
     <>
       <div className="flex items-start justify-between gap-2">
-        <span className="font-medium text-neutral-900">{card.name}</span>
+        <div className="flex min-w-0 items-center gap-1.5">
+          {assignedMember && (
+            <Avatar name={assignedMember.full_name || 'Agent'} avatarUrl={assignedMember.avatar_url} size={18} />
+          )}
+          <span className="min-w-0 truncate font-medium text-neutral-900">{card.name}</span>
+        </div>
         <span className={`shrink-0 rounded-full border px-1.5 py-0.5 text-[10px] font-medium ${PRIORITY_TIER_CLASS[tier]}`}>
           {PRIORITY_TIER_LABEL[tier]}
         </span>

@@ -2,8 +2,10 @@
 
 import { useActionState, useState } from 'react'
 import { createInvite, cancelInvite, removeTeamMember, type InviteFormState } from '@/app/actions/team'
+import Avatar from '../_components/avatar'
+import AvatarUpload from './avatar-upload'
 
-type Member = { id: string; full_name: string; role: string }
+type Member = { id: string; full_name: string; role: string; avatar_url: string }
 type Invite = { id: string; email: string; token: string; created_at: string }
 
 function InviteLinkButton({ token }: { token: string }) {
@@ -48,9 +50,16 @@ export default function TeamSection({
         <ul className="flex flex-col divide-y divide-neutral-100 rounded-xl border border-neutral-200">
           {members.map((m) => (
             <li key={m.id} className="flex items-center justify-between gap-3 px-4 py-2.5">
-              <div>
-                <p className="text-sm font-medium text-neutral-900">{m.full_name || 'Sans nom'}</p>
-                <p className="text-xs text-neutral-500">{m.role === 'owner' ? 'Propriétaire' : 'Agent'}</p>
+              <div className="flex items-center gap-3">
+                {m.id === currentUserId ? (
+                  <AvatarUpload name={m.full_name || 'Sans nom'} avatarUrl={m.avatar_url} />
+                ) : (
+                  <Avatar name={m.full_name || 'Sans nom'} avatarUrl={m.avatar_url} size={36} />
+                )}
+                <div>
+                  <p className="text-sm font-medium text-neutral-900">{m.full_name || 'Sans nom'}</p>
+                  <p className="text-xs text-neutral-500">{m.role === 'owner' ? 'Propriétaire' : 'Agent'}</p>
+                </div>
               </div>
               {isOwner && m.id !== currentUserId && (
                 <button
