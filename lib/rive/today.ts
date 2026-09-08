@@ -20,6 +20,14 @@ export function actionBucket(dateStr: string | null): ActionBucket {
 export const RECONTACT_THRESHOLD_DAYS = 300
 export const STALE_BIEN_THRESHOLD_DAYS = 60
 
+// Seuils utilisés par l'agent de relance automatique (voir
+// lib/rive/relance-agent.ts) : paliers de la séquence "nouveau prospect
+// sans retour", et délai avant de proposer un avis Google ou de relancer
+// une estimation restée sans suite.
+export const RELANCE_STEPS = { j3: 3, j7: 7, j14: 14 } as const
+export const GOOGLE_REVIEW_DELAY_DAYS = 7
+export const ESTIMATION_FOLLOWUP_DELAY_DAYS = 7
+
 export function daysAgo(dateStr: string | null): number | null {
   if (!dateStr) return null
   const d = new Date(dateStr)

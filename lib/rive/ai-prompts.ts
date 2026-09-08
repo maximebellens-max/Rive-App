@@ -100,3 +100,74 @@ export function generateRelanceBrief(leadName: string, address: string, daysSinc
     `Vente conclue il y a ${daysSinceSale} jours, sans nouvelles depuis.`,
   ].join('\n')
 }
+
+// Les 6 fonctions ci-dessous alimentent l'agent de relance automatique (voir
+// lib/rive/relance-agent.ts) : chacune génère un brouillon prêt à envoyer,
+// jamais envoyé directement au client — toujours relayé à l'agent par
+// WhatsApp pour validation manuelle (voir la note RGPD dans relance-agent.ts).
+
+const RELANCE_STEP_LABEL: Record<'j3' | 'j7' | 'j14', string> = {
+  j3: '3 jours',
+  j7: '1 semaine',
+  j14: '2 semaines',
+}
+
+export function generateNoResponseRelanceBrief(leadName: string, step: 'j3' | 'j7' | 'j14', daysSince: number): string {
+  return [
+    `Rédige un très court message (SMS, ton pro et chaleureux, jamais insistant) pour relancer un prospect qui n'a donné aucun signe depuis sa demande initiale.`,
+    ``,
+    `Nom : ${leadName}`,
+    `Sans nouvelles depuis ${daysSince} jours (${RELANCE_STEP_LABEL[step]} depuis le dernier point de contact).`,
+    step === 'j14'
+      ? `C'est la 3e et dernière relance de cette séquence : reste léger, propose une dernière fois un échange rapide sans donner l'impression d'insister.`
+      : null,
+  ]
+    .filter(Boolean)
+    .join('\n')
+}
+
+export function generateAnniversaryBrief(leadName: string, address: string, years: number, category: string | null): string {
+  const isVendeur = category === 'vendeur'
+  return [
+    `Rédige un court message chaleureux (SMS ou email, pas commercial) pour marquer l'anniversaire d'une transaction immobilière avec un ancien client.`,
+    ``,
+    `Nom : ${leadName}`,
+    `Bien ${isVendeur ? 'vendu' : 'acheté'} : ${address || 'non renseigné'}`,
+    `Il y a ${years} an${years > 1 ? 's' : ''} jour pour jour.`,
+  ].join('\n')
+}
+
+export function generateBirthdayBrief(leadName: string): string {
+  return [
+    `Rédige un très court message d'anniversaire, chaleureux et personnel, sans aucun ton commercial, pour un client de l'agence.`,
+    ``,
+    `Nom : ${leadName}`,
+  ].join('\n')
+}
+
+export function generateYearEndWishesBrief(): string {
+  return [
+    `Rédige un message de vœux de fin d'année, chaleureux et professionnel, à envoyer à l'ensemble des prospects et clients d'une agence immobilière (Hevrest, bassin genevois / Annecy).`,
+    `Assez court pour un SMS ou WhatsApp, sans mention de nom spécifique (il sera envoyé tel quel à toute la liste de diffusion).`,
+  ].join('\n')
+}
+
+export function generateGoogleReviewBrief(leadName: string, address: string, daysSince: number): string {
+  return [
+    `Rédige un court message chaleureux pour demander un avis Google (ou une recommandation) à un client dont la transaction vient d'être conclue, sans être insistant.`,
+    ``,
+    `Nom : ${leadName}`,
+    `Bien : ${address || 'non renseigné'}`,
+    `Transaction conclue il y a ${daysSince} jours.`,
+  ].join('\n')
+}
+
+export function generateEstimationFollowupBrief(leadName: string, address: string, daysSince: number): string {
+  return [
+    `Rédige un court message professionnel, pas pressant, pour relancer un propriétaire qui a reçu une estimation mais n'a pas encore donné suite (pas de mandat signé), en proposant un échange pour en discuter.`,
+    ``,
+    `Nom : ${leadName}`,
+    `Bien estimé : ${address || 'non renseigné'}`,
+    `Estimation réalisée il y a ${daysSince} jours, sans suite depuis.`,
+  ].join('\n')
+}

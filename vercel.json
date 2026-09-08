@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/daily-whatsapp",
       "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/cron/daily-relances",
+      "schedule": "10 6 * * *"
     }
   ]
 }

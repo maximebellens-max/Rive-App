@@ -8,6 +8,7 @@ import {
 } from '@/lib/rive/whatsapp-notify'
 import { generateBriefingBrief } from '@/lib/rive/ai-prompts'
 import { generateWithClaude } from '@/lib/rive/anthropic'
+import { claimDailyAlert } from '@/lib/rive/daily-alerts'
 
 type AdminClient = ReturnType<typeof createAdminClient>
 
@@ -41,27 +42,6 @@ export async function GET(request: NextRequest) {
   }
 
   return NextResponse.json({ ok: true })
-}
-
-// Marque l'événement comme notifié pour aujourd'hui et renvoie true si
-// c'était bien la première fois (sinon un précédent passage du cron l'a déjà
-// envoyé, on ne renvoie pas de deuxième message).
-async function claimDailyAlert(
-  supabase: AdminClient,
-  agencyId: string,
-  kind: 'appointment' | 'mandate_renewal',
-  entityId: string,
-  today: string
-): Promise<boolean> {
-  const { data: inserted } = await supabase
-    .from('whatsapp_daily_alerts_sent')
-    .upsert(
-      { agency_id: agencyId, kind, entity_id: entityId, alert_date: today },
-      { onConflict: 'agency_id,kind,entity_id,alert_date', ignoreDuplicates: true }
-    )
-    .select('id')
-
-  return !!inserted && inserted.length > 0
 }
 
 // Compose un briefing court (contexte du prospect + derniers échanges +
