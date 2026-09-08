@@ -314,6 +314,25 @@ export function mapLeadFields(fieldData: MetaLeadData['fieldData']): MetaLeadDet
   return { name, email, phone, criterType, criterLieu, customAnswers }
 }
 
+// Résumé compact des critères d'un lead Meta (type de bien, secteur, et
+// toutes les réponses complémentaires du formulaire — budget, délai, bien
+// déjà en vente...) pour l'alerte WhatsApp enrichie envoyée à l'arrivée
+// d'un nouveau lead : de quoi juger en un coup d'œil si ça vaut le coup de
+// rappeler tout de suite, sans avoir à ouvrir la fiche.
+export function summarizeLeadDetails(
+  criterType: string,
+  criterLieu: string,
+  customAnswers: { question: string; answer: string }[]
+): string {
+  const lines: string[] = []
+  if (criterType) lines.push(`Type de bien : ${criterType}`)
+  if (criterLieu) lines.push(`Secteur : ${criterLieu}`)
+  for (const qa of customAnswers) {
+    lines.push(`${qa.question} : ${qa.answer}`)
+  }
+  return lines.length ? lines.join('\n') : 'Aucun détail complémentaire renseigné sur le formulaire.'
+}
+
 // Vérifie l'en-tête X-Hub-Signature-256 que Meta ajoute à chaque appel
 // webhook, calculé côté Meta comme un HMAC-SHA256 du corps brut de la
 // requête avec l'App Secret. Sans cette vérification, n'importe qui

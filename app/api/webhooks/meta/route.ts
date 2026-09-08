@@ -2,8 +2,15 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { initialPositions } from '@/lib/rive/pipeline-positions'
 import { sendLeadAlertEmail } from '@/lib/rive/email'
-import { notifyTeamNewLeadWhatsApp } from '@/lib/rive/whatsapp-notify'
-import { appBaseUrl, fetchLeadData, mapLeadFields, parseWebhookLeadgenChanges, verifyWebhookSignature } from '@/lib/rive/meta'
+import { notifyTeamNewLeadWhatsApp, notifyTeamAlertWhatsApp } from '@/lib/rive/whatsapp-notify'
+import {
+  appBaseUrl,
+  fetchLeadData,
+  mapLeadFields,
+  parseWebhookLeadgenChanges,
+  summarizeLeadDetails,
+  verifyWebhookSignature,
+} from '@/lib/rive/meta'
 
 // Étape de validation initiale de l'abonnement webhook (une seule fois, au
 // moment où l'URL est configurée côté Meta) : Meta appelle cette route en
@@ -216,4 +223,11 @@ async function processLeadgenChange(
     category,
     source: leadData.campaignName || 'Meta Ads',
   })
+
+  // Deuxième message WhatsApp, juste après le premier : les réponses du
+  // formulaire (type de bien, budget, délai...) pour juger tout de suite si
+  // ça vaut le coup de rappeler sans attendre d'ouvrir la fiche. Via le
+  // gabarit générique "rive_alerte" (voir lib/rive/whatsapp-notify.ts).
+  const details = summarizeLeadDetails(criterType, criterLieu, customAnswers)
+  await notifyTeamAlertWhatsApp(supabase, connection.agency_id, `Détails — ${name}`, details)
 }
