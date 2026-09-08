@@ -7,14 +7,7 @@
 // régénérable à tout moment depuis Réglages si le lien fuite.
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-
-function escapeICS(text: string): string {
-  return text.replace(/\\/g, '\\\\').replace(/,/g, '\\,').replace(/;/g, '\\;').replace(/\n/g, '\\n')
-}
-
-function toICSDate(dateStr: string): string {
-  return dateStr.replace(/-/g, '')
-}
+import { icsDtStamp, icsEvent, type ICSAppointment } from '@/lib/rive/ics'
 
 export async function GET(_request: Request, { params }: { params: Promise<{ token: string }> }) {
   const { token } = await params
@@ -23,27 +16,27 @@ export async function GET(_request: Request, { params }: { params: Promise<{ tok
   const { data: agency } = await supabase.from('agencies').select('id').eq('ics_token', token).maybeSingle()
   if (!agency) return new NextResponse('Not found', { status: 404 })
 
-  const { data: leads } = await supabase
-    .from('leads')
-    .select('id, name, action_label, action_date, notes')
+  // Un lead peut désormais avoir plusieurs rendez-vous (table appointments) —
+  // le flux exporte chacun d'entre eux, pas seulement le plus proche.
+  const { data: appointments } = await supabase
+    .from('appointments')
+    .select('id, label, appointment_date, appointment_time, leads(name, notes)')
     .eq('agency_id', agency.id)
-    .not('action_date', 'is', null)
 
-  const now = new Date()
-  const dtstamp =
-    `${now.getUTCFullYear()}${String(now.getUTCMonth() + 1).padStart(2, '0')}${String(now.getUTCDate()).padStart(2, '0')}` +
-    `T${String(now.getUTCHours()).padStart(2, '0')}${String(now.getUTCMinutes()).padStart(2, '0')}${String(now.getUTCSeconds()).padStart(2, '0')}Z`
-
-  const events = (leads ?? [])
-    .map(
-      (l) => `BEGIN:VEVENT
-UID:${l.id}-action@rive.hevrest
-DTSTAMP:${dtstamp}
-DTSTART;VALUE=DATE:${toICSDate(l.action_date as string)}
-SUMMARY:${escapeICS(`${l.action_label || 'Action'} — ${l.name}`)}
-DESCRIPTION:${escapeICS(l.notes || '')}
-END:VEVENT`
-    )
+  const dtstamp = icsDtStamp()
+  const events = (appointments ?? [])
+    .map((a) => {
+      const lead = (a.leads as { name: string; notes: string }[] | null)?.[0]
+      const item: ICSAppointment = {
+        id: a.id,
+        label: a.label,
+        leadName: lead?.name ?? 'Prospect',
+        date: a.appointment_date,
+        time: a.appointment_time,
+        notes: lead?.notes || '',
+      }
+      return icsEvent(item, dtstamp)
+    })
     .join('\n')
 
   const ics = `BEGIN:VCALENDAR

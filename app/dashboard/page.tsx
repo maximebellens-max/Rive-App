@@ -3,29 +3,36 @@ import { formatDate } from '@/lib/rive/mandates'
 import { actionBucket } from '@/lib/rive/today'
 import { computeMatchPairs, type MatchLead, type MatchMandate } from '@/lib/rive/matching'
 import TodayWidgets, { type Widget } from './today-widgets'
-import AppointmentForm from './appointment-form'
-import MonthCalendar from './month-calendar'
+import MonthCalendar, { type AppointmentItem } from './month-calendar'
 
 export default async function TodayPage() {
   const supabase = await createClient()
 
-  const [{ data: leads }, { data: mandates }, { data: seen }, { data: firstProspectsCol }] = await Promise.all([
-    supabase
-      .from('leads')
-      .select(
-        'id, name, category, action_label, action_date, budget, critere_type, critere_lieu, surface_min, pieces_min, created_at, positions'
-      ),
-    supabase
-      .from('mandates')
-      .select(
-        'id, type, stage, is_draft, lead_id, address, property_type, price, surface, pieces, signed_date, sold_date, duration_months, renewal_notice_days, diffusion, ad_date'
-      ),
-    supabase.from('seen_match_pairs').select('lead_id, mandate_id'),
-    // Un prospect encore posé sur la 1ère colonne du tableau Prospects n'a
-    // pas encore avancé — même convention que l'agent de relance
-    // (lib/rive/relance-agent.ts) pour repérer "pas encore traité".
-    supabase.from('pipeline_columns').select('id').eq('board_type', 'prospects').order('position', { ascending: true }).limit(1).maybeSingle(),
-  ])
+  const [{ data: leads }, { data: mandates }, { data: seen }, { data: firstProspectsCol }, { data: appointmentsRaw }] =
+    await Promise.all([
+      supabase
+        .from('leads')
+        .select(
+          'id, name, category, action_label, action_date, budget, critere_type, critere_lieu, surface_min, pieces_min, created_at, positions'
+        ),
+      supabase
+        .from('mandates')
+        .select(
+          'id, type, stage, is_draft, lead_id, address, property_type, price, surface, pieces, signed_date, sold_date, duration_months, renewal_notice_days, diffusion, ad_date'
+        ),
+      supabase.from('seen_match_pairs').select('lead_id, mandate_id'),
+      // Un prospect encore posé sur la 1ère colonne du tableau Prospects n'a
+      // pas encore avancé — même convention que l'agent de relance
+      // (lib/rive/relance-agent.ts) pour repérer "pas encore traité".
+      supabase.from('pipeline_columns').select('id').eq('board_type', 'prospects').order('position', { ascending: true }).limit(1).maybeSingle(),
+      // Tous les rendez-vous (pas seulement ceux du mois affiché) — la
+      // navigation entre mois se fait côté client sans aller-retour serveur,
+      // comme c'était déjà le cas avant.
+      supabase
+        .from('appointments')
+        .select('id, lead_id, label, appointment_date, appointment_time, leads(name)')
+        .order('appointment_date', { ascending: true }),
+    ])
 
   const leadsList = leads ?? []
   const mandatesList = mandates ?? []
@@ -89,6 +96,15 @@ export default async function TodayPage() {
     .map((l) => ({ id: l.id, name: l.name }))
     .sort((a, b) => a.name.localeCompare(b.name))
 
+  const appointments: AppointmentItem[] = (appointmentsRaw ?? []).map((a) => ({
+    id: a.id,
+    leadId: a.lead_id,
+    leadName: (a.leads as { name: string }[] | null)?.[0]?.name ?? 'Prospect',
+    label: a.label,
+    date: a.appointment_date,
+    time: a.appointment_time,
+  }))
+
   const now = new Date()
   const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
 
@@ -102,17 +118,12 @@ export default async function TodayPage() {
       <TodayWidgets widgets={widgets} matchPairs={newMatches} />
 
       <div className="flex flex-col gap-3">
-        <h2 className="text-sm font-semibold text-neutral-900">Ajouter un rendez-vous</h2>
-        <AppointmentForm options={appointmentOptions} />
-      </div>
-
-      <div className="flex flex-col gap-3">
         <h2 className="text-sm font-semibold text-neutral-900">Agenda</h2>
         <MonthCalendar
           initialYear={now.getFullYear()}
           initialMonth={now.getMonth()}
           todayStr={todayStr}
-          leads={leadsList.map((l) => ({ id: l.id, name: l.name, action_date: l.action_date }))}
+          appointments={appointments}
           leadOptions={appointmentOptions}
         />
       </div>
