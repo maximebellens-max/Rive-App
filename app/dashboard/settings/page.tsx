@@ -1,120 +1,107 @@
+import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { formatDate } from '@/lib/rive/mandates'
-import { actionBucket } from '@/lib/rive/today'
-import { computeMatchPairs, type MatchLead, type MatchMandate } from '@/lib/rive/matching'
-import TodayWidgets, { type Widget } from './today-widgets'
-import AppointmentForm from './appointment-form'
-import MonthCalendar from './month-calendar'
+import AgencySettingsForm from './agency-settings-form'
+import TeamSection from './team-section'
+import BackupSection from './backup-section'
+import MetaSection from './meta-section'
+import WhatsAppSection from './whatsapp-section'
+import AgendaSyncSection from './agenda-sync-section'
 
-export default async function TodayPage() {
+export default async function SettingsPage({ searchParams }: PageProps<'/dashboard/settings'>) {
   const supabase = await createClient()
+  const params = await searchParams
 
-  const [{ data: leads }, { data: mandates }, { data: seen }, { data: firstProspectsCol }] = await Promise.all([
-    supabase
-      .from('leads')
-      .select(
-        'id, name, category, action_label, action_date, budget, critere_type, critere_lieu, surface_min, pieces_min, created_at, positions'
-      ),
-    supabase
-      .from('mandates')
-      .select(
-        'id, type, stage, is_draft, lead_id, address, property_type, price, surface, pieces, signed_date, sold_date, duration_months, renewal_notice_days, diffusion, ad_date'
-      ),
-    supabase.from('seen_match_pairs').select('lead_id, mandate_id'),
-    // Un prospect encore posé sur la 1ère colonne du tableau Prospects n'a
-    // pas encore avancé — même convention que l'agent de relance
-    // (lib/rive/relance-agent.ts) pour repérer "pas encore traité".
-    supabase.from('pipeline_columns').select('id').eq('board_type', 'prospects').order('position', { ascending: true }).limit(1).maybeSingle(),
-  ])
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) notFound()
 
-  const leadsList = leads ?? []
-  const mandatesList = mandates ?? []
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('agency_id, role, whatsapp_number, whatsapp_alerts_enabled, whatsapp_sender_phone_number_id')
+    .eq('id', user.id)
+    .single()
 
-  // ---------- 1. Nouveaux rapprochements acheteur ↔ bien ----------
-  const matchPairs = computeMatchPairs(leadsList as MatchLead[], mandatesList as MatchMandate[])
-  const seenSet = new Set((seen ?? []).map((s) => `${s.lead_id}|${s.mandate_id}`))
-  const newMatches = matchPairs.filter((p) => !seenSet.has(`${p.leadId}|${p.mandateId}`))
-  const leadById = new Map(leadsList.map((l) => [l.id, l]))
-  const mandateById = new Map(mandatesList.map((m) => [m.id, m]))
+  if (!profile?.agency_id) notFound()
 
-  // ---------- 2. Nouveaux prospects à contacter ----------
-  const newProspects = leadsList.filter(
-    (l) => firstProspectsCol && (l.positions as Record<string, string> | null)?.prospects === firstProspectsCol.id
-  )
+  const [{ data: agency }, { data: members }, { data: invites }, { data: metaConnection }, { data: metaCampaigns }] =
+    await Promise.all([
+      supabase.from('agencies').select('*').eq('id', profile.agency_id).single(),
+      supabase
+        .from('profiles')
+        .select('id, full_name, role')
+        .eq('agency_id', profile.agency_id)
+        .order('role', { ascending: false }),
+      supabase
+        .from('agency_invites')
+        .select('id, email, token, created_at')
+        .eq('agency_id', profile.agency_id)
+        .is('accepted_at', null)
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('meta_connections')
+        .select('ad_account_id, ad_account_name, page_id, page_name, available_ad_accounts, available_pages')
+        .eq('agency_id', profile.agency_id)
+        .maybeSingle(),
+      supabase
+        .from('meta_campaigns')
+        .select('id, campaign_name, status, owner_id, target_category, created_time')
+        .eq('agency_id', profile.agency_id)
+        .order('created_time', { ascending: false, nullsFirst: false }),
+    ])
 
-  // ---------- 3. À venir (3j) ----------
-  const upcoming = leadsList.filter((l) => actionBucket(l.action_date) === 'upcoming')
+  if (!agency) notFound()
 
-  const widgets: Widget[] = [
-    {
-      key: 'matches',
-      icon: '🤝',
-      label: 'Nouveaux rapprochements',
-      items: newMatches.map((p) => {
-        const lead = leadById.get(p.leadId)
-        const mandate = mandateById.get(p.mandateId)
-        return {
-          id: `${p.leadId}-${p.mandateId}`,
-          primary: lead?.name ?? 'Prospect',
-          secondary: mandate?.address || mandate?.property_type || '',
-          href: `/dashboard/prospects/${p.leadId}`,
-        }
-      }),
-    },
-    {
-      key: 'newProspects',
-      icon: '🆕',
-      label: 'Nouveaux prospects à contacter',
-      items: newProspects.map((l) => ({
-        id: l.id,
-        primary: l.name,
-        secondary: l.critere_lieu || undefined,
-        href: `/dashboard/prospects/${l.id}`,
-      })),
-    },
-    {
-      key: 'upcoming',
-      icon: '🗓️',
-      label: 'À venir (3j)',
-      items: upcoming.map((l) => ({
-        id: l.id,
-        primary: l.name,
-        secondary: l.action_label ? `${l.action_label} · ${formatDate(l.action_date)}` : formatDate(l.action_date),
-        href: `/dashboard/prospects/${l.id}`,
-      })),
-    },
-  ]
-
-  const appointmentOptions = leadsList
-    .map((l) => ({ id: l.id, name: l.name }))
-    .sort((a, b) => a.name.localeCompare(b.name))
-
-  const now = new Date()
-  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+  // Les campagnes actives passent en premier (ce sont celles qui comptent
+  // au quotidien), puis le reste par ordre chronologique décroissant (déjà
+  // fait par la requête ci-dessus) — tri stable, donc l'ordre chronologique
+  // est préservé à l'intérieur de chaque groupe.
+  const sortedCampaigns = [...(metaCampaigns ?? [])].sort((a, b) => {
+    const aActive = a.status === 'ACTIVE' ? 0 : 1
+    const bActive = b.status === 'ACTIVE' ? 0 : 1
+    return aActive - bActive
+  })
 
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-xl font-semibold tracking-tight">Aujourd’hui</h1>
-        <p className="mt-1 text-sm text-neutral-500">Ce qui a besoin de toi, sans avoir à rouvrir chaque fiche.</p>
+        <h1 className="text-xl font-semibold tracking-tight">Réglages de l&apos;agence</h1>
+        <p className="mt-1 text-sm text-neutral-500">
+          Ces informations servent à générer tes mandats.
+        </p>
       </div>
-
-      <TodayWidgets widgets={widgets} matchPairs={newMatches} />
-
-      <div className="flex flex-col gap-3">
-        <h2 className="text-sm font-semibold text-neutral-900">Ajouter un rendez-vous</h2>
-        <AppointmentForm options={appointmentOptions} />
+      <div className="max-w-2xl rounded-2xl border border-neutral-200 bg-surface p-6 shadow-sm">
+        <AgencySettingsForm agency={agency} />
       </div>
-
-      <div className="flex flex-col gap-3">
-        <h2 className="text-sm font-semibold text-neutral-900">Agenda</h2>
-        <MonthCalendar
-          initialYear={now.getFullYear()}
-          initialMonth={now.getMonth()}
-          todayStr={todayStr}
-          leads={leadsList.map((l) => ({ id: l.id, name: l.name, action_date: l.action_date }))}
-          leadOptions={appointmentOptions}
+      <div className="max-w-2xl rounded-2xl border border-neutral-200 bg-surface p-6 shadow-sm">
+        <TeamSection
+          isOwner={profile.role === 'owner'}
+          currentUserId={user.id}
+          members={members ?? []}
+          invites={invites ?? []}
         />
+      </div>
+      <div className="max-w-2xl rounded-2xl border border-neutral-200 bg-surface p-6 shadow-sm">
+        <MetaSection
+          connection={metaConnection ?? null}
+          campaigns={sortedCampaigns}
+          members={members ?? []}
+          successMessage={typeof params?.meta === 'string' ? params.meta : undefined}
+          errorMessage={typeof params?.meta_error === 'string' ? params.meta_error : undefined}
+        />
+      </div>
+      <div className="max-w-2xl rounded-2xl border border-neutral-200 bg-surface p-6 shadow-sm">
+        <WhatsAppSection
+          whatsappNumber={profile.whatsapp_number ?? ''}
+          whatsappAlertsEnabled={profile.whatsapp_alerts_enabled ?? false}
+          whatsappSenderPhoneNumberId={profile.whatsapp_sender_phone_number_id ?? ''}
+        />
+      </div>
+      <div className="max-w-2xl rounded-2xl border border-neutral-200 bg-surface p-6 shadow-sm">
+        <AgendaSyncSection icsUrl={`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/ics/${agency.ics_token}`} />
+      </div>
+      <div className="max-w-2xl rounded-2xl border border-neutral-200 bg-surface p-6 shadow-sm">
+        <BackupSection isOwner={profile.role === 'owner'} />
       </div>
     </div>
   )

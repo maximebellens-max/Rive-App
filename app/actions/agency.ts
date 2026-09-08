@@ -67,3 +67,29 @@ export async function updateAgencySettings(
   revalidatePath('/dashboard/settings')
   return { success: true }
 }
+
+// Régénère le jeton du flux ICS public (voir app/api/ics/[token]/route.ts) —
+// invalide immédiatement tout abonnement existant côté calendrier externe.
+// Accessible à tout membre de l'agence, pas seulement au titulaire : c'est
+// un outil du quotidien, pas un réglage légal de l'agence.
+export async function regenerateIcsToken(): Promise<{ error?: string; success?: boolean }> {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { error: 'Session expirée, reconnecte-toi.' }
+
+  const { data: profile } = await supabase.from('profiles').select('agency_id').eq('id', user.id).single()
+  if (!profile?.agency_id) return { error: 'Agence introuvable.' }
+
+  const { error } = await supabase
+    .from('agencies')
+    .update({ ics_token: crypto.randomUUID() })
+    .eq('id', profile.agency_id)
+
+  if (error) return { error: 'Impossible de régénérer le lien.' }
+
+  revalidatePath('/dashboard/settings')
+  return { success: true }
+}
