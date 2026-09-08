@@ -8,6 +8,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { bienIsActive, leadMatchesBien, type MatchLead, type MatchMandate } from './matching'
 import { sendMatchAlertEmail } from './email'
+import { notifyTeamAlertWhatsApp } from './whatsapp-notify'
 
 const LEAD_FIELDS = 'id, name, category, budget, critere_type, critere_lieu, surface_min, pieces_min'
 const MANDATE_FIELDS = 'id, type, stage, is_draft, signed_date, address, property_type, price, surface, pieces'
@@ -58,12 +59,12 @@ export async function notifyMatchesForLeadId(supabase: SupabaseClient, agencyId:
   })
 
   const emails = await agencyMemberEmails(supabase, agencyId)
-  await sendMatchAlertEmail({
-    to: emails,
-    title,
-    body,
-    url: `${appUrl()}/dashboard/prospects/${leadId}`,
-  })
+  const url = `${appUrl()}/dashboard/prospects/${leadId}`
+  await sendMatchAlertEmail({ to: emails, title, body, url })
+  // title porte le nom du contact (leadName), body la ville/adresse du ou
+  // des biens : les deux sont nécessaires pour se repérer sans avoir à
+  // ouvrir le lien.
+  await notifyTeamAlertWhatsApp(supabase, agencyId, 'Alerte rapprochement', `${title}\n${body}\n${url}`)
 }
 
 // Appelée après la création/modification d'un mandat : si le bien est
@@ -104,10 +105,10 @@ export async function notifyMatchesForMandateId(supabase: SupabaseClient, agency
   })
 
   const emails = await agencyMemberEmails(supabase, agencyId)
-  await sendMatchAlertEmail({
-    to: emails,
-    title,
-    body,
-    url: `${appUrl()}/dashboard/mandates/${mandateId}`,
-  })
+  const url = `${appUrl()}/dashboard/mandates/${mandateId}`
+  await sendMatchAlertEmail({ to: emails, title, body, url })
+  // title porte la ville/adresse du bien, body les noms des contacts
+  // correspondants : les deux sont nécessaires pour se repérer sans avoir à
+  // ouvrir le lien.
+  await notifyTeamAlertWhatsApp(supabase, agencyId, 'Alerte rapprochement', `${title}\n${body}\n${url}`)
 }

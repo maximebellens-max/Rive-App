@@ -81,3 +81,17 @@ export async function notifyTeamMandateRenewalWhatsApp(
     mandate.noticeDate,
   ])
 }
+
+// Alerte générique — rapprochement acheteur/bien, relance, brief du jour, et
+// tout futur type d'alerte — via un unique gabarit à deux variables (titre +
+// contenu rédigé) plutôt qu'un gabarit dédié par cas d'usage, pour ne jamais
+// avoir à refaire approuver un nouveau gabarit à chaque nouvelle alerte.
+// Modèle Meta : "rive_alerte".
+export async function notifyTeamAlertWhatsApp(
+  supabase: SupabaseClient,
+  agencyId: string,
+  title: string,
+  body: string
+) {
+  await broadcastToTeam(supabase, agencyId, 'rive_alerte', [title, body])
+}
