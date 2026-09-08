@@ -1,6 +1,6 @@
 import { addDvfComparable, removeDvfComparable } from '@/app/actions/mandates'
-import { saveAISummary } from '@/app/actions/ai'
-import { generateEstimationBrief } from '@/lib/rive/ai-prompts'
+import { saveAISummary, saveAIListing } from '@/app/actions/ai'
+import { generateEstimationBrief, generateListingBrief } from '@/lib/rive/ai-prompts'
 import AIBriefPanel from '../../_components/ai-brief-panel'
 import DvfAutoSearch from './dvf-auto-search'
 import ClearComparablesButton from './clear-comparables-button'
@@ -44,6 +44,7 @@ type Mandate = {
   manual_adjustment_pct: number | null
   manual_adjustment_note: string
   ai_summary: string
+  ai_listing: string
 }
 
 const inputClass =
@@ -347,6 +348,14 @@ export default async function EstimationSection({
         prompt={generateEstimationBrief(mandate, comparables, estimation, matchingBuyersCount)}
         initialValue={mandate.ai_summary}
         onSave={saveAISummary.bind(null, mandateId)}
+      />
+
+      <AIBriefPanel
+        title="Assistant IA — annonce immobilière"
+        prompt={generateListingBrief(mandate)}
+        initialValue={mandate.ai_listing}
+        onSave={saveAIListing.bind(null, mandateId)}
+        generateLabel="Rédiger l'annonce"
       />
     </div>
   )

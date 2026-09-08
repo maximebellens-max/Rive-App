@@ -44,3 +44,19 @@ export async function saveAIRelanceDraft(leadId: string, text: string) {
   await supabase.from('leads').update({ ai_relance_draft: text }).eq('id', leadId)
   revalidatePath(`/dashboard/prospects/${leadId}`)
 }
+
+export async function saveAIListing(mandateId: string, text: string) {
+  const { supabase, agencyId } = await getAgencyId()
+  if (!agencyId) return
+
+  await supabase.from('mandates').update({ ai_listing: text }).eq('id', mandateId)
+  revalidatePath(`/dashboard/mandates/${mandateId}`)
+}
+
+export async function saveAIVisitReport(leadId: string, text: string) {
+  const { supabase, agencyId } = await getAgencyId()
+  if (!agencyId) return
+
+  await supabase.from('leads').update({ ai_visit_report: text }).eq('id', leadId)
+  revalidatePath(`/dashboard/prospects/${leadId}`)
+}

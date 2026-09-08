@@ -59,6 +59,37 @@ export function generateEstimationBrief(
   return lines.filter(Boolean).join('\n')
 }
 
+type MandateForListing = MandateForBrief & { price: number | null }
+
+// Annonce prête à publier (portails + réseaux sociaux), à partir des mêmes
+// données déjà saisies pour l'avis de valeur — pas de ressaisie.
+export function generateListingBrief(mandate: MandateForListing): string {
+  const conditionLabel = CONDITION_LEVELS.find((c) => c.value === mandate.condition)?.label || 'non renseigné'
+  const featuresList = FEATURE_KEYS.filter((f) => mandate.features?.[f.key])
+    .map((f) => f.label)
+    .join(', ')
+
+  const lines = [
+    `Rédige 3 versions d'annonce immobilière pour ce bien, prêtes à publier :`,
+    `1. Une version courte (environ 400 caractères, titre + texte percutant) pour les portails (SeLoger, LeBonCoin, PAP).`,
+    `2. Une version longue et détaillée, mettant en avant tous les atouts réels du bien sans exagération.`,
+    `3. Une accroche très courte (1-2 phrases) pour une story ou un post réseau social.`,
+    ``,
+    `Bien : ${mandate.property_type || 'non renseigné'}, ${mandate.address || 'adresse non renseignée'}`,
+    mandate.price ? `Prix : ${formatEUR(mandate.price)}` : null,
+    `Surface : ${mandate.surface ?? '—'} m²${mandate.land_surface ? ` · Terrain : ${mandate.land_surface} m²` : ''} · Pièces : ${mandate.pieces ?? '—'}`,
+    `État : ${conditionLabel} · DPE : ${mandate.dpe || '—'}`,
+    `Étage : ${mandate.floor ?? '—'} ${mandate.has_elevator ? '(avec ascenseur)' : '(sans ascenseur)'}`,
+    featuresList ? `Prestations : ${featuresList}` : null,
+    mandate.year_built ? `Année de construction : ${mandate.year_built}` : null,
+    mandate.recent_works ? `Travaux récents : ${mandate.recent_works}` : null,
+    ``,
+    `Ton chaleureux et vendeur mais honnête, sans superlatifs excessifs ni promesses non vérifiables, en français.`,
+  ]
+
+  return lines.filter(Boolean).join('\n')
+}
+
 type LeadForBriefing = {
   name: string
   category: string | null
@@ -91,6 +122,21 @@ export function generateBriefingBrief(lead: LeadForBriefing, history: HistoryEnt
   return lines.filter(Boolean).join('\n')
 }
 
+// Structure la dernière note brute de l'historique (prise à la volée après
+// un RDV/appel) en compte-rendu clair + un message de suivi suggéré —
+// n'écrase jamais la note brute d'origine, s'enregistre à part.
+export function generateVisitReportBrief(leadName: string, rawNote: string, noteDate: string): string {
+  return [
+    `Voici une note brute prise après un rendez-vous ou un appel avec un prospect. Transforme-la en :`,
+    `1. Un compte-rendu structuré et clair (points forts relevés, points de vigilance, niveau d'intérêt perçu).`,
+    `2. Un message de suivi court à envoyer ensuite au prospect (chaleureux, pas commercial).`,
+    ``,
+    `Nom : ${leadName}`,
+    `Date de la note : ${formatDate(noteDate)}`,
+    `Note brute : ${rawNote}`,
+  ].join('\n')
+}
+
 export function generateRelanceBrief(leadName: string, address: string, daysSinceSale: number): string {
   return [
     `Rédige un court message (SMS ou email, chaleureux, pas commercial ni pressant) pour reprendre contact avec un ancien client.`,
@@ -101,7 +147,7 @@ export function generateRelanceBrief(leadName: string, address: string, daysSinc
   ].join('\n')
 }
 
-// Les 6 fonctions ci-dessous alimentent l'agent de relance automatique (voir
+// Les 4 fonctions ci-dessous alimentent l'agent de relance automatique (voir
 // lib/rive/relance-agent.ts) : chacune génère un brouillon prêt à envoyer,
 // jamais envoyé directement au client — toujours relayé à l'agent par
 // WhatsApp pour validation manuelle (voir la note RGPD dans relance-agent.ts).

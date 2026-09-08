@@ -4,8 +4,8 @@ import { getAuthedProfile } from '@/lib/supabase/session'
 import { leadMatchesBien, type MatchLead, type MatchMandate } from '@/lib/rive/matching'
 import { formatEUR } from '@/lib/rive/mandates'
 import { RECONTACT_THRESHOLD_DAYS, daysAgo } from '@/lib/rive/today'
-import { generateBriefingBrief, generateRelanceBrief } from '@/lib/rive/ai-prompts'
-import { saveAIBriefing, saveAIRelanceDraft } from '@/app/actions/ai'
+import { generateBriefingBrief, generateRelanceBrief, generateVisitReportBrief } from '@/lib/rive/ai-prompts'
+import { saveAIBriefing, saveAIRelanceDraft, saveAIVisitReport } from '@/app/actions/ai'
 import AIBriefPanel from '../../_components/ai-brief-panel'
 import LeadEditForm from './lead-edit-form'
 import HistorySection from './history-section'
@@ -148,6 +148,16 @@ export default async function ProspectDetailPage({ params }: PageProps<'/dashboa
         initialValue={lead.ai_briefing}
         onSave={saveAIBriefing.bind(null, lead.id)}
       />
+
+      {entries && entries.length > 0 && (
+        <AIBriefPanel
+          title="Assistant IA — compte-rendu structuré"
+          prompt={generateVisitReportBrief(lead.name, entries[0].text, entries[0].entry_date)}
+          initialValue={lead.ai_visit_report}
+          onSave={saveAIVisitReport.bind(null, lead.id)}
+          generateLabel="Structurer la dernière note"
+        />
+      )}
 
       {recontactDays !== null && mandate && (
         <AIBriefPanel
