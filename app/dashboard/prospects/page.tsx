@@ -6,7 +6,14 @@ import { leadPriorityScore } from '@/lib/rive/pipelines'
 export default async function ProspectsPage() {
   const supabase = await createClient()
 
-  const [{ data: columns }, { data: leads }] = await Promise.all([
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  const { data: profile } = user
+    ? await supabase.from('profiles').select('agency_id').eq('id', user.id).single()
+    : { data: null }
+
+  const [{ data: columns }, { data: leads }, { data: members }] = await Promise.all([
     supabase
       .from('pipeline_columns')
       .select('id, name, color, is_default')
@@ -18,6 +25,9 @@ export default async function ProspectsPage() {
         'id, name, category, phone, email, critere_lieu, critere_type, budget, financement, action_date, created_at, positions, ai_priority_score, ai_priority_reasoning'
       )
       .order('created_at', { ascending: false }),
+    profile?.agency_id
+      ? supabase.from('profiles').select('id, full_name').eq('agency_id', profile.agency_id)
+      : Promise.resolve({ data: [] as { id: string; full_name: string }[] }),
   ])
 
   const leadIds = (leads ?? []).map((l) => l.id)
@@ -71,7 +81,7 @@ export default async function ProspectsPage() {
 
       <NewLeadForm />
 
-      <KanbanBoard boardType="prospects" columns={columns ?? []} cards={cards} />
+      <KanbanBoard boardType="prospects" columns={columns ?? []} cards={cards} members={members ?? []} />
     </div>
   )
 }

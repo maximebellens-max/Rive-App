@@ -162,6 +162,31 @@ export async function deleteLead(leadId: string) {
   redirect('/dashboard/prospects')
 }
 
+// Actions groupées depuis la sélection multiple (vue kanban/liste) :
+// suppression et réassignation d'un lot de prospects en une fois. Bornées à
+// l'agence de l'utilisateur connecté par sécurité, même si les ids viennent
+// du client — pas de redirect ici, contrairement à deleteLead, puisqu'on
+// reste sur la même page (kanban ou liste des prospects).
+export async function bulkDeleteLeads(leadIds: string[]) {
+  const { supabase, agencyId } = await getAgencyId()
+  if (!agencyId || !leadIds.length) return
+
+  await supabase.from('leads').delete().eq('agency_id', agencyId).in('id', leadIds)
+
+  revalidatePath('/dashboard/prospects')
+  revalidatePath('/dashboard/pipelines', 'layout')
+}
+
+export async function bulkAssignLeads(leadIds: string[], assignedTo: string) {
+  const { supabase, agencyId } = await getAgencyId()
+  if (!agencyId || !leadIds.length || !assignedTo) return
+
+  await supabase.from('leads').update({ assigned_to: assignedTo }).eq('agency_id', agencyId).in('id', leadIds)
+
+  revalidatePath('/dashboard/prospects')
+  revalidatePath('/dashboard/pipelines', 'layout')
+}
+
 export async function addLeadHistoryEntry(leadId: string, formData: FormData) {
   const { supabase, agencyId } = await getAgencyId()
   if (!agencyId) return

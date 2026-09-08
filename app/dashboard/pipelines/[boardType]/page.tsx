@@ -31,14 +31,15 @@ export default async function PipelineBoardPage({ params }: PageProps<'/dashboar
           'id, name, category, phone, email, critere_lieu, critere_type, budget, financement, action_date, created_at, positions, ai_priority_score, ai_priority_reasoning'
         )
 
-  // Ces 3 requêtes ne dépendent que de bt/profile.agency_id (déjà connus) —
+  // Ces 4 requêtes ne dépendent que de bt/profile.agency_id (déjà connus) —
   // elles partent en parallèle plutôt qu'à la suite les unes des autres.
-  const [{ data: board }, { data: columns }, { data: leadsRaw }] = await Promise.all([
+  const [{ data: board }, { data: columns }, { data: leadsRaw }, { data: members }] = await Promise.all([
     isFixedCategoryBoard
       ? Promise.resolve({ data: null as BoardRow | null })
       : supabase.from('boards').select('id, name, kind').eq('id', bt).eq('agency_id', profile.agency_id).maybeSingle(),
     supabase.from('pipeline_columns').select('id, name, color, is_default').eq('board_type', bt).order('position', { ascending: true }),
     leadsQuery,
+    supabase.from('profiles').select('id, full_name').eq('agency_id', profile.agency_id),
   ])
 
   let boardName: string
@@ -110,7 +111,7 @@ export default async function PipelineBoardPage({ params }: PageProps<'/dashboar
           </p>
         </div>
       )}
-      <KanbanBoard boardType={bt} columns={columns ?? []} cards={cards} />
+      <KanbanBoard boardType={bt} columns={columns ?? []} cards={cards} members={members ?? []} />
     </div>
   )
 }

@@ -11,6 +11,7 @@ import {
   addPipelineColumn,
   deletePipelineColumn,
 } from '@/app/actions/pipelines'
+import { bulkDeleteLeads, bulkAssignLeads } from '@/app/actions/leads'
 import {
   COLUMN_COLORS,
   COLUMN_COLOR_HEX,
@@ -62,21 +63,46 @@ function formatLeadAge(iso: string): string {
   return new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
 }
 
+export type BoardMember = { id: string; full_name: string }
+
 export default function KanbanBoard({
   boardType,
   columns,
   cards,
+  members = [],
 }: {
   boardType: BoardType
   columns: PipelineColumn[]
   cards: PipelineCard[]
+  members?: BoardMember[]
 }) {
   const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban')
   const [override, setOverride] = useState<Record<string, string>>({})
+  const [selectMode, setSelectMode] = useState(false)
+  const [selected, setSelected] = useState<Set<string>>(new Set())
   const [, startTransition] = useTransition()
   const router = useRouter()
 
   const effectiveColumnId = (card: PipelineCard) => override[card.id] ?? card.columnId
+
+  function toggleSelectMode() {
+    setSelectMode((v) => !v)
+    setSelected(new Set())
+  }
+
+  function toggleSelected(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  function clearSelection() {
+    setSelected(new Set())
+    setSelectMode(false)
+  }
 
   const grouped = useMemo(
     () =>
@@ -105,7 +131,16 @@ export default function KanbanBoard({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-end gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <button
+          type="button"
+          onClick={toggleSelectMode}
+          className={`rounded-lg border px-3 py-1.5 text-xs font-medium ${
+            selectMode ? 'border-accent bg-accent-soft text-accent' : 'border-neutral-300 text-neutral-600 hover:bg-neutral-100'
+          }`}
+        >
+          {selectMode ? 'Annuler la sélection' : '☑ Sélectionner'}
+        </button>
         <div className="flex rounded-lg border border-neutral-300 p-0.5 text-xs">
           <button
             type="button"
@@ -124,6 +159,14 @@ export default function KanbanBoard({
         </div>
       </div>
 
+      {selectMode && (
+        <BulkActionBar
+          selectedIds={[...selected]}
+          members={members}
+          onDone={clearSelection}
+        />
+      )}
+
       <div className={viewMode === 'kanban' ? 'flex gap-4 overflow-x-auto pb-2' : 'flex flex-col gap-4'}>
         {grouped.map(({ column, cards: colCards }) => (
           <ColumnBlock
@@ -133,10 +176,109 @@ export default function KanbanBoard({
             boardType={boardType}
             wide={viewMode === 'list'}
             onDrop={(leadId) => handleDrop(leadId, column.id)}
+            selectMode={selectMode}
+            selected={selected}
+            onToggleSelect={toggleSelected}
           />
         ))}
         <AddColumnForm boardType={boardType} />
       </div>
+    </div>
+  )
+}
+
+function BulkActionBar({
+  selectedIds,
+  members,
+  onDone,
+}: {
+  selectedIds: string[]
+  members: BoardMember[]
+  onDone: () => void
+}) {
+  const [, startTransition] = useTransition()
+  const [pending, setPending] = useState(false)
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
+  const [assignTo, setAssignTo] = useState('')
+  const count = selectedIds.length
+
+  function runDelete() {
+    setPending(true)
+    startTransition(async () => {
+      await bulkDeleteLeads(selectedIds)
+      setPending(false)
+      setConfirmingDelete(false)
+      onDone()
+    })
+  }
+
+  function runAssign() {
+    if (!assignTo) return
+    setPending(true)
+    startTransition(async () => {
+      await bulkAssignLeads(selectedIds, assignTo)
+      setPending(false)
+      onDone()
+    })
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-2 rounded-lg border border-accent bg-accent-soft px-3 py-2 text-xs">
+      <span className="font-medium text-neutral-700">
+        {count} prospect{count > 1 ? 's' : ''} sélectionné{count > 1 ? 's' : ''}
+      </span>
+
+      {members.length > 0 && (
+        <div className="flex items-center gap-1.5">
+          <select
+            value={assignTo}
+            onChange={(e) => setAssignTo(e.target.value)}
+            disabled={!count || pending}
+            className="rounded-lg border border-neutral-300 bg-surface px-2 py-1 text-xs outline-none focus:border-accent disabled:opacity-50"
+          >
+            <option value="">Assigner à…</option>
+            {members.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.full_name}
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            disabled={!count || !assignTo || pending}
+            onClick={runAssign}
+            className="rounded-lg border border-neutral-300 bg-surface px-2.5 py-1 text-xs font-medium text-neutral-700 hover:bg-neutral-100 disabled:opacity-50"
+          >
+            Appliquer
+          </button>
+        </div>
+      )}
+
+      {!confirmingDelete ? (
+        <button
+          type="button"
+          disabled={!count || pending}
+          onClick={() => setConfirmingDelete(true)}
+          className="rounded-lg border border-danger px-2.5 py-1 text-xs font-medium text-danger hover:bg-danger-soft disabled:opacity-50"
+        >
+          Supprimer
+        </button>
+      ) : (
+        <div className="flex items-center gap-1.5">
+          <span className="text-neutral-500">Supprimer {count} prospect{count > 1 ? 's' : ''} ?</span>
+          <button
+            type="button"
+            disabled={pending}
+            onClick={runDelete}
+            className="rounded bg-danger px-2 py-1 font-medium text-white disabled:opacity-50"
+          >
+            Confirmer
+          </button>
+          <button type="button" onClick={() => setConfirmingDelete(false)} className="text-neutral-500 hover:underline">
+            Annuler
+          </button>
+        </div>
+      )}
     </div>
   )
 }
@@ -147,12 +289,18 @@ function ColumnBlock({
   boardType,
   wide,
   onDrop,
+  selectMode,
+  selected,
+  onToggleSelect,
 }: {
   column: PipelineColumn
   cards: PipelineCard[]
   boardType: BoardType
   wide: boolean
   onDrop: (leadId: string) => void
+  selectMode?: boolean
+  selected?: Set<string>
+  onToggleSelect?: (id: string) => void
 }) {
   const [dragOver, setDragOver] = useState(false)
 
@@ -177,7 +325,13 @@ function ColumnBlock({
 
       <div className="flex flex-col gap-2">
         {cards.map((card) => (
-          <CardItem key={card.id} card={card} />
+          <CardItem
+            key={card.id}
+            card={card}
+            selectMode={selectMode}
+            selected={selected?.has(card.id)}
+            onToggleSelect={() => onToggleSelect?.(card.id)}
+          />
         ))}
         {!cards.length && <p className="px-1 py-2 text-xs text-neutral-400">Aucun prospect ici.</p>}
       </div>
@@ -341,16 +495,22 @@ function truncate(text: string, max: number): string {
   return text.length > max ? `${text.slice(0, max - 1)}…` : text
 }
 
-function CardItem({ card }: { card: PipelineCard }) {
+function CardItem({
+  card,
+  selectMode,
+  selected,
+  onToggleSelect,
+}: {
+  card: PipelineCard
+  selectMode?: boolean
+  selected?: boolean
+  onToggleSelect?: () => void
+}) {
   const effectiveScore = card.aiScore ?? card.score
   const tier = priorityTier(effectiveScore)
-  return (
-    <Link
-      href={`/dashboard/prospects/${card.id}`}
-      draggable
-      onDragStart={(e) => e.dataTransfer.setData('text/plain', card.id)}
-      className="flex cursor-grab flex-col gap-1.5 rounded-xl border border-neutral-200 bg-surface p-3 text-sm shadow-sm active:cursor-grabbing"
-    >
+
+  const content = (
+    <>
       <div className="flex items-start justify-between gap-2">
         <span className="font-medium text-neutral-900">{card.name}</span>
         <span className={`shrink-0 rounded-full border px-1.5 py-0.5 text-[10px] font-medium ${PRIORITY_TIER_CLASS[tier]}`}>
@@ -366,6 +526,41 @@ function CardItem({ card }: { card: PipelineCard }) {
           🤖 {truncate(card.aiReasoning, 70)}
         </span>
       )}
+    </>
+  )
+
+  // En mode sélection, la case à cocher doit rester cliquable sans déclencher
+  // la navigation — on sort le lien de la carte au lieu de l'englober dedans,
+  // et on désactive le glisser-déposer (les deux interactions se gênent).
+  if (selectMode) {
+    return (
+      <div
+        className={`flex items-start gap-2 rounded-xl border p-3 text-sm shadow-sm ${
+          selected ? 'border-accent bg-accent-soft' : 'border-neutral-200 bg-surface'
+        }`}
+      >
+        <input
+          type="checkbox"
+          checked={!!selected}
+          onChange={onToggleSelect}
+          className="mt-1 h-4 w-4 shrink-0"
+          aria-label={`Sélectionner ${card.name}`}
+        />
+        <Link href={`/dashboard/prospects/${card.id}`} className="flex min-w-0 flex-1 flex-col gap-1.5">
+          {content}
+        </Link>
+      </div>
+    )
+  }
+
+  return (
+    <Link
+      href={`/dashboard/prospects/${card.id}`}
+      draggable
+      onDragStart={(e) => e.dataTransfer.setData('text/plain', card.id)}
+      className="flex cursor-grab flex-col gap-1.5 rounded-xl border border-neutral-200 bg-surface p-3 text-sm shadow-sm active:cursor-grabbing"
+    >
+      {content}
     </Link>
   )
 }
