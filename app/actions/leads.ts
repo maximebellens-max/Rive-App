@@ -6,6 +6,8 @@ import { createClient } from '@/lib/supabase/server'
 import { initialPositions, reconcilePositionsOnCategoryChange } from '@/lib/rive/pipeline-positions'
 import { notifyMatchesForLeadId } from '@/lib/rive/match-notify'
 import { notifyTeamNewLeadWhatsApp } from '@/lib/rive/whatsapp-notify'
+import { sendLeadAlertEmail } from '@/lib/rive/email'
+import { appBaseUrl } from '@/lib/rive/meta'
 
 export type LeadFormState = { error?: string } | undefined
 
@@ -80,6 +82,24 @@ export async function createLead(
   if (newLead?.id) {
     await notifyMatchesForLeadId(supabase, agencyId, newLead.id)
     await notifyTeamNewLeadWhatsApp(supabase, agencyId, { name, category, source: 'Saisie manuelle' })
+
+    // Jusqu'ici seuls les leads Meta Ads déclenchaient un email d'alerte —
+    // un oubli plutôt qu'un choix voulu. Même logique de destinataires que
+    // pour un lead Meta : tous les membres de l'agence ayant un email
+    // enregistré.
+    const [{ data: members }, { data: creator }] = await Promise.all([
+      supabase.from('profiles').select('email').eq('agency_id', agencyId).not('email', 'eq', ''),
+      userId ? supabase.from('profiles').select('full_name').eq('id', userId).single() : Promise.resolve({ data: null }),
+    ])
+    const recipients = (members ?? []).map((m) => m.email).filter(Boolean)
+    await sendLeadAlertEmail({
+      to: recipients,
+      leadName: name,
+      source: 'Saisie manuelle',
+      ownerName: creator?.full_name || null,
+      category,
+      leadUrl: `${appBaseUrl()}/dashboard/prospects/${newLead.id}`,
+    })
   }
 
   revalidatePath('/dashboard/prospects')

@@ -38,24 +38,27 @@ export async function sendTestEmail(to: string[]): Promise<{ ok: boolean; error?
   return { ok: true }
 }
 
+// `source` distingue un lead Meta Ads (nom de la campagne) d'un prospect
+// ajouté à la main dans le CRM ("Saisie manuelle") — le même email sert aux
+// deux cas, seul le libellé affiché change.
 export async function sendLeadAlertEmail({
   to,
   leadName,
-  campaignName,
+  source,
   ownerName,
   category,
   leadUrl,
 }: {
   to: string[]
   leadName: string
-  campaignName: string
+  source: string
   ownerName: string | null
   category: string | null
   leadUrl: string
 }): Promise<void> {
   const apiKey = await resendApiKey()
   if (!apiKey || to.length === 0) {
-    console.warn('[meta] Email d’alerte non envoyé (RESEND_API_KEY manquante ou aucun destinataire).')
+    console.warn('[leads] Email d’alerte non envoyé (RESEND_API_KEY manquante ou aucun destinataire).')
     return
   }
 
@@ -63,13 +66,13 @@ export async function sendLeadAlertEmail({
   const categoryLabel =
     category === 'acheteur' ? 'Acheteurs' : category === 'vendeur' ? 'Vendeurs' : category === 'investisseur' ? 'Investisseurs' : null
 
-  const subject = `Nouveau lead Meta — ${leadName}`
+  const subject = `Nouveau prospect — ${leadName}`
   const html = `
     <div style="font-family: -apple-system, sans-serif; color: #2b2b28; max-width: 480px;">
-      <h2 style="margin: 0 0 12px;">Nouveau lead Meta Ads</h2>
-      <p style="margin: 0 0 8px;"><strong>${leadName}</strong> vient de remplir un formulaire publicitaire.</p>
+      <h2 style="margin: 0 0 12px;">Nouveau prospect</h2>
+      <p style="margin: 0 0 8px;"><strong>${leadName}</strong> vient d'être ajouté à Rive.</p>
       <table style="margin: 16px 0; font-size: 14px;">
-        <tr><td style="color:#6b6a64; padding-right: 12px;">Campagne</td><td>${campaignName || '—'}</td></tr>
+        <tr><td style="color:#6b6a64; padding-right: 12px;">Source</td><td>${source || '—'}</td></tr>
         ${ownerName ? `<tr><td style="color:#6b6a64; padding-right: 12px;">Propriétaire</td><td>${ownerName}</td></tr>` : ''}
         ${categoryLabel ? `<tr><td style="color:#6b6a64; padding-right: 12px;">Tableau</td><td>${categoryLabel}</td></tr>` : ''}
       </table>
@@ -86,7 +89,7 @@ export async function sendLeadAlertEmail({
   })
 
   if (!res.ok) {
-    console.error(`[meta] Échec de l'envoi de l'email d'alerte (${res.status}).`)
+    console.error(`[leads] Échec de l'envoi de l'email d'alerte (${res.status}).`)
   }
 }
 

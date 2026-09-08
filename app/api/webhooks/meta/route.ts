@@ -212,7 +212,7 @@ async function processLeadgenChange(
   await sendLeadAlertEmail({
     to: recipients,
     leadName: name,
-    campaignName: leadData.campaignName || '',
+    source: leadData.campaignName || 'Meta Ads',
     ownerName: campaignConfigured ? ownerName : null,
     category,
     leadUrl: `${appBaseUrl()}/dashboard/prospects/${lead.id}`,
