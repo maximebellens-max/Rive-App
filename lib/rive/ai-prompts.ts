@@ -217,3 +217,25 @@ export function generateEstimationFollowupBrief(leadName: string, address: strin
     `Estimation réalisée il y a ${daysSince} jours, sans suite depuis.`,
   ].join('\n')
 }
+// Rapport hebdomadaire automatique (voir lib/rive/weekly-report.ts) : synthèse
+// factuelle envoyée par WhatsApp à l'équipe chaque lundi matin.
+export function generateWeeklyReportBrief(stats: {
+  weekLabel: string
+  newLeadsCount: number
+  newLeadsByCategory: Record<string, number>
+  mandatesSignedCount: number
+  mandatesSoldCount: number
+  soldVolume: number
+}): string {
+  const categoryLines = Object.entries(stats.newLeadsByCategory)
+    .map(([label, count]) => `${label} : ${count}`)
+    .join(', ')
+  return [
+    `Rédige un court message WhatsApp de synthèse hebdomadaire pour une agence immobilière (Hevrest, bassin genevois / Annecy), à destination de l'équipe (2 agents, ce sont des frères). Ton professionnel, factuel, chaleureux sans excès, en français. Reste sobre et honnête, pas de superlatifs si les chiffres sont faibles.`,
+    ``,
+    `Semaine du ${stats.weekLabel}.`,
+    `Nouveaux prospects : ${stats.newLeadsCount}${categoryLines ? ` (${categoryLines})` : ''}`,
+    `Mandats signés : ${stats.mandatesSignedCount}`,
+    `Ventes conclues : ${stats.mandatesSoldCount}${stats.soldVolume ? ` pour un volume total de ${formatEUR(stats.soldVolume)}` : ''}`,
+  ].join('\n')
+}
