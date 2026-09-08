@@ -2,6 +2,7 @@
 
 import { useActionState } from 'react'
 import { updateMyWhatsAppNumber, type WhatsAppFormState } from '@/app/actions/team'
+import TestWhatsAppButton from './test-whatsapp-button'
 
 export default function WhatsAppSection({
   whatsappNumber,
@@ -76,6 +77,15 @@ export default function WhatsAppSection({
           Enregistrer
         </button>
       </form>
+
+      <div className="flex flex-col gap-2 rounded-lg border border-neutral-200 bg-neutral-50 p-3">
+        <p className="text-xs font-medium text-neutral-700">Diagnostic</p>
+        <p className="text-xs text-neutral-500">
+          Envoie le message "nouveau lead" à ton numéro ci-dessus, sans attendre un vrai prospect — enregistre
+          d&apos;abord ton numéro ci-dessus si ce n&apos;est pas déjà fait.
+        </p>
+        <TestWhatsAppButton />
+      </div>
     </div>
   )
 }

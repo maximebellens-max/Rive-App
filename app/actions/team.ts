@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { sendTestWhatsAppTemplate } from '@/lib/rive/whatsapp'
 
 async function getOwnerContext() {
   const supabase = await createClient()
@@ -108,4 +109,38 @@ export async function updateMyWhatsAppNumber(
 
   revalidatePath('/dashboard/settings')
   return { success: true }
+}
+
+export type WhatsAppDiagnosticState = { error?: string; success?: string } | undefined
+
+// Envoie le même gabarit que l'alerte "nouveau lead" à TON propre numéro
+// WhatsApp (indépendamment de l'opt-in "Recevoir les alertes WhatsApp"), pour
+// vérifier la configuration (identifiants Meta, numéro, gabarit approuvé)
+// sans attendre un vrai lead ou rendez-vous.
+export async function sendTestWhatsAppAction(
+  _prevState: WhatsAppDiagnosticState,
+  _formData: FormData
+): Promise<WhatsAppDiagnosticState> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { error: 'Session expirée, reconnecte-toi.' }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('whatsapp_number, whatsapp_sender_phone_number_id')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile?.whatsapp_number) {
+    return { error: 'Renseigne d’abord ton numéro WhatsApp ci-dessus, enregistre, puis réessaie.' }
+  }
+
+  const result = await sendTestWhatsAppTemplate(
+    profile.whatsapp_number,
+    profile.whatsapp_sender_phone_number_id || undefined
+  )
+  if (!result.ok) return { error: result.error }
+  return { success: 'Message de test envoyé — vérifie WhatsApp sur ton téléphone.' }
 }

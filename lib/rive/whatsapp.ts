@@ -62,3 +62,48 @@ export async function sendWhatsAppTemplate({
     console.error(`[whatsapp] Échec de l'envoi du message "${templateName}" (${res.status}). ${detail}`)
   }
 }
+
+// Contrairement à sendWhatsAppTemplate ci-dessus (qui ne doit jamais faire
+// échouer le traitement d'un événement réel), cette fonction sert uniquement
+// au bouton de test dans Réglages : elle renvoie explicitement ce qui a
+// bloqué (identifiants manquants, numéro non renseigné, gabarit refusé par
+// Meta...) pour diagnostiquer sans attendre un vrai lead/rendez-vous.
+export async function sendTestWhatsAppTemplate(
+  to: string,
+  phoneNumberId?: string
+): Promise<{ ok: boolean; error?: string }> {
+  const creds = whatsappCredentials(phoneNumberId)
+  if (!creds) {
+    return {
+      ok: false,
+      error: 'WHATSAPP_ACCESS_TOKEN et/ou WHATSAPP_PHONE_NUMBER_ID manquants dans les variables d’environnement Vercel.',
+    }
+  }
+  if (!to) return { ok: false, error: 'Aucun numéro WhatsApp enregistré pour toi dans Réglages.' }
+
+  const res = await fetch(`https://graph.facebook.com/v21.0/${creds.phoneNumberId}/messages`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${creds.accessToken}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      messaging_product: 'whatsapp',
+      to,
+      type: 'template',
+      template: {
+        name: 'rive_nouveau_lead',
+        language: { code: 'fr' },
+        components: [
+          {
+            type: 'body',
+            parameters: ['Test Rive', 'Vendeur', 'Test manuel'].map((text) => ({ type: 'text', text })),
+          },
+        ],
+      },
+    }),
+  })
+
+  if (!res.ok) {
+    const detail = await res.text().catch(() => '')
+    return { ok: false, error: `Meta a refusé l’envoi (${res.status}). ${detail}` }
+  }
+  return { ok: true }
+}
