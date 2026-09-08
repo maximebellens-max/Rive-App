@@ -1,9 +1,20 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { mandateNoticeDate, dateUrgency, formatDate } from '@/lib/rive/mandates'
-import { notifyTeamAppointmentWhatsApp, notifyTeamMandateRenewalWhatsApp } from '@/lib/rive/whatsapp-notify'
+import {
+  notifyTeamAlertWhatsApp,
+  notifyTeamAppointmentWhatsApp,
+  notifyTeamMandateRenewalWhatsApp,
+} from '@/lib/rive/whatsapp-notify'
+import { generateBriefingBrief } from '@/lib/rive/ai-prompts'
+import { generateWithClaude } from '@/lib/rive/anthropic'
 
 type AdminClient = ReturnType<typeof createAdminClient>
+
+// Longueur max raisonnable pour un corps de message WhatsApp (le gabarit
+// rive_alerte accepte plus, mais on garde le briefing lisible sur un écran
+// de téléphone plutôt que de coller la limite technique).
+const BRIEF_MAX_LENGTH = 900
 
 // Digest quotidien des alertes WhatsApp qui ne sont pas déclenchées par un
 // événement (contrairement à un nouveau lead, alerté immédiatement) : les
@@ -53,10 +64,57 @@ async function claimDailyAlert(
   return !!inserted && inserted.length > 0
 }
 
+// Compose un briefing court (contexte du prospect + derniers échanges +
+// question(s) à poser) via Claude, pour l'alerte WhatsApp de RDV du jour —
+// plutôt que le simple "RDV avec untel à telle heure" d'origine. Renvoie
+// null si Claude n'a pas pu générer de texte (clé API absente, erreur
+// ponctuelle...), auquel cas l'appelant se replie sur l'alerte simple.
+async function composeAppointmentBrief(
+  supabase: AdminClient,
+  lead: {
+    id: string
+    name: string
+    category: string | null
+    critere_lieu: string | null
+    critere_type: string | null
+    budget: number | null
+    financement: string | null
+    notes: string | null
+    action_label: string | null
+    action_date: string | null
+  }
+): Promise<string | null> {
+  const { data: entries } = await supabase
+    .from('lead_history_entries')
+    .select('entry_date, text')
+    .eq('lead_id', lead.id)
+    .order('entry_date', { ascending: false })
+    .limit(5)
+
+  const prompt = generateBriefingBrief(
+    {
+      name: lead.name,
+      category: lead.category,
+      critere_lieu: lead.critere_lieu || '',
+      critere_type: lead.critere_type || '',
+      budget: lead.budget,
+      financement: lead.financement || '',
+      notes: lead.notes || '',
+      action_label: lead.action_label || '',
+      action_date: lead.action_date,
+    },
+    entries ?? []
+  )
+
+  const { text } = await generateWithClaude(prompt)
+  if (!text) return null
+  return text.length > BRIEF_MAX_LENGTH ? `${text.slice(0, BRIEF_MAX_LENGTH)}…` : text
+}
+
 async function sendAppointmentAlerts(supabase: AdminClient, agencyId: string, today: string) {
   const { data: leads } = await supabase
     .from('leads')
-    .select('id, name, action_label, action_date')
+    .select('id, name, category, critere_lieu, critere_type, budget, financement, notes, action_label, action_date')
     .eq('agency_id', agencyId)
     .eq('action_date', today)
 
@@ -64,10 +122,15 @@ async function sendAppointmentAlerts(supabase: AdminClient, agencyId: string, to
     const isNew = await claimDailyAlert(supabase, agencyId, 'appointment', lead.id, today)
     if (!isNew) continue
 
-    await notifyTeamAppointmentWhatsApp(supabase, agencyId, {
-      leadName: lead.name,
-      actionLabel: lead.action_label || '',
-    })
+    const brief = await composeAppointmentBrief(supabase, lead)
+    if (brief) {
+      await notifyTeamAlertWhatsApp(supabase, agencyId, `RDV aujourd'hui — ${lead.name}`, brief)
+    } else {
+      await notifyTeamAppointmentWhatsApp(supabase, agencyId, {
+        leadName: lead.name,
+        actionLabel: lead.action_label || '',
+      })
+    }
   }
 }
 
