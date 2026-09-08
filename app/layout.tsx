@@ -21,7 +21,19 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="fr" className="h-full antialiased">
-      <body className="min-h-full flex flex-col bg-neutral-50 text-neutral-900 font-sans">{children}</body>
+      <body className="min-h-full flex flex-col bg-neutral-50 text-neutral-900 font-sans">
+        {/* Pose le thème choisi (clair/sombre) AVANT le premier rendu visible,
+            pour éviter un flash du mauvais thème au chargement. Un choix
+            "système" ne laisse rien dans localStorage : la media query CSS
+            @media(prefers-color-scheme) s'en charge seule, aucun script requis. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "try{var m=localStorage.getItem('rive-theme');if(m==='light'||m==='dark'){document.documentElement.setAttribute('data-theme',m)}}catch(e){}",
+          }}
+        />
+        {children}
+      </body>
     </html>
   );
 }

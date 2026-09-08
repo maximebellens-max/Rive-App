@@ -1,6 +1,6 @@
 import { disconnectMeta, selectMetaAdAccount, selectMetaPage } from '@/app/actions/meta'
 import SyncCampaignsButton from './sync-campaigns-button'
-import CampaignMappingRow from './campaign-mapping-row'
+import CampaignList from './campaign-list'
 import TestEmailButton from './test-email-button'
 import CheckSubscriptionButton from './check-subscription-button'
 
@@ -39,8 +39,6 @@ export default function MetaSection({
   successMessage?: string
   errorMessage?: string
 }) {
-  const unconfigured = campaigns.filter((c) => !c.owner_id || !c.target_category).length
-
   return (
     <div className="flex flex-col gap-4">
       <div>
@@ -161,25 +159,7 @@ export default function MetaSection({
             </div>
           )}
 
-          <div>
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-medium text-neutral-700">Campagnes ({campaigns.length})</p>
-              {unconfigured > 0 && (
-                <p className="text-xs text-warn">
-                  {unconfigured} campagne{unconfigured > 1 ? 's' : ''} sans propriétaire ou tableau assigné
-                </p>
-              )}
-            </div>
-            <div className="mt-2 flex flex-col gap-2">
-              {campaigns.length === 0 ? (
-                <p className="text-sm text-neutral-400">
-                  Aucune campagne récupérée pour l&apos;instant — clique sur &quot;Actualiser les campagnes&quot;.
-                </p>
-              ) : (
-                campaigns.map((c) => <CampaignMappingRow key={c.id} campaign={c} members={members} />)
-              )}
-            </div>
-          </div>
+          <CampaignList campaigns={campaigns} members={members} />
         </>
       )}
     </div>

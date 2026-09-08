@@ -4,6 +4,7 @@ import { getAuthedProfile } from '@/lib/supabase/session'
 import { logout } from '@/app/actions/auth'
 import { createBoard } from '@/app/actions/boards'
 import NotificationBell, { type NotificationItem } from './notification-bell'
+import ThemeToggle from './theme-toggle'
 
 const NAV_GROUPS: { label: string; links: { href: string; label: string }[] }[] = [
   {
@@ -99,6 +100,7 @@ export default async function DashboardLayout({
             Rive
           </Link>
           <div className="flex items-center gap-3 text-sm text-neutral-500">
+            <ThemeToggle />
             <NotificationBell notifications={notifications} />
             <Link href="/dashboard/settings" className="hover:text-neutral-900">
               Réglages
