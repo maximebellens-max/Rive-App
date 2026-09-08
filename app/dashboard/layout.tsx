@@ -22,6 +22,7 @@ const NAV_GROUPS: { label: string; links: { href: string; label: string }[] }[] 
       { href: '/dashboard/pipelines/vendeur', label: 'Vendeurs' },
       { href: '/dashboard/pipelines/acheteur', label: 'Acheteurs' },
       { href: '/dashboard/pipelines/investisseur', label: 'Investisseurs' },
+      { href: '/dashboard/locations', label: 'Location' },
     ],
   },
   {
@@ -30,6 +31,7 @@ const NAV_GROUPS: { label: string; links: { href: string; label: string }[] }[] 
       { href: '/dashboard/estimations', label: 'Estimations' },
       { href: '/dashboard/mandates', label: 'Mandats' },
       { href: '/dashboard/commissions', label: 'Commissions' },
+      { href: '/dashboard/investments', label: 'Projets investisseur' },
     ],
   },
   {

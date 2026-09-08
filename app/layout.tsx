@@ -1,185 +1,39 @@
-import Link from 'next/link'
-import { redirect } from 'next/navigation'
-import { getAuthedProfile } from '@/lib/supabase/session'
-import { logout } from '@/app/actions/auth'
-import { createBoard } from '@/app/actions/boards'
-import NotificationBell, { type NotificationItem } from './notification-bell'
-import ThemeToggle from './theme-toggle'
+import type { Metadata } from "next";
+// Polices du prototype, auto-hébergées via @fontsource (fichiers woff2 servis
+// depuis notre propre build, aucune requête vers fonts.googleapis.com) :
+// Archivo pour les titres, Manrope pour le texte courant, IBM Plex Mono pour
+// les données chiffrées (perf, montants).
+import "@fontsource/archivo/600.css";
+import "@fontsource/archivo/700.css";
+import "@fontsource/archivo/800.css";
+import "@fontsource/manrope/400.css";
+import "@fontsource/manrope/500.css";
+import "@fontsource/manrope/600.css";
+import "@fontsource/manrope/700.css";
+import "@fontsource/ibm-plex-mono/500.css";
+import "./globals.css";
 
-const NAV_GROUPS: { label: string; links: { href: string; label: string }[] }[] = [
-  {
-    label: 'Vue d’ensemble',
-    links: [
-      { href: '/dashboard', label: 'Aujourd’hui' },
-      { href: '/dashboard/prospects', label: 'Prospects' },
-      { href: '/dashboard/sectors', label: 'Secteurs' },
-      { href: '/dashboard/performance', label: 'Performance' },
-    ],
-  },
-  {
-    label: 'Pipelines',
-    links: [
-      { href: '/dashboard/pipelines/vendeur', label: 'Vendeurs' },
-      { href: '/dashboard/pipelines/acheteur', label: 'Acheteurs' },
-      { href: '/dashboard/pipelines/investisseur', label: 'Investisseurs' },
-      { href: '/dashboard/locations', label: 'Location' },
-    ],
-  },
-  {
-    label: 'Gestion',
-    links: [
-      { href: '/dashboard/estimations', label: 'Estimations' },
-      { href: '/dashboard/mandates', label: 'Mandats' },
-      { href: '/dashboard/commissions', label: 'Commissions' },
-      { href: '/dashboard/investments', label: 'Projets investisseur' },
-    ],
-  },
-  {
-    label: 'Suivi chantiers',
-    links: [
-      { href: '/dashboard/ameublement', label: 'Ameublement' },
-      { href: '/dashboard/cuisine', label: 'Cuisine' },
-      { href: '/dashboard/travaux', label: 'Travaux' },
-    ],
-  },
-  {
-    label: 'Outils',
-    links: [
-      { href: '/dashboard/partners', label: 'Contacts pro' },
-      { href: '/dashboard/templates', label: 'Modèles' },
-    ],
-  },
-]
+export const metadata: Metadata = {
+  title: "Rive — CRM immobilier",
+  description: "Rive, le CRM pensé pour les agents immobiliers.",
+};
 
-export default async function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
-  const { supabase, user, profile } = await getAuthedProfile()
-
-  if (!user) {
-    redirect('/login')
-  }
-
-  const agencyName = (profile?.agencies as unknown as { name: string } | null)?.name
-
-  const { data: customBoards } = profile?.agency_id
-    ? await supabase
-        .from('boards')
-        .select('id, name')
-        .eq('agency_id', profile.agency_id)
-        .eq('kind', 'custom')
-        .order('position', { ascending: true })
-    : { data: [] as { id: string; name: string }[] }
-
-  const { data: rawNotifications } = profile?.agency_id
-    ? await supabase
-        .from('notifications')
-        .select('id, title, body, lead_id, mandate_id, read_by, created_at')
-        .eq('agency_id', profile.agency_id)
-        .order('created_at', { ascending: false })
-        .limit(20)
-    : {
-        data: [] as {
-          id: string
-          title: string
-          body: string
-          lead_id: string | null
-          mandate_id: string | null
-          read_by: string[]
-          created_at: string
-        }[],
-      }
-
-  const notifications: NotificationItem[] = (rawNotifications ?? []).map((n) => ({
-    id: n.id,
-    title: n.title,
-    body: n.body,
-    lead_id: n.lead_id,
-    mandate_id: n.mandate_id,
-    created_at: n.created_at,
-    read: (n.read_by ?? []).includes(user.id),
-  }))
-
+export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <div className="flex min-h-screen flex-col">
-      <header className="border-b border-neutral-200 bg-surface">
-        <div className="flex items-center justify-between px-4 py-3">
-          <Link href="/dashboard" className="text-lg font-semibold tracking-tight">
-            Rive
-          </Link>
-          <div className="flex items-center gap-3 text-sm text-neutral-500">
-            <ThemeToggle />
-            <NotificationBell notifications={notifications} />
-            <Link href="/dashboard/settings" className="hover:text-neutral-900">
-              Réglages
-            </Link>
-            <span>
-              {profile?.full_name || user.email}
-              {agencyName ? ` · ${agencyName}` : ''}
-            </span>
-            <form action={logout}>
-              <button
-                type="submit"
-                className="rounded-lg border border-neutral-300 px-3 py-1.5 text-neutral-700 hover:bg-neutral-100"
-              >
-                Déconnexion
-              </button>
-            </form>
-          </div>
-        </div>
-      </header>
-      <div className="mx-auto flex w-full max-w-7xl flex-1 gap-8 px-4 py-8">
-        <aside className="hidden w-48 shrink-0 flex-col gap-6 md:flex">
-          {NAV_GROUPS.map((group) => (
-            <div key={group.label} className="flex flex-col gap-1">
-              <span className="px-2 text-xs font-semibold uppercase tracking-wide text-neutral-400">
-                {group.label}
-              </span>
-              {group.links.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className="rounded-lg px-2 py-1.5 text-sm text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900"
-                >
-                  {link.label}
-                </Link>
-              ))}
-            </div>
-          ))}
-          <div className="flex flex-col gap-1">
-            <span className="px-2 text-xs font-semibold uppercase tracking-wide text-neutral-400">
-              Tableaux personnalisés
-            </span>
-            {(customBoards ?? []).map((board) => (
-              <Link
-                key={board.id}
-                href={`/dashboard/pipelines/${board.id}`}
-                className="truncate rounded-lg px-2 py-1.5 text-sm text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900"
-              >
-                {board.name}
-              </Link>
-            ))}
-            <form action={createBoard} className="flex gap-1 px-2 pt-1">
-              <input
-                name="name"
-                placeholder="Nouveau tableau…"
-                aria-label="Nom du nouveau tableau"
-                className="min-w-0 flex-1 rounded-lg border border-neutral-200 px-2 py-1 text-xs outline-none focus:border-accent"
-              />
-              <button
-                type="submit"
-                aria-label="Créer le tableau"
-                className="shrink-0 rounded-lg border border-neutral-200 px-2 py-1 text-xs font-medium text-neutral-600 hover:bg-neutral-100"
-              >
-                +
-              </button>
-            </form>
-          </div>
-        </aside>
-        <main className="min-w-0 flex-1">{children}</main>
-      </div>
-    </div>
-  )
+    <html lang="fr" className="h-full antialiased">
+      <body className="min-h-full flex flex-col bg-neutral-50 text-neutral-900 font-sans">
+        {/* Pose le thème choisi (clair/sombre) AVANT le premier rendu visible,
+            pour éviter un flash du mauvais thème au chargement. Un choix
+            "système" ne laisse rien dans localStorage : la media query CSS
+            @media(prefers-color-scheme) s'en charge seule, aucun script requis. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "try{var m=localStorage.getItem('rive-theme');if(m==='light'||m==='dark'){document.documentElement.setAttribute('data-theme',m)}}catch(e){}",
+          }}
+        />
+        {children}
+      </body>
+    </html>
+  );
 }
