@@ -37,6 +37,8 @@ export type PipelineCard = {
   created_at: string
   columnId: string | null
   score: number
+  aiScore: number | null
+  aiReasoning: string
 }
 
 function formatBudget(n: number | null): string {
@@ -82,7 +84,7 @@ export default function KanbanBoard({
         column,
         cards: cards
           .filter((c) => effectiveColumnId(c) === column.id)
-          .sort((a, b) => b.score - a.score),
+          .sort((a, b) => (b.aiScore ?? b.score) - (a.aiScore ?? a.score)),
       })),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [columns, cards, override]
@@ -333,8 +335,15 @@ function QuickAddForm({ boardType, columnId }: { boardType: BoardType; columnId:
   )
 }
 
+// Tronque la raison IA pour qu'elle tienne sur une ligne de carte — le texte
+// complet reste lisible au survol via l'attribut title.
+function truncate(text: string, max: number): string {
+  return text.length > max ? `${text.slice(0, max - 1)}…` : text
+}
+
 function CardItem({ card }: { card: PipelineCard }) {
-  const tier = priorityTier(card.score)
+  const effectiveScore = card.aiScore ?? card.score
+  const tier = priorityTier(effectiveScore)
   return (
     <Link
       href={`/dashboard/prospects/${card.id}`}
@@ -352,6 +361,11 @@ function CardItem({ card }: { card: PipelineCard }) {
       {card.critere_lieu && <span className="text-xs text-neutral-500">📍 {card.critere_lieu}</span>}
       {card.budget ? <span className="text-xs text-neutral-500">💰 {formatBudget(card.budget)}</span> : null}
       {card.created_at && <span className="text-xs text-neutral-400">🕓 {formatLeadAge(card.created_at)}</span>}
+      {card.aiReasoning && (
+        <span className="text-xs text-neutral-500" title={card.aiReasoning}>
+          🤖 {truncate(card.aiReasoning, 70)}
+        </span>
+      )}
     </Link>
   )
 }

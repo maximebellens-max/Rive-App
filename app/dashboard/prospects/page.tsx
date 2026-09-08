@@ -15,7 +15,7 @@ export default async function ProspectsPage() {
     supabase
       .from('leads')
       .select(
-        'id, name, category, phone, email, critere_lieu, critere_type, budget, financement, action_date, created_at, positions'
+        'id, name, category, phone, email, critere_lieu, critere_type, budget, financement, action_date, created_at, positions, ai_priority_score, ai_priority_reasoning'
       )
       .order('created_at', { ascending: false }),
   ])
@@ -56,6 +56,8 @@ export default async function ProspectsPage() {
       created_at: l.created_at,
       last_history_date: lastHistory[l.id] ?? null,
     }),
+    aiScore: l.ai_priority_score,
+    aiReasoning: l.ai_priority_reasoning,
   }))
 
   return (

@@ -22,13 +22,13 @@ export default async function PipelineBoardPage({ params }: PageProps<'/dashboar
     ? supabase
         .from('leads')
         .select(
-          'id, name, category, phone, email, critere_lieu, critere_type, budget, financement, action_date, created_at, positions'
+          'id, name, category, phone, email, critere_lieu, critere_type, budget, financement, action_date, created_at, positions, ai_priority_score, ai_priority_reasoning'
         )
         .eq('category', bt)
     : supabase
         .from('leads')
         .select(
-          'id, name, category, phone, email, critere_lieu, critere_type, budget, financement, action_date, created_at, positions'
+          'id, name, category, phone, email, critere_lieu, critere_type, budget, financement, action_date, created_at, positions, ai_priority_score, ai_priority_reasoning'
         )
 
   // Ces 3 requêtes ne dépendent que de bt/profile.agency_id (déjà connus) —
@@ -94,6 +94,8 @@ export default async function PipelineBoardPage({ params }: PageProps<'/dashboar
       created_at: l.created_at,
       last_history_date: lastHistory[l.id] ?? null,
     }),
+    aiScore: l.ai_priority_score,
+    aiReasoning: l.ai_priority_reasoning,
   }))
 
   return (
