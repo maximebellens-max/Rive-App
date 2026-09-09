@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
-import { firstColumnId, engagedColumnId } from '@/lib/rive/pipeline-positions'
+import { firstColumnId, lastColumnId, engagedColumnId, clientColumnId } from '@/lib/rive/pipeline-positions'
 import { nextColumnColor, CATEGORY_BOARD_TYPES, BOARD_LABELS, type BoardType } from '@/lib/rive/pipelines'
 import { ensureMandateDraftForLead, activateMandateForLead } from '@/lib/rive/automation'
 import { notifyNewLead } from '@/lib/rive/new-lead-notify'
@@ -31,6 +31,13 @@ function revalidateBoard(boardType: BoardType) {
   revalidatePath(boardType === 'prospects' ? '/dashboard/prospects' : `/dashboard/pipelines/${boardType}`)
 }
 
+// Tableaux de catégorie dont la dernière colonne correspond à un mandat
+// signé — donc à un vrai passage au statut client. Le pipeline Acheteur n'a
+// pas cette notion (sa dernière colonne, "RDV de visite", n'est qu'une étape
+// intermédiaire) : sa synchronisation avec Prospects reste seulement
+// 1ère colonne / reste, comme avant.
+const MANDATE_CATEGORY_BOARD_TYPES = new Set(['vendeur', 'investisseur'])
+
 export async function moveLeadCard(leadId: string, boardType: BoardType, columnId: string) {
   const { supabase, agencyId } = await getAgencyId()
   if (!agencyId) return
@@ -43,18 +50,35 @@ export async function moveLeadCard(leadId: string, boardType: BoardType, columnI
   if (!lead) return
 
   const positions = { ...((lead.positions as Record<string, string>) ?? {}), [boardType]: columnId }
+  const category = lead.category
 
-  // Évite la double saisie : avancer un prospect sur son pipeline de
-  // catégorie (Vendeur/Acheteur/Investisseur) répercute son étape côté
-  // Prospects, plutôt que de devoir aussi le glisser à la main là-bas —
-  // même règle que pour un ajout direct (voir quickAddLead) : 1ère colonne
-  // → "Nouveau lead", n'importe quelle autre → "Qualifié".
-  if (CATEGORY_BOARD_TYPES.has(boardType)) {
+  // Évite la double saisie : avancer un prospect sur Prospects ou sur son
+  // pipeline de catégorie (Vendeur/Acheteur/Investisseur) répercute son
+  // étape sur l'autre tableau, dans les deux sens, plutôt que de devoir
+  // aussi le glisser à la main là-bas. Même règle des deux côtés : 1ère
+  // colonne ↔ 1ère colonne ("Nouveau lead"), dernière colonne ↔ "Client
+  // actif" (mandat signé), n'importe quelle autre ↔ "Qualifié"/3ème colonne.
+  if (boardType === 'prospects' && category && CATEGORY_BOARD_TYPES.has(category)) {
+    const prospectsFirstCol = await firstColumnId(supabase, agencyId, 'prospects')
+    const clientCol = MANDATE_CATEGORY_BOARD_TYPES.has(category) ? await clientColumnId(supabase, agencyId) : null
+    const catCol =
+      columnId === prospectsFirstCol
+        ? await firstColumnId(supabase, agencyId, category)
+        : clientCol && columnId === clientCol
+          ? await lastColumnId(supabase, agencyId, category)
+          : await engagedColumnId(supabase, agencyId, category)
+    if (catCol) positions[category] = catCol
+  } else if (CATEGORY_BOARD_TYPES.has(boardType)) {
     const targetFirstCol = await firstColumnId(supabase, agencyId, boardType)
+    const targetLastCol = MANDATE_CATEGORY_BOARD_TYPES.has(boardType)
+      ? await lastColumnId(supabase, agencyId, boardType)
+      : null
     const prospectsCol =
       columnId === targetFirstCol
         ? await firstColumnId(supabase, agencyId, 'prospects')
-        : await engagedColumnId(supabase, agencyId, 'prospects')
+        : targetLastCol && columnId === targetLastCol
+          ? await clientColumnId(supabase, agencyId)
+          : await engagedColumnId(supabase, agencyId, 'prospects')
     if (prospectsCol) positions.prospects = prospectsCol
   }
 
@@ -94,12 +118,6 @@ export async function quickAddLead(boardType: BoardType, columnId: string, formD
   const positions: Record<string, string> = {}
   if (boardType === 'prospects') {
     positions.prospects = columnId
-  } else if (boardType === 'client') {
-    // Le tableau Client n'a qu'une étape ("Client actif") : un ajout direct
-    // ici n'est jamais un "nouveau lead" côté Prospects.
-    positions.client = columnId
-    const prospectsCol = await engagedColumnId(supabase, agencyId, 'prospects')
-    if (prospectsCol) positions.prospects = prospectsCol
   } else {
     positions[boardType] = columnId
     // Un ajout direct sur la 1ère colonne d'un autre tableau (ex : "Nouveau
@@ -110,10 +128,15 @@ export async function quickAddLead(boardType: BoardType, columnId: string, formD
     // "Nouveaux prospects à contacter" côté Aujourd'hui et dans la 1ère
     // colonne du tableau Prospects.
     const targetFirstCol = await firstColumnId(supabase, agencyId, boardType)
+    const targetLastCol = MANDATE_CATEGORY_BOARD_TYPES.has(boardType)
+      ? await lastColumnId(supabase, agencyId, boardType)
+      : null
     const prospectsCol =
       columnId === targetFirstCol
         ? await firstColumnId(supabase, agencyId, 'prospects')
-        : await engagedColumnId(supabase, agencyId, 'prospects')
+        : targetLastCol && columnId === targetLastCol
+          ? await clientColumnId(supabase, agencyId)
+          : await engagedColumnId(supabase, agencyId, 'prospects')
     if (prospectsCol) positions.prospects = prospectsCol
   }
 

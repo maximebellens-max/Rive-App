@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { FEATURE_KEYS, type Features } from '@/lib/rive/mandates'
-import { maybeCreateCommissionForMandate, moveLeadToClientBoard } from '@/lib/rive/automation'
+import { maybeCreateCommissionForMandate, moveLeadToClientColumn } from '@/lib/rive/automation'
 import { firstColumnId, engagedColumnId } from '@/lib/rive/pipeline-positions'
 import { notifyMatchesForMandateId } from '@/lib/rive/match-notify'
 import { notifyNewLead } from '@/lib/rive/new-lead-notify'
@@ -197,10 +197,11 @@ export async function createMandate(
   await notifyMatchesForMandateId(supabase, agencyId, data.id)
 
   // Un mandat créé directement (pas un brouillon) signifie que ce prospect
-  // est déjà client — il rejoint le tableau "Client" tout de suite, sans
-  // attendre un passage par le pipeline Vendeur/Acheteur/Investisseur.
+  // est déjà client — il rejoint "Client actif" côté Prospects tout de
+  // suite, sans attendre un passage par le pipeline Vendeur/Acheteur/
+  // Investisseur.
   if (leadId && !isDraft) {
-    await moveLeadToClientBoard(supabase, agencyId, leadId)
+    await moveLeadToClientColumn(supabase, agencyId, leadId)
   }
 
   if (newLeadCreated) revalidatePath('/dashboard/prospects')
@@ -310,7 +311,7 @@ export async function moveMandateStage(mandateId: string, stage: string) {
   // Ce déplacement force is_draft à false : si le mandat était encore un
   // brouillon, le prospect devient client au même moment.
   if (before.is_draft && before.lead_id) {
-    await moveLeadToClientBoard(supabase, agencyId, before.lead_id)
+    await moveLeadToClientColumn(supabase, agencyId, before.lead_id)
   }
 
   if (justSold) {
@@ -344,7 +345,7 @@ export async function activateMandateDraft(mandateId: string) {
     .eq('id', mandateId)
 
   if (mandate?.lead_id) {
-    await moveLeadToClientBoard(supabase, agencyId, mandate.lead_id)
+    await moveLeadToClientColumn(supabase, agencyId, mandate.lead_id)
   }
 
   await notifyMatchesForMandateId(supabase, agencyId, mandateId)

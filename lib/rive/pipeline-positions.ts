@@ -19,6 +19,38 @@ export async function firstColumnId(
   return data?.id ?? null
 }
 
+export async function lastColumnId(
+  supabase: SupabaseClient,
+  agencyId: string,
+  boardType: string
+): Promise<string | null> {
+  const { data } = await supabase
+    .from('pipeline_columns')
+    .select('id')
+    .eq('agency_id', agencyId)
+    .eq('board_type', boardType)
+    .order('position', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  return data?.id ?? null
+}
+
+// La colonne "Client actif" du tableau Prospects (une étape par défaut parmi
+// les autres, pas un tableau séparé) : un prospect y bascule automatiquement
+// dès qu'un mandat (vente ou recherche) est signé/activé pour lui. Recherchée
+// par son nom plutôt que par sa position, car une agence peut avoir ajouté
+// ses propres étapes après elle sur ce même tableau.
+export async function clientColumnId(supabase: SupabaseClient, agencyId: string): Promise<string | null> {
+  const { data } = await supabase
+    .from('pipeline_columns')
+    .select('id')
+    .eq('agency_id', agencyId)
+    .eq('board_type', 'prospects')
+    .eq('name', 'Client actif')
+    .maybeSingle()
+  return data?.id ?? null
+}
+
 // Colonne de repli pour un prospect qui n'est PAS un lead neuf à contacter :
 // ajouté directement plus loin dans un autre pipeline (ex : quick-add sur une
 // colonne "Mandat en cours" du tableau Vendeur), ou créé à la volée depuis un

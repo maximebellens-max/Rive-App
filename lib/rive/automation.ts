@@ -5,7 +5,7 @@
 // crée automatiquement la commission.
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { feeForPrice } from './mandates'
-import { firstColumnId } from './pipeline-positions'
+import { clientColumnId } from './pipeline-positions'
 
 type LeadRow = {
   id: string
@@ -38,28 +38,29 @@ export async function ensureMandateDraftForLead(supabase: SupabaseClient, lead: 
   })
 }
 
-// Fait basculer un prospect sur le tableau "Client" (une seule colonne
-// "Client actif") dès qu'un mandat non-brouillon existe pour lui — quel que
-// soit le chemin emprunté (glisser-déposer jusqu'à la dernière colonne d'un
-// pipeline, création directe depuis "Nouveau mandat", activation manuelle
-// d'un brouillon). Ne retire rien de ses autres positions (Prospects,
-// Vendeur/Acheteur/Investisseur) : "Client" est un tableau en plus, pas un
-// remplacement.
-export async function moveLeadToClientBoard(supabase: SupabaseClient, agencyId: string, leadId: string) {
-  const clientCol = await firstColumnId(supabase, agencyId, 'client')
+// Fait basculer un prospect sur la colonne "Client actif" du tableau
+// Prospects dès qu'un mandat non-brouillon existe pour lui — quel que soit le
+// chemin emprunté (glisser-déposer jusqu'à la dernière colonne d'un pipeline
+// de catégorie, création directe depuis "Nouveau mandat", activation
+// manuelle d'un brouillon). Ne touche qu'à sa position Prospects — ses
+// éventuelles positions Vendeur/Acheteur/Investisseur restent inchangées ici
+// (moveLeadCard s'occupe de les garder synchronisées quand on avance depuis
+// ces tableaux-là).
+export async function moveLeadToClientColumn(supabase: SupabaseClient, agencyId: string, leadId: string) {
+  const clientCol = await clientColumnId(supabase, agencyId)
   if (!clientCol) return
 
   const { data: lead } = await supabase.from('leads').select('positions').eq('id', leadId).single()
   if (!lead) return
 
-  const positions = { ...((lead.positions as Record<string, string>) ?? {}), client: clientCol }
+  const positions = { ...((lead.positions as Record<string, string>) ?? {}), prospects: clientCol }
   await supabase.from('leads').update({ positions }).eq('id', leadId)
 }
 
 // Active le brouillon de mandat existant pour ce lead (ou en crée un directement
 // si l'étape estimation a été sautée), à l'entrée dans la dernière colonne
-// ("Mandat signé" / "Mandat de recherche") — et le fait basculer sur le
-// tableau "Client" au passage.
+// ("Mandat signé" / "Mandat de recherche") — et le fait basculer sur la
+// colonne "Client actif" au passage.
 export async function activateMandateForLead(supabase: SupabaseClient, lead: LeadRow) {
   const { data: existing } = await supabase
     .from('mandates')
@@ -76,7 +77,7 @@ export async function activateMandateForLead(supabase: SupabaseClient, lead: Lea
       .from('mandates')
       .update({ is_draft: false, signed_date: existing.signed_date || today })
       .eq('id', existing.id)
-    await moveLeadToClientBoard(supabase, lead.agency_id, lead.id)
+    await moveLeadToClientColumn(supabase, lead.agency_id, lead.id)
     return
   }
 
@@ -92,7 +93,7 @@ export async function activateMandateForLead(supabase: SupabaseClient, lead: Lea
     is_draft: false,
     signed_date: today,
   })
-  await moveLeadToClientBoard(supabase, lead.agency_id, lead.id)
+  await moveLeadToClientColumn(supabase, lead.agency_id, lead.id)
 }
 
 type MandateRow = { id: string; agency_id: string; type: string; price: number | null }
