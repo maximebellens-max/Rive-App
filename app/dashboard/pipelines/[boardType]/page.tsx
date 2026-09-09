@@ -14,11 +14,18 @@ export default async function PipelineBoardPage({ params }: PageProps<'/dashboar
   if (!user || !profile?.agency_id) notFound()
 
   const isFixedCategoryBoard = CATEGORY_BOARD_TYPES.has(bt)
+  // "Client" est un tableau fixe (comme Vendeur/Acheteur/Investisseur) mais
+  // sans filtre de catégorie : un client peut être d'origine vendeur,
+  // acheteur ou investisseur, donc on le traite comme un tableau
+  // personnalisé pour la requête des leads (tous les leads de l'agence,
+  // filtrés ensuite par positions.client) tout en gardant un nom/pas de
+  // lookup `boards` comme les tableaux de catégorie.
+  const isFixedBoard = isFixedCategoryBoard || bt === 'client'
 
   // Les tableaux de catégorie n'affichent que les prospects de cette
-  // catégorie. Les tableaux personnalisés sont une vue additionnelle sur
-  // l'ensemble des prospects de l'agence : un prospect peut y figurer en
-  // plus de son tableau de catégorie habituel.
+  // catégorie. Les tableaux personnalisés (et "Client") sont une vue
+  // additionnelle sur l'ensemble des prospects de l'agence : un prospect
+  // peut y figurer en plus de son tableau de catégorie habituel.
   const leadsQuery = isFixedCategoryBoard
     ? supabase
         .from('leads')
@@ -35,7 +42,7 @@ export default async function PipelineBoardPage({ params }: PageProps<'/dashboar
   // Ces 4 requêtes ne dépendent que de bt/profile.agency_id (déjà connus) —
   // elles partent en parallèle plutôt qu'à la suite les unes des autres.
   const [{ data: board }, { data: columns }, { data: leadsRaw }, { data: members }] = await Promise.all([
-    isFixedCategoryBoard
+    isFixedBoard
       ? Promise.resolve({ data: null as BoardRow | null })
       : supabase.from('boards').select('id, name, kind').eq('id', bt).eq('agency_id', profile.agency_id).maybeSingle(),
     supabase.from('pipeline_columns').select('id, name, color, is_default').eq('board_type', bt).order('position', { ascending: true }),
@@ -46,7 +53,7 @@ export default async function PipelineBoardPage({ params }: PageProps<'/dashboar
   let boardName: string
   let isCustom = false
 
-  if (isFixedCategoryBoard) {
+  if (isFixedBoard) {
     boardName = BOARD_LABELS[bt]
   } else {
     if (!board) notFound()
@@ -110,7 +117,8 @@ export default async function PipelineBoardPage({ params }: PageProps<'/dashboar
           <div>
             <h1 className="text-xl font-semibold tracking-tight">{boardName}</h1>
             <p className="mt-1 text-sm text-neutral-500">
-              {cards.length} prospect{cards.length > 1 ? 's' : ''}
+              {cards.length} {bt === 'client' ? 'client' : 'prospect'}
+              {cards.length > 1 ? 's' : ''}
             </p>
           </div>
           {bt === 'investisseur' && (

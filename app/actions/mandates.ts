@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { FEATURE_KEYS, type Features } from '@/lib/rive/mandates'
-import { maybeCreateCommissionForMandate } from '@/lib/rive/automation'
+import { maybeCreateCommissionForMandate, moveLeadToClientBoard } from '@/lib/rive/automation'
 import { firstColumnId, engagedColumnId } from '@/lib/rive/pipeline-positions'
 import { notifyMatchesForMandateId } from '@/lib/rive/match-notify'
 import { notifyNewLead } from '@/lib/rive/new-lead-notify'
@@ -196,6 +196,13 @@ export async function createMandate(
 
   await notifyMatchesForMandateId(supabase, agencyId, data.id)
 
+  // Un mandat créé directement (pas un brouillon) signifie que ce prospect
+  // est déjà client — il rejoint le tableau "Client" tout de suite, sans
+  // attendre un passage par le pipeline Vendeur/Acheteur/Investisseur.
+  if (leadId && !isDraft) {
+    await moveLeadToClientBoard(supabase, agencyId, leadId)
+  }
+
   if (newLeadCreated) revalidatePath('/dashboard/prospects')
   revalidatePath(isDraft ? '/dashboard/estimations' : '/dashboard/mandates')
   redirect(`/dashboard/mandates/${data.id}`)
@@ -287,7 +294,7 @@ export async function moveMandateStage(mandateId: string, stage: string) {
 
   const { data: before } = await supabase
     .from('mandates')
-    .select('stage, type, price, sold_date')
+    .select('stage, type, price, sold_date, is_draft, lead_id')
     .eq('id', mandateId)
     .single()
   if (!before) return
@@ -299,6 +306,12 @@ export async function moveMandateStage(mandateId: string, stage: string) {
     .from('mandates')
     .update({ stage, sold_date: soldDate, is_draft: false, updated_at: new Date().toISOString() })
     .eq('id', mandateId)
+
+  // Ce déplacement force is_draft à false : si le mandat était encore un
+  // brouillon, le prospect devient client au même moment.
+  if (before.is_draft && before.lead_id) {
+    await moveLeadToClientBoard(supabase, agencyId, before.lead_id)
+  }
 
   if (justSold) {
     await maybeCreateCommissionForMandate(supabase, {
@@ -323,10 +336,16 @@ export async function activateMandateDraft(mandateId: string) {
   const { supabase, agencyId } = await getAgencyId()
   if (!agencyId) return
 
+  const { data: mandate } = await supabase.from('mandates').select('lead_id').eq('id', mandateId).single()
+
   await supabase
     .from('mandates')
     .update({ is_draft: false, updated_at: new Date().toISOString() })
     .eq('id', mandateId)
+
+  if (mandate?.lead_id) {
+    await moveLeadToClientBoard(supabase, agencyId, mandate.lead_id)
+  }
 
   await notifyMatchesForMandateId(supabase, agencyId, mandateId)
 
