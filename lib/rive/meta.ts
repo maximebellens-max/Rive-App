@@ -204,6 +204,62 @@ export async function fetchCampaigns(adAccountId: string, accessToken: string): 
   }))
 }
 
+// Fenêtres de date supportées côté page Campagnes — reprennent telles
+// quelles les valeurs de "date_preset" acceptées par l'API Insights de Meta.
+export type MetaDatePreset = 'yesterday' | 'last_7d' | 'last_30d'
+
+export type MetaCampaignInsight = {
+  campaignId: string
+  spend: number
+  impressions: number
+  clicks: number
+  ctr: number
+  cpc: number
+  reach: number
+}
+
+type RawMetaInsight = {
+  campaign_id: string
+  spend?: string
+  impressions?: string
+  clicks?: string
+  ctr?: string
+  cpc?: string
+  reach?: string
+}
+
+// Performance publicitaire (dépense, impressions, clics...) par campagne, sur
+// une fenêtre de date donnée — endpoint Insights de l'API Marketing, distinct
+// de fetchCampaigns() ci-dessus qui ne renvoie que le nom/statut. Porté par
+// le même jeton utilisateur (permission ads_read). Tous les champs numériques
+// reviennent en chaîne de caractères côté Meta, d'où la conversion Number().
+export async function fetchCampaignInsights(
+  adAccountId: string,
+  accessToken: string,
+  datePreset: MetaDatePreset
+): Promise<MetaCampaignInsight[]> {
+  const params = new URLSearchParams({
+    access_token: accessToken,
+    level: 'campaign',
+    date_preset: datePreset,
+    fields: 'campaign_id,spend,impressions,clicks,ctr,cpc,reach',
+    limit: '200',
+  })
+  const res = await fetch(`${GRAPH_BASE}/${adAccountId}/insights?${params.toString()}`)
+  if (!res.ok) throw new Error(`Impossible de récupérer les performances des campagnes (${res.status}).`)
+  const data = await res.json()
+  const rows = (data.data ?? []) as RawMetaInsight[]
+  return rows.map((r) => ({
+    campaignId: r.campaign_id,
+    spend: Number(r.spend ?? 0),
+    impressions: Number(r.impressions ?? 0),
+    clicks: Number(r.clicks ?? 0),
+    ctr: Number(r.ctr ?? 0),
+    cpc: Number(r.cpc ?? 0),
+    reach: Number(r.reach ?? 0),
+  }))
+}
+
 export type MetaLeadData = {
   id: string
   createdTime: string | null
