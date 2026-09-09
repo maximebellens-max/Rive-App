@@ -123,7 +123,7 @@ export default async function PipelineBoardPage({ params }: PageProps<'/dashboar
           )}
         </div>
       )}
-      <KanbanBoard boardType={bt} columns={columns ?? []} cards={cards} members={members ?? []} />
+      <KanbanBoard boardType={bt} columns={columns ?? []} cards={cards} members={members ?? []} currentUserId={user.id} />
     </div>
   )
 }

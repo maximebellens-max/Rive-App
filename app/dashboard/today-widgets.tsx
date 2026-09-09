@@ -3,8 +3,9 @@
 import { useEffect, useRef, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { markMatchesSeen } from '@/app/actions/matching'
+import { CATEGORY_COLOR_HEX } from '@/lib/rive/pipelines'
 
-export type WidgetItem = { id: string; primary: string; secondary?: string; href: string }
+export type WidgetItem = { id: string; primary: string; secondary?: string; href: string; category?: string | null }
 export type Widget = { key: string; icon: string; label: string; items: WidgetItem[] }
 
 export default function TodayWidgets({
@@ -66,8 +67,16 @@ export default function TodayWidgets({
                 href={item.href}
                 className="flex items-center justify-between rounded-lg border border-neutral-200 px-3 py-2 text-sm hover:border-neutral-300 hover:bg-neutral-50"
               >
-                <span className="font-medium text-neutral-900">{item.primary}</span>
-                {item.secondary && <span className="text-neutral-500">{item.secondary}</span>}
+                <span className="flex min-w-0 items-center gap-1.5">
+                  {item.category && CATEGORY_COLOR_HEX[item.category] && (
+                    <span
+                      className="h-2 w-2 shrink-0 rounded-full"
+                      style={{ backgroundColor: CATEGORY_COLOR_HEX[item.category] }}
+                    />
+                  )}
+                  <span className="truncate font-medium text-neutral-900">{item.primary}</span>
+                </span>
+                {item.secondary && <span className="shrink-0 text-neutral-500">{item.secondary}</span>}
               </Link>
             ))}
           </div>

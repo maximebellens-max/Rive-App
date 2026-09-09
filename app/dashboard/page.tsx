@@ -44,15 +44,15 @@ export default async function TodayPage() {
     // Travaux) : seuls les dossiers non terminés nous intéressent ici.
     supabase
       .from('furnishing_projects')
-      .select('id, lead_id, statut, date_livraison_ikea, date_livraison_ed, date_pose, leads(name)')
+      .select('id, lead_id, statut, date_livraison_ikea, date_livraison_ed, date_pose, leads(name, category)')
       .eq('statut', 'en_cours'),
     supabase
       .from('kitchen_projects')
-      .select('id, lead_id, statut, date_livraison, date_pose_debut, date_pose_fin, leads(name)')
+      .select('id, lead_id, statut, date_livraison, date_pose_debut, date_pose_fin, leads(name, category)')
       .eq('statut', 'en_cours'),
     supabase
       .from('works_projects')
-      .select('id, lead_id, statut, echeance_debut, echeance_fin, leads(name)')
+      .select('id, lead_id, statut, echeance_debut, echeance_fin, leads(name, category)')
       .neq('statut', 'termine'),
   ])
 
@@ -90,6 +90,7 @@ export default async function TodayPage() {
         id: r.id,
         leadId: r.lead_id,
         leadName: (r.leads as { name: string }[] | null)?.[0]?.name ?? 'Client',
+        category: (r.leads as { category: string | null }[] | null)?.[0]?.category ?? null,
         milestone,
       }
     })
@@ -108,6 +109,7 @@ export default async function TodayPage() {
         id: r.id,
         leadId: r.lead_id,
         leadName: (r.leads as { name: string }[] | null)?.[0]?.name ?? 'Client',
+        category: (r.leads as { category: string | null }[] | null)?.[0]?.category ?? null,
         milestone,
       }
     })
@@ -125,6 +127,7 @@ export default async function TodayPage() {
         id: r.id,
         leadId: r.lead_id,
         leadName: (r.leads as { name: string }[] | null)?.[0]?.name ?? 'Client',
+        category: (r.leads as { category: string | null }[] | null)?.[0]?.category ?? null,
         milestone,
       }
     })
@@ -144,6 +147,7 @@ export default async function TodayPage() {
           primary: lead?.name ?? 'Prospect',
           secondary: mandate?.address || mandate?.property_type || '',
           href: `/dashboard/prospects/${p.leadId}`,
+          category: lead?.category ?? null,
         }
       }),
     },
@@ -156,6 +160,7 @@ export default async function TodayPage() {
         primary: l.name,
         secondary: l.critere_lieu || undefined,
         href: `/dashboard/prospects/${l.id}`,
+        category: l.category,
       })),
     },
     {
@@ -167,6 +172,7 @@ export default async function TodayPage() {
         primary: l.name,
         secondary: l.action_label ? `${l.action_label} · ${formatDate(l.action_date)}` : formatDate(l.action_date),
         href: `/dashboard/prospects/${l.id}`,
+        category: l.category,
       })),
     },
     {
@@ -178,6 +184,7 @@ export default async function TodayPage() {
         primary: r.leadName,
         secondary: `${r.milestone.label} · ${formatDate(r.milestone.date)}`,
         href: `/dashboard/prospects/${r.leadId}`,
+        category: r.category,
       })),
     },
     {
@@ -189,6 +196,7 @@ export default async function TodayPage() {
         primary: r.leadName,
         secondary: `${r.milestone.label} · ${formatDate(r.milestone.date)}`,
         href: `/dashboard/prospects/${r.leadId}`,
+        category: r.category,
       })),
     },
     {
@@ -200,6 +208,7 @@ export default async function TodayPage() {
         primary: r.leadName,
         secondary: `${r.milestone.label} · ${formatDate(r.milestone.date)}`,
         href: `/dashboard/prospects/${r.leadId}`,
+        category: r.category,
       })),
     },
   ]

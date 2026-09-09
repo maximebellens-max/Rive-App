@@ -38,6 +38,17 @@ export const CATEGORY_LABEL: Record<string, string> = {
   investisseur: 'Investisseur',
 }
 
+// Couleurs dédiées aux 3 catégories de prospects, pour les distinguer d'un
+// coup d'œil partout où elles se mélangent (tableau Prospects, Aujourd'hui) —
+// volontairement différentes des couleurs de colonnes (COLUMN_COLOR_HEX) et
+// du code couleur chaud/tiède/froid (PRIORITY_TIER_CLASS) pour ne pas les
+// confondre sur une même carte.
+export const CATEGORY_COLOR_HEX: Record<string, string> = {
+  vendeur: '#4f46e5',
+  acheteur: '#059669',
+  investisseur: '#7c3aed',
+}
+
 export function nextColumnColor(usedCount: number): ColumnColor {
   return COLUMN_COLORS[usedCount % COLUMN_COLORS.length]
 }

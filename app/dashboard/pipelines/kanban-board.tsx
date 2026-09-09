@@ -17,6 +17,8 @@ import {
   COLUMN_COLORS,
   COLUMN_COLOR_HEX,
   CATEGORY_LABEL,
+  CATEGORY_COLOR_HEX,
+  CATEGORY_BOARD_TYPES,
   priorityTier,
   PRIORITY_TIER_LABEL,
   PRIORITY_TIER_CLASS,
@@ -72,16 +74,20 @@ export default function KanbanBoard({
   columns,
   cards,
   members = [],
+  currentUserId,
 }: {
   boardType: BoardType
   columns: PipelineColumn[]
   cards: PipelineCard[]
   members?: BoardMember[]
+  currentUserId?: string
 }) {
-  const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban')
+  const [viewMode, setViewMode] = useState<'kanban' | 'list' | 'agent'>('kanban')
   const [override, setOverride] = useState<Record<string, string>>({})
   const [selectMode, setSelectMode] = useState(false)
   const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [categoryFilter, setCategoryFilter] = useState('all')
+  const [agentFilter, setAgentFilter] = useState('all')
   const [, startTransition] = useTransition()
   const router = useRouter()
 
@@ -106,17 +112,57 @@ export default function KanbanBoard({
     setSelectMode(false)
   }
 
+  // Filtres rapides (catégorie + agent) — utiles surtout sur Prospects,
+  // devenu un tableau où les 3 catégories se mélangent depuis que "Client
+  // actif" y est intégré.
+  const filteredCards = useMemo(
+    () =>
+      cards.filter((c) => {
+        if (categoryFilter !== 'all' && c.category !== categoryFilter) return false
+        if (agentFilter === 'me') return c.assignedTo === currentUserId
+        if (agentFilter !== 'all') return c.assignedTo === agentFilter
+        return true
+      }),
+    [cards, categoryFilter, agentFilter, currentUserId]
+  )
+
   const grouped = useMemo(
     () =>
       columns.map((column) => ({
         column,
-        cards: cards
+        cards: filteredCards
           .filter((c) => effectiveColumnId(c) === column.id)
           .sort((a, b) => (b.aiScore ?? b.score) - (a.aiScore ?? a.score)),
       })),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [columns, cards, override]
+    [columns, filteredCards, override]
   )
+
+  // Vue "Par agent" : regroupe les prospects filtrés par agent assigné,
+  // plutôt que par étape de pipeline — pratique pour voir la charge de
+  // chacun d'un coup d'œil.
+  const groupedByAgent = useMemo(() => {
+    const byId = new Map<string, PipelineCard[]>()
+    for (const c of filteredCards) {
+      const key = c.assignedTo ?? '__unassigned'
+      if (!byId.has(key)) byId.set(key, [])
+      byId.get(key)!.push(c)
+    }
+    const groups = members
+      .filter((m) => byId.has(m.id))
+      .map((m) => ({
+        member: m,
+        cards: (byId.get(m.id) ?? []).sort((a, b) => (b.aiScore ?? b.score) - (a.aiScore ?? a.score)),
+      }))
+    const unassigned = byId.get('__unassigned') ?? []
+    if (unassigned.length) {
+      groups.push({
+        member: { id: '__unassigned', full_name: 'Non assigné', avatar_url: '' },
+        cards: unassigned.sort((a, b) => (b.aiScore ?? b.score) - (a.aiScore ?? a.score)),
+      })
+    }
+    return groups.sort((a, b) => b.cards.length - a.cards.length)
+  }, [filteredCards, members])
 
   function handleDrop(leadId: string, columnId: string) {
     const card = cards.find((c) => c.id === leadId)
@@ -134,15 +180,46 @@ export default function KanbanBoard({
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <button
-          type="button"
-          onClick={toggleSelectMode}
-          className={`rounded-lg border px-3 py-1.5 text-xs font-medium ${
-            selectMode ? 'border-accent bg-accent-soft text-accent' : 'border-neutral-300 text-neutral-600 hover:bg-neutral-100'
-          }`}
-        >
-          {selectMode ? 'Annuler la sélection' : '☑ Sélectionner'}
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={toggleSelectMode}
+            className={`rounded-lg border px-3 py-1.5 text-xs font-medium ${
+              selectMode ? 'border-accent bg-accent-soft text-accent' : 'border-neutral-300 text-neutral-600 hover:bg-neutral-100'
+            }`}
+          >
+            {selectMode ? 'Annuler la sélection' : '☑ Sélectionner'}
+          </button>
+          {!CATEGORY_BOARD_TYPES.has(boardType) && (
+            <select
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              aria-label="Filtrer par catégorie"
+              className="rounded-lg border border-neutral-300 bg-surface px-2 py-1.5 text-xs text-neutral-600 outline-none focus:border-accent"
+            >
+              <option value="all">Toutes catégories</option>
+              <option value="vendeur">Vendeur</option>
+              <option value="acheteur">Acheteur</option>
+              <option value="investisseur">Investisseur</option>
+            </select>
+          )}
+          {members.length > 0 && (
+            <select
+              value={agentFilter}
+              onChange={(e) => setAgentFilter(e.target.value)}
+              aria-label="Filtrer par agent"
+              className="rounded-lg border border-neutral-300 bg-surface px-2 py-1.5 text-xs text-neutral-600 outline-none focus:border-accent"
+            >
+              <option value="all">Tous les agents</option>
+              {currentUserId && <option value="me">À moi</option>}
+              {members.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.full_name}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
         <div className="flex rounded-lg border border-neutral-300 p-0.5 text-xs">
           <button
             type="button"
@@ -158,6 +235,13 @@ export default function KanbanBoard({
           >
             Liste
           </button>
+          <button
+            type="button"
+            onClick={() => setViewMode('agent')}
+            className={`rounded px-2.5 py-1 font-medium ${viewMode === 'agent' ? 'bg-accent text-white' : 'text-neutral-600'}`}
+          >
+            Par agent
+          </button>
         </div>
       </div>
 
@@ -169,23 +253,45 @@ export default function KanbanBoard({
         />
       )}
 
-      <div className={viewMode === 'kanban' ? 'flex gap-4 overflow-x-auto pb-2' : 'flex flex-col gap-4'}>
-        {grouped.map(({ column, cards: colCards }) => (
-          <ColumnBlock
-            key={column.id}
-            column={column}
-            cards={colCards}
-            boardType={boardType}
-            wide={viewMode === 'list'}
-            onDrop={(leadId) => handleDrop(leadId, column.id)}
-            selectMode={selectMode}
-            selected={selected}
-            onToggleSelect={toggleSelected}
-            members={members}
-          />
-        ))}
-        <AddColumnForm boardType={boardType} />
-      </div>
+      {viewMode === 'agent' ? (
+        <div className="flex flex-col gap-3">
+          {!groupedByAgent.length && (
+            <p className="px-1 py-2 text-sm text-neutral-400">Aucun prospect ne correspond à ces filtres.</p>
+          )}
+          {groupedByAgent.map(({ member, cards: memberCards }) => (
+            <div key={member.id} className="rounded-2xl border border-neutral-200 bg-neutral-50 p-3">
+              <div className="mb-2 flex items-center gap-2">
+                {member.id !== '__unassigned' && <Avatar name={member.full_name || 'Agent'} avatarUrl={member.avatar_url} size={20} />}
+                <span className="text-sm font-semibold text-neutral-900">{member.full_name}</span>
+                <span className="text-xs text-neutral-400">{memberCards.length}</span>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                {memberCards.map((card) => (
+                  <CardItem key={card.id} card={card} />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className={viewMode === 'kanban' ? 'flex gap-4 overflow-x-auto pb-2' : 'flex flex-col gap-4'}>
+          {grouped.map(({ column, cards: colCards }) => (
+            <ColumnBlock
+              key={column.id}
+              column={column}
+              cards={colCards}
+              boardType={boardType}
+              wide={viewMode === 'list'}
+              onDrop={(leadId) => handleDrop(leadId, column.id)}
+              selectMode={selectMode}
+              selected={selected}
+              onToggleSelect={toggleSelected}
+              members={members}
+            />
+          ))}
+          <AddColumnForm boardType={boardType} />
+        </div>
+      )}
     </div>
   )
 }
@@ -530,7 +636,15 @@ function CardItem({
           {PRIORITY_TIER_LABEL[tier]}
         </span>
       </div>
-      {card.category && <span className="text-xs text-neutral-500">{CATEGORY_LABEL[card.category]}</span>}
+      {card.category && (
+        <span className="flex items-center gap-1.5 text-xs text-neutral-500">
+          <span
+            className="h-2 w-2 shrink-0 rounded-full"
+            style={{ backgroundColor: CATEGORY_COLOR_HEX[card.category] }}
+          />
+          {CATEGORY_LABEL[card.category]}
+        </span>
+      )}
       {card.critere_lieu && <span className="text-xs text-neutral-500">📍 {card.critere_lieu}</span>}
       {card.budget ? <span className="text-xs text-neutral-500">💰 {formatBudget(card.budget)}</span> : null}
       {card.created_at && <span className="text-xs text-neutral-400">🕓 {formatLeadAge(card.created_at)}</span>}
@@ -545,9 +659,17 @@ function CardItem({
   // En mode sélection, la case à cocher doit rester cliquable sans déclencher
   // la navigation — on sort le lien de la carte au lieu de l'englober dedans,
   // et on désactive le glisser-déposer (les deux interactions se gênent).
+  // Liseré coloré côté catégorie : repère visuel constant, en plus de la
+  // pastille dans le texte, pour distinguer vendeur/acheteur/investisseur
+  // même en scannant rapidement une colonne remplie de cartes.
+  const categoryBorderStyle = card.category
+    ? { borderLeftColor: CATEGORY_COLOR_HEX[card.category], borderLeftWidth: 3 }
+    : undefined
+
   if (selectMode) {
     return (
       <div
+        style={categoryBorderStyle}
         className={`flex items-start gap-2 rounded-xl border p-3 text-sm shadow-sm ${
           selected ? 'border-accent bg-accent-soft' : 'border-neutral-200 bg-surface'
         }`}
@@ -571,6 +693,7 @@ function CardItem({
       href={`/dashboard/prospects/${card.id}`}
       draggable
       onDragStart={(e) => e.dataTransfer.setData('text/plain', card.id)}
+      style={categoryBorderStyle}
       className="flex cursor-grab flex-col gap-1.5 rounded-xl border border-neutral-200 bg-surface p-3 text-sm shadow-sm active:cursor-grabbing"
     >
       {content}

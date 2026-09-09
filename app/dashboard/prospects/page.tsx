@@ -82,7 +82,7 @@ export default async function ProspectsPage() {
 
       <NewLeadForm />
 
-      <KanbanBoard boardType="prospects" columns={columns ?? []} cards={cards} members={members ?? []} />
+      <KanbanBoard boardType="prospects" columns={columns ?? []} cards={cards} members={members ?? []} currentUserId={user?.id} />
     </div>
   )
 }
