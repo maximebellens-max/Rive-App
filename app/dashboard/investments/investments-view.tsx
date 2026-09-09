@@ -9,6 +9,9 @@ const STAGE_COLUMNS = [
   { value: 'compromis_signe', label: 'Compromis signé', color: 'gold' },
   { value: 'acte', label: 'Acte signé', color: 'teal' },
   { value: 'travaux', label: 'Travaux', color: 'success' },
+  { value: 'cuisine', label: 'Cuisine', color: 'sage' },
+  { value: 'ameublement', label: 'Ameublement', color: 'brick' },
+  { value: 'location', label: 'Location', color: 'plum' },
 ]
 
 export default function InvestmentsView({ table, cards }: { table: React.ReactNode; cards: StageCard[] }) {

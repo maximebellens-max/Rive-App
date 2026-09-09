@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
 
 async function getAgencyId() {
@@ -83,10 +84,60 @@ export async function deleteInvestment(investmentId: string) {
   redirect('/dashboard/investments')
 }
 
+// Un dossier n'a de ligne créée qu'une seule fois par tableau de suivi — si
+// l'agent fait des allers-retours entre étapes (ou si la ligne existait déjà
+// avant le passage par ce stage), on ne duplique rien.
+async function ensureRow(
+  supabase: SupabaseClient,
+  table: string,
+  agencyId: string,
+  leadId: string,
+  extra: Record<string, unknown> = {}
+) {
+  const { count } = await supabase
+    .from(table)
+    .select('id', { count: 'exact', head: true })
+    .eq('agency_id', agencyId)
+    .eq('lead_id', leadId)
+  if (count) return
+
+  await supabase.from(table).insert({ agency_id: agencyId, lead_id: leadId, ...extra })
+}
+
 export async function moveInvestmentStage(investmentId: string, stage: string) {
   const { supabase, agencyId } = await getAgencyId()
   if (!agencyId) return
 
+  const { data: project } = await supabase
+    .from('invest_projects')
+    .select('lead_id, notes')
+    .eq('id', investmentId)
+    .eq('agency_id', agencyId)
+    .single()
+
   await supabase.from('invest_projects').update({ stage }).eq('id', investmentId)
+
+  // En passant en "Travaux", le dossier rejoint automatiquement les 3
+  // tableaux de "Suivi de chantier" (Ameublement, Cuisine, Travaux), en
+  // reportant les notes déjà saisies sur le projet investisseur dans le
+  // commentaire (works_projects n'a pas de champ commentaire équivalent).
+  // En passant en "Location", il rejoint le pipeline Location (rental_listings).
+  if (project?.lead_id) {
+    const notes = project.notes || ''
+    if (stage === 'travaux') {
+      await Promise.all([
+        ensureRow(supabase, 'furnishing_projects', agencyId, project.lead_id, { commentaire: notes }),
+        ensureRow(supabase, 'kitchen_projects', agencyId, project.lead_id, { commentaire: notes }),
+        ensureRow(supabase, 'works_projects', agencyId, project.lead_id),
+      ])
+      revalidatePath('/dashboard/ameublement')
+      revalidatePath('/dashboard/cuisine')
+      revalidatePath('/dashboard/travaux')
+    } else if (stage === 'location') {
+      await ensureRow(supabase, 'rental_listings', agencyId, project.lead_id, { commentaire: notes })
+      revalidatePath('/dashboard/locations')
+    }
+  }
+
   revalidatePath('/dashboard/investments')
 }

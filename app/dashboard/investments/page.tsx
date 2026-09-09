@@ -105,4 +105,7 @@ const STAGE_LABEL: Record<string, string> = {
   compromis_signe: 'Compromis signé',
   acte: 'Acte',
   travaux: 'Travaux',
+  cuisine: 'Cuisine',
+  ameublement: 'Ameublement',
+  location: 'Location',
 }
