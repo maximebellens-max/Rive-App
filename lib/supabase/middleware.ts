@@ -35,7 +35,7 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser()
 
   const path = request.nextUrl.pathname
-  const isAuthRoute = path === '/login' || path === '/signup'
+  const isAuthRoute = path === '/login' || path === '/signup' || path === '/login/forgot-password'
   // /auth/* (ex: /auth/confirm) doit rester accessible sans session : c'est justement
   // la route qui crée la session après un clic sur le lien de confirmation par email.
   // /api/* gère son propre contrôle d'accès à l'intérieur de chaque route : le

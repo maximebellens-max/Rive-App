@@ -185,13 +185,22 @@ function resolveCampaignDeliveryStatus(c: RawMetaCampaign): string {
   return 'PAUSED'
 }
 
+// Cache léger (Data Cache de Next.js, cf. option next.revalidate) sur les
+// deux appels utilisés par la page Campagnes (voir app/dashboard/campaigns) :
+// évite de refaire un aller-retour vers l'API Meta à chaque chargement/
+// rechargement de la page, tout en gardant des chiffres à jour à quelques
+// minutes près — largement suffisant pour du suivi de performance publicitaire.
+const CAMPAIGNS_CACHE_SECONDS = 300
+
 export async function fetchCampaigns(adAccountId: string, accessToken: string): Promise<MetaCampaign[]> {
   const params = new URLSearchParams({
     access_token: accessToken,
     fields: 'id,name,status,effective_status,created_time,adsets.limit(500){effective_status}',
     limit: '200',
   })
-  const res = await fetch(`${GRAPH_BASE}/${adAccountId}/campaigns?${params.toString()}`)
+  const res = await fetch(`${GRAPH_BASE}/${adAccountId}/campaigns?${params.toString()}`, {
+    next: { revalidate: CAMPAIGNS_CACHE_SECONDS },
+  })
   if (!res.ok) throw new Error(`Impossible de récupérer les campagnes (${res.status}).`)
   const data = await res.json()
   const rawCampaigns = (data.data ?? []) as RawMetaCampaign[]
@@ -245,7 +254,9 @@ export async function fetchCampaignInsights(
     fields: 'campaign_id,spend,impressions,clicks,ctr,cpc,reach',
     limit: '200',
   })
-  const res = await fetch(`${GRAPH_BASE}/${adAccountId}/insights?${params.toString()}`)
+  const res = await fetch(`${GRAPH_BASE}/${adAccountId}/insights?${params.toString()}`, {
+    next: { revalidate: CAMPAIGNS_CACHE_SECONDS },
+  })
   if (!res.ok) throw new Error(`Impossible de récupérer les performances des campagnes (${res.status}).`)
   const data = await res.json()
   const rows = (data.data ?? []) as RawMetaInsight[]
