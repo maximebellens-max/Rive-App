@@ -141,6 +141,12 @@ export async function updatePassword(
 
   const { error } = await supabase.auth.updateUser({ password })
   if (error) {
+    // Cas fréquent et sinon peu clair : Supabase refuse silencieusement (avec
+    // un message générique côté client) si le nouveau mot de passe est
+    // identique à l'ancien — error.code === 'same_password' côté API.
+    if (error.code === 'same_password') {
+      return { error: 'Ce mot de passe est déjà le tien : choisis-en un différent de l’ancien.' }
+    }
     return { error: 'Impossible de mettre à jour le mot de passe. Réessaie ou redemande un lien.' }
   }
 
