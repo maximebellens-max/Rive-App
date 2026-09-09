@@ -17,23 +17,27 @@ export async function GET(_request: Request, { params }: { params: Promise<{ tok
   if (!agency) return new NextResponse('Not found', { status: 404 })
 
   // Un lead peut désormais avoir plusieurs rendez-vous (table appointments) —
-  // le flux exporte chacun d'entre eux, pas seulement le plus proche.
+  // le flux exporte chacun d'entre eux, pas seulement le plus proche. Un
+  // rendez-vous peut aussi n'avoir aucun prospect attaché (RDV libre).
   const { data: appointments } = await supabase
     .from('appointments')
-    .select('id, label, appointment_date, appointment_time, leads(name, notes)')
+    .select('id, label, lieu, appointment_date, appointment_time, leads(name, notes)')
     .eq('agency_id', agency.id)
 
   const dtstamp = icsDtStamp()
   const events = (appointments ?? [])
     .map((a) => {
-      const lead = (a.leads as { name: string; notes: string }[] | null)?.[0]
+      // lead_id est une relation simple (un seul prospect par RDV) : Supabase/PostgREST
+      // renvoie donc `leads` comme un objet unique, pas un tableau.
+      const lead = a.leads as unknown as { name: string; notes: string } | null
       const item: ICSAppointment = {
         id: a.id,
         label: a.label,
-        leadName: lead?.name ?? 'Prospect',
+        leadName: lead?.name ?? null,
         date: a.appointment_date,
         time: a.appointment_time,
         notes: lead?.notes || '',
+        lieu: a.lieu || '',
       }
       return icsEvent(item, dtstamp)
     })

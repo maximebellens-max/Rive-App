@@ -20,13 +20,16 @@ function formatDateFrLong(dateStr: string): string {
 
 export type AppointmentItem = {
   id: string
-  leadId: string
-  leadName: string
+  leadId: string | null
+  leadName: string | null
   label: string
+  lieu: string
   date: string
   time: string | null
+  participantNames: string[]
 }
 export type LeadOption = { id: string; name: string }
+export type MemberOption = { id: string; name: string }
 
 export default function MonthCalendar({
   initialYear,
@@ -34,12 +37,14 @@ export default function MonthCalendar({
   todayStr,
   appointments,
   leadOptions,
+  memberOptions,
 }: {
   initialYear: number
   initialMonth: number
   todayStr: string
   appointments: AppointmentItem[]
   leadOptions: LeadOption[]
+  memberOptions: MemberOption[]
 }) {
   const [year, setYear] = useState(initialYear)
   const [month, setMonth] = useState(initialMonth)
@@ -105,10 +110,7 @@ export default function MonthCalendar({
         <div className="flex items-center gap-3">
           <button
             type="button"
-            onClick={() => {
-              goToday()
-              setAddingDate(todayStr)
-            }}
+            onClick={() => setAddingDate(todayStr)}
             className="rounded-lg bg-accent px-2.5 py-1.5 text-xs font-medium text-white hover:bg-accent-hover"
           >
             + Rendez-vous
@@ -166,6 +168,7 @@ export default function MonthCalendar({
         <AppointmentModal
           dateStr={addingDate}
           leadOptions={leadOptions}
+          memberOptions={memberOptions}
           onClose={() => setAddingDate(null)}
         />
       )}
@@ -180,15 +183,18 @@ export default function MonthCalendar({
 function AppointmentModal({
   dateStr,
   leadOptions,
+  memberOptions,
   onClose,
 }: {
   dateStr: string
   leadOptions: LeadOption[]
+  memberOptions: MemberOption[]
   onClose: () => void
 }) {
   const [, startTransition] = useTransition()
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [date, setDate] = useState(dateStr)
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
@@ -209,7 +215,7 @@ function AppointmentModal({
         <div className="mb-4 flex items-start justify-between gap-3">
           <div>
             <h2 className="text-base font-semibold text-neutral-900">Nouveau rendez-vous</h2>
-            <p className="text-sm text-neutral-500">{formatDateFrLong(dateStr)}</p>
+            <p className="text-sm text-neutral-500">{formatDateFrLong(date)}</p>
           </div>
           <button
             type="button"
@@ -237,10 +243,20 @@ function AppointmentModal({
           }}
           className="flex flex-col gap-3"
         >
-          <input type="hidden" name="appointment_date" value={dateStr} />
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium text-neutral-500">Date</label>
+            <input
+              name="appointment_date"
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              required
+              className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-accent"
+            />
+          </div>
 
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-neutral-500">Prospect</label>
+            <label className="text-xs font-medium text-neutral-500">Prospect (facultatif)</label>
             <LeadCombobox options={leadOptions} large />
           </div>
 
@@ -262,6 +278,29 @@ function AppointmentModal({
               />
             </div>
           </div>
+
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium text-neutral-500">Lieu (facultatif)</label>
+            <input
+              name="lieu"
+              placeholder="Adresse, agence, visio…"
+              className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-accent"
+            />
+          </div>
+
+          {memberOptions.length > 0 && (
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-medium text-neutral-500">Agents participants (facultatif)</label>
+              <div className="flex flex-wrap gap-x-4 gap-y-1.5">
+                {memberOptions.map((m) => (
+                  <label key={m.id} className="flex items-center gap-1.5 text-sm text-neutral-700">
+                    <input type="checkbox" name="participant_ids" value={m.id} className="accent-accent" />
+                    {m.name}
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
 
           {error && <p className="text-sm text-danger">{error}</p>}
 
@@ -293,16 +332,44 @@ function AppointmentChip({ appointment }: { appointment: AppointmentItem }) {
 
   if (removed) return null
 
+  // RDV libre (sans prospect attaché) : pas de fiche vers laquelle pointer,
+  // on affiche le motif (ou "Rendez-vous" par défaut) et, si renseignés, le
+  // lieu et les agents participants.
+  const displayName = appointment.leadName ?? appointment.label ?? 'Rendez-vous'
+  const title = [
+    appointment.label || (appointment.leadName ? '' : 'Rendez-vous'),
+    appointment.leadName,
+    appointment.lieu,
+    appointment.participantNames.length ? `avec ${appointment.participantNames.join(', ')}` : '',
+  ]
+    .filter(Boolean)
+    .join(' — ')
+
+  const content = (
+    <>
+      {appointment.time ? `${appointment.time.slice(0, 5)} · ` : ''}
+      {displayName}
+    </>
+  )
+
   return (
     <div className="group/item flex items-center gap-0.5 rounded bg-neutral-100 py-0.5 pl-1.5 pr-0.5 hover:bg-neutral-200">
-      <Link
-        href={`/dashboard/prospects/${appointment.leadId}`}
-        className="block min-w-0 flex-1 truncate text-[11px] font-medium text-neutral-700"
-        title={appointment.label ? `${appointment.label} — ${appointment.leadName}` : appointment.leadName}
-      >
-        {appointment.time ? `${appointment.time.slice(0, 5)} · ` : ''}
-        {appointment.leadName}
-      </Link>
+      {appointment.leadId ? (
+        <Link
+          href={`/dashboard/prospects/${appointment.leadId}`}
+          className="block min-w-0 flex-1 truncate text-[11px] font-medium text-neutral-700"
+          title={title}
+        >
+          {content}
+        </Link>
+      ) : (
+        <span
+          className="block min-w-0 flex-1 truncate text-[11px] font-medium text-neutral-700"
+          title={title}
+        >
+          {content}
+        </span>
+      )}
       <button
         type="button"
         onClick={() => {
@@ -357,7 +424,6 @@ function LeadCombobox({ options, large }: { options: LeadOption[]; large?: boole
         onBlur={() => setTimeout(() => setOpen(false), 150)}
         autoComplete="off"
         placeholder="Rechercher un prospect…"
-        required={!selected}
         className={inputClass}
       />
       <input type="hidden" name="lead_id" value={selected?.id ?? ''} />

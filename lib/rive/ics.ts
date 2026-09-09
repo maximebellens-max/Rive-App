@@ -5,10 +5,11 @@
 export type ICSAppointment = {
   id: string
   label: string
-  leadName: string
+  leadName: string | null
   date: string
   time: string | null
   notes?: string
+  lieu?: string
 }
 
 function escapeICS(text: string): string {
@@ -34,8 +35,9 @@ export function icsDtStamp(): string {
 // fuseau de l'appareil, ce qui convient pour une agence mono-fuseau.
 export function icsEvent(a: ICSAppointment, dtstamp: string): string {
   const dateCompact = a.date.replace(/-/g, '')
-  const summary = escapeICS(`${a.label || 'Rendez-vous'} — ${a.leadName}`)
+  const summary = escapeICS(a.leadName ? `${a.label || 'Rendez-vous'} — ${a.leadName}` : a.label || 'Rendez-vous')
   const description = a.notes ? `\nDESCRIPTION:${escapeICS(a.notes)}` : ''
+  const location = a.lieu ? `\nLOCATION:${escapeICS(a.lieu)}` : ''
 
   if (a.time) {
     const [h, m] = a.time.split(':').map(Number)
@@ -46,7 +48,7 @@ UID:${a.id}@rive.hevrest
 DTSTAMP:${dtstamp}
 DTSTART:${dateCompact}T${start}
 DTEND:${dateCompact}T${end}
-SUMMARY:${summary}${description}
+SUMMARY:${summary}${description}${location}
 END:VEVENT`
   }
 
@@ -54,6 +56,6 @@ END:VEVENT`
 UID:${a.id}@rive.hevrest
 DTSTAMP:${dtstamp}
 DTSTART;VALUE=DATE:${dateCompact}
-SUMMARY:${summary}${description}
+SUMMARY:${summary}${description}${location}
 END:VEVENT`
 }

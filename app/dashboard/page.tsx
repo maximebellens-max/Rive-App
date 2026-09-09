@@ -17,6 +17,7 @@ export default async function TodayPage() {
     { data: furnishingRows },
     { data: kitchenRows },
     { data: worksRows },
+    { data: members },
   ] = await Promise.all([
     supabase
       .from('leads')
@@ -38,7 +39,7 @@ export default async function TodayPage() {
     // comme c'était déjà le cas avant.
     supabase
       .from('appointments')
-      .select('id, lead_id, label, appointment_date, appointment_time, leads(name)')
+      .select('id, lead_id, label, lieu, appointment_date, appointment_time, participant_ids, leads(name)')
       .order('appointment_date', { ascending: true }),
     // Échéances à venir des 3 tableaux de suivi (Ameublement, Cuisine,
     // Travaux) : seuls les dossiers non terminés nous intéressent ici.
@@ -54,6 +55,8 @@ export default async function TodayPage() {
       .from('works_projects')
       .select('id, lead_id, statut, echeance_debut, echeance_fin, leads(name, category)')
       .neq('statut', 'termine'),
+    // Équipe de l'agence, pour la liste "participants" du formulaire de RDV.
+    supabase.from('profiles').select('id, full_name'),
   ])
 
   const leadsList = leads ?? []
@@ -217,14 +220,26 @@ export default async function TodayPage() {
     .map((l) => ({ id: l.id, name: l.name }))
     .sort((a, b) => a.name.localeCompare(b.name))
 
-  const appointments: AppointmentItem[] = (appointmentsRaw ?? []).map((a) => ({
-    id: a.id,
-    leadId: a.lead_id,
-    leadName: (a.leads as { name: string }[] | null)?.[0]?.name ?? 'Prospect',
-    label: a.label,
-    date: a.appointment_date,
-    time: a.appointment_time,
-  }))
+  const memberNameById = new Map((members ?? []).map((m) => [m.id, m.full_name]))
+
+  const appointments: AppointmentItem[] = (appointmentsRaw ?? []).map((a) => {
+    // lead_id est une relation simple (un seul prospect par RDV) : Supabase/PostgREST
+    // renvoie donc `leads` comme un objet unique, pas un tableau. Un rendez-vous peut
+    // aussi n'avoir aucun prospect attaché (RDV libre) depuis que lead_id est optionnel.
+    const lead = a.leads as unknown as { name: string } | null
+    return {
+      id: a.id,
+      leadId: a.lead_id,
+      leadName: lead?.name ?? null,
+      label: a.label,
+      lieu: a.lieu,
+      date: a.appointment_date,
+      time: a.appointment_time,
+      participantNames: ((a.participant_ids ?? []) as string[])
+        .map((id) => memberNameById.get(id))
+        .filter((n: string | undefined): n is string => Boolean(n)),
+    }
+  })
 
   const now = new Date()
   const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
@@ -246,6 +261,7 @@ export default async function TodayPage() {
           todayStr={todayStr}
           appointments={appointments}
           leadOptions={appointmentOptions}
+          memberOptions={(members ?? []).map((m) => ({ id: m.id, name: m.full_name || 'Agent' }))}
         />
       </div>
     </div>
