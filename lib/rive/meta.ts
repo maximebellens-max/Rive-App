@@ -334,6 +334,8 @@ function prettifyFieldName(name: string): string {
 
 export type MetaLeadDetails = {
   name: string
+  firstName: string
+  lastName: string
   email: string
   phone: string
   criterType: string
@@ -365,9 +367,19 @@ export function mapLeadFields(fieldData: MetaLeadData['fieldData']): MetaLeadDet
   )
 
   const fullName = fullNameField?.values?.[0] || ''
-  const firstName = firstNameField?.values?.[0] || ''
-  const lastName = lastNameField?.values?.[0] || ''
+  let firstName = firstNameField?.values?.[0] || ''
+  let lastName = lastNameField?.values?.[0] || ''
+  // Le formulaire Meta ne fournit pas toujours prénom/nom séparément : quand
+  // seul un "nom complet" est présent, on applique la même convention que la
+  // saisie manuelle (1er mot → prénom, reste → nom) pour alimenter les deux
+  // nouveaux champs de la fiche prospect.
+  if (!firstName && !lastName && fullName) {
+    const spaceIdx = fullName.indexOf(' ')
+    firstName = spaceIdx > -1 ? fullName.slice(0, spaceIdx) : fullName
+    lastName = spaceIdx > -1 ? fullName.slice(spaceIdx + 1).trim() : ''
+  }
   const name = fullName || [firstName, lastName].filter(Boolean).join(' ') || 'Lead Meta sans nom'
+  if (!firstName && !lastName) lastName = name
 
   const email = emailField?.values?.[0] || ''
   const phone = phoneField?.values?.[0] || ''
@@ -378,7 +390,7 @@ export function mapLeadFields(fieldData: MetaLeadData['fieldData']): MetaLeadDet
     .filter((f) => !consumed.has(f) && f.values?.[0])
     .map((f) => ({ question: prettifyFieldName(f.name), answer: f.values[0] }))
 
-  return { name, email, phone, criterType, criterLieu, customAnswers }
+  return { name, firstName, lastName, email, phone, criterType, criterLieu, customAnswers }
 }
 
 // Résumé compact des critères d'un lead Meta (type de bien, secteur, et

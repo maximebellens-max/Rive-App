@@ -1,11 +1,12 @@
 'use client'
 
-import { useActionState } from 'react'
+import { useActionState, useState } from 'react'
 import { updateLead, type LeadFormState } from '@/app/actions/leads'
 
 type Lead = {
   id: string
-  name: string
+  first_name: string
+  last_name: string
   phone: string
   email: string
   category: string | null
@@ -27,15 +28,29 @@ type Lead = {
   birth_place: string
   nationality: string
   marital_status: string
+  spouse_first_name: string
+  spouse_last_name: string
 }
 
 const inputClass =
   'rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-accent focus:ring-1 focus:ring-accent'
 const labelClass = 'text-sm font-medium text-neutral-700'
 
+// Options courantes + valeur déjà en base si elle ne correspond à aucune
+// d'entre elles (ancienne saisie libre, avant que ce champ devienne un menu
+// déroulant) — pour ne jamais faire disparaître silencieusement une donnée.
+const MARITAL_STATUS_OPTIONS = ['Célibataire', 'Marié(e)', 'Pacsé(e)', 'Concubinage', 'Divorcé(e)', 'Veuf(ve)']
+const MARRIED_STATUSES = ['Marié(e)', 'Pacsé(e)']
+
 export default function LeadEditForm({ lead }: { lead: Lead }) {
   const updateWithId = updateLead.bind(null, lead.id)
   const [state, action, pending] = useActionState<LeadFormState, FormData>(updateWithId, undefined)
+  const [maritalStatus, setMaritalStatus] = useState(lead.marital_status)
+  const maritalStatusOptions =
+    lead.marital_status && !MARITAL_STATUS_OPTIONS.includes(lead.marital_status)
+      ? [...MARITAL_STATUS_OPTIONS, lead.marital_status]
+      : MARITAL_STATUS_OPTIONS
+  const showSpouseFields = MARRIED_STATUSES.includes(maritalStatus)
 
   return (
     <form action={action} className="flex flex-col gap-8">
@@ -43,8 +58,12 @@ export default function LeadEditForm({ lead }: { lead: Lead }) {
         <h2 className="text-sm font-semibold text-neutral-900">Identité</h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="flex flex-col gap-1.5">
+            <label className={labelClass}>Prénom</label>
+            <input name="first_name" defaultValue={lead.first_name} className={inputClass} />
+          </div>
+          <div className="flex flex-col gap-1.5">
             <label className={labelClass}>Nom</label>
-            <input name="name" defaultValue={lead.name} className={inputClass} required />
+            <input name="last_name" defaultValue={lead.last_name} className={inputClass} required />
           </div>
           <div className="flex flex-col gap-1.5">
             <label className={labelClass}>Catégorie</label>
@@ -165,9 +184,39 @@ export default function LeadEditForm({ lead }: { lead: Lead }) {
           </div>
           <div className="flex flex-col gap-1.5">
             <label className={labelClass}>Situation familiale</label>
-            <input name="marital_status" placeholder="Célibataire, marié(e)…" defaultValue={lead.marital_status} className={inputClass} />
+            <select
+              name="marital_status"
+              value={maritalStatus}
+              onChange={(e) => setMaritalStatus(e.target.value)}
+              className={inputClass}
+            >
+              <option value="">—</option>
+              {maritalStatusOptions.map((o) => (
+                <option key={o} value={o}>
+                  {o}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
+
+        {showSpouseFields && (
+          <div className="flex flex-col gap-4 rounded-lg border border-neutral-200 bg-neutral-50 p-4">
+            <p className="text-xs text-neutral-500">
+              Conjoint(e) — son nom s&apos;affichera à côté de celui du contact partout dans Rive.
+            </p>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="flex flex-col gap-1.5">
+                <label className={labelClass}>Prénom du conjoint</label>
+                <input name="spouse_first_name" defaultValue={lead.spouse_first_name} className={inputClass} />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className={labelClass}>Nom du conjoint</label>
+                <input name="spouse_last_name" defaultValue={lead.spouse_last_name} className={inputClass} />
+              </div>
+            </div>
+          </div>
+        )}
       </section>
 
       {state?.error && (

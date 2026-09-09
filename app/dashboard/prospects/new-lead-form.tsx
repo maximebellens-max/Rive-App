@@ -29,7 +29,12 @@ export default function NewLeadForm() {
       </div>
 
       <input
-        name="name"
+        name="first_name"
+        placeholder="Prénom"
+        className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-accent focus:ring-1 focus:ring-accent"
+      />
+      <input
+        name="last_name"
         placeholder="Nom"
         required
         className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-accent focus:ring-1 focus:ring-accent"

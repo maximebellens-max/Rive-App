@@ -117,7 +117,9 @@ async function processLeadgenChange(
   }
 
   const leadData = await fetchLeadData(leadgenId, connection.access_token)
-  const { name, email, phone, criterType, criterLieu, customAnswers } = mapLeadFields(leadData.fieldData)
+  const { name, firstName, lastName, email, phone, criterType, criterLieu, customAnswers } = mapLeadFields(
+    leadData.fieldData
+  )
 
   let ownerId: string | null = null
   let ownerName: string | null = null
@@ -148,7 +150,8 @@ async function processLeadgenChange(
     .insert({
       agency_id: connection.agency_id,
       assigned_to: ownerId,
-      name,
+      first_name: firstName,
+      last_name: lastName,
       phone,
       email,
       category,

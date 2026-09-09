@@ -40,13 +40,14 @@ export async function createLead(
   _prevState: LeadFormState,
   formData: FormData
 ): Promise<LeadFormState> {
-  const name = str(formData, 'name')
+  const firstName = str(formData, 'first_name')
+  const lastName = str(formData, 'last_name')
   const phone = str(formData, 'phone')
   const email = str(formData, 'email')
   const category = str(formData, 'category') || null
   const critereLieu = str(formData, 'critere_lieu')
 
-  if (!name) {
+  if (!lastName) {
     return { error: 'Le nom du prospect est obligatoire.' }
   }
   if (category && !['acheteur', 'vendeur', 'investisseur'].includes(category)) {
@@ -63,7 +64,8 @@ export async function createLead(
     .insert({
       agency_id: agencyId,
       assigned_to: userId,
-      name,
+      first_name: firstName,
+      last_name: lastName,
       phone,
       email,
       category,
@@ -80,7 +82,7 @@ export async function createLead(
   if (newLead?.id) {
     await notifyNewLead(supabase, agencyId, {
       id: newLead.id,
-      name,
+      name: [firstName, lastName].filter(Boolean).join(' '),
       category,
       source: 'Saisie manuelle',
       ownerId: userId,
@@ -88,6 +90,49 @@ export async function createLead(
   }
 
   revalidatePath('/dashboard/prospects')
+}
+
+// Création rapide depuis un tableau de suivi (Ameublement, Cuisine, Travaux,
+// Projets investisseur, Location) : mêmes règles que createLead, mais sans
+// FormData (appelée directement depuis le combobox) et renvoie le nouveau
+// prospect pour l'y sélectionner aussitôt.
+export async function createLeadQuick(
+  firstName: string,
+  lastName: string
+): Promise<{ error: string } | { lead: { id: string; name: string } }> {
+  const first = firstName.trim()
+  const last = lastName.trim()
+  if (!last) return { error: 'Le nom du client est obligatoire.' }
+
+  const { supabase, agencyId, userId } = await getAgencyId()
+  if (!agencyId) return { error: 'Session expirée, reconnecte-toi.' }
+
+  const positions = await initialPositions(supabase, agencyId, null)
+
+  const { data: newLead, error } = await supabase
+    .from('leads')
+    .insert({
+      agency_id: agencyId,
+      assigned_to: userId,
+      first_name: first,
+      last_name: last,
+      positions,
+    })
+    .select('id, name')
+    .single()
+
+  if (error || !newLead) return { error: 'Impossible de créer le client.' }
+
+  await notifyNewLead(supabase, agencyId, {
+    id: newLead.id,
+    name: newLead.name,
+    category: null,
+    source: 'Saisie manuelle',
+    ownerId: userId,
+  })
+
+  revalidatePath('/dashboard/prospects')
+  return { lead: newLead as { id: string; name: string } }
 }
 
 export async function updateLead(
@@ -98,8 +143,8 @@ export async function updateLead(
   const { supabase, agencyId } = await getAgencyId()
   if (!agencyId) return { error: 'Session expirée, reconnecte-toi.' }
 
-  const name = str(formData, 'name')
-  if (!name) return { error: 'Le nom du prospect est obligatoire.' }
+  const lastName = str(formData, 'last_name')
+  if (!lastName) return { error: 'Le nom du prospect est obligatoire.' }
 
   const newCategory = str(formData, 'category') || null
 
@@ -122,7 +167,8 @@ export async function updateLead(
   const { error } = await supabase
     .from('leads')
     .update({
-      name,
+      first_name: str(formData, 'first_name'),
+      last_name: lastName,
       ...(positions ? { positions } : {}),
       phone: str(formData, 'phone'),
       email: str(formData, 'email'),
@@ -145,6 +191,12 @@ export async function updateLead(
       birth_place: str(formData, 'birth_place'),
       nationality: str(formData, 'nationality'),
       marital_status: str(formData, 'marital_status'),
+      // Le formulaire n'affiche (et donc n'envoie) les champs conjoint que si
+      // "Marié(e)" ou "Pacsé(e)" est sélectionné ; ils sont donc vidés ici dès
+      // que la situation familiale change pour autre chose, ce qui est le
+      // comportement voulu.
+      spouse_first_name: str(formData, 'spouse_first_name'),
+      spouse_last_name: str(formData, 'spouse_last_name'),
       updated_at: new Date().toISOString(),
     })
     .eq('id', leadId)
