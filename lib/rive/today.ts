@@ -17,6 +17,22 @@ export function actionBucket(dateStr: string | null): ActionBucket {
   return null
 }
 
+// Pour les tableaux de suivi (Ameublement, Cuisine, Travaux) : un dossier a
+// plusieurs dates clés possibles (livraison, pose, échéance de travaux...).
+// Retourne la plus proche parmi celles tombant dans les 3 prochains jours
+// (même fenêtre que le widget "À venir" des prospects), avec le libellé de
+// l'étape correspondante — ou null si aucune n'est dans cette fenêtre.
+export function nearestUpcomingMilestone(
+  candidates: { label: string; date: string | null }[]
+): { label: string; date: string } | null {
+  let best: { label: string; date: string } | null = null
+  for (const c of candidates) {
+    if (!c.date || actionBucket(c.date) !== 'upcoming') continue
+    if (!best || c.date < best.date) best = { label: c.label, date: c.date }
+  }
+  return best
+}
+
 export const RECONTACT_THRESHOLD_DAYS = 300
 export const STALE_BIEN_THRESHOLD_DAYS = 60
 

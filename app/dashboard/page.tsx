@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { formatDate } from '@/lib/rive/mandates'
-import { actionBucket } from '@/lib/rive/today'
+import { actionBucket, nearestUpcomingMilestone } from '@/lib/rive/today'
 import { computeMatchPairs, type MatchLead, type MatchMandate } from '@/lib/rive/matching'
 import TodayWidgets, { type Widget } from './today-widgets'
 import MonthCalendar, { type AppointmentItem } from './month-calendar'
@@ -8,31 +8,53 @@ import MonthCalendar, { type AppointmentItem } from './month-calendar'
 export default async function TodayPage() {
   const supabase = await createClient()
 
-  const [{ data: leads }, { data: mandates }, { data: seen }, { data: firstProspectsCol }, { data: appointmentsRaw }] =
-    await Promise.all([
-      supabase
-        .from('leads')
-        .select(
-          'id, name, category, action_label, action_date, budget, critere_type, critere_lieu, surface_min, pieces_min, created_at, positions'
-        ),
-      supabase
-        .from('mandates')
-        .select(
-          'id, type, stage, is_draft, lead_id, address, property_type, price, surface, pieces, signed_date, sold_date, duration_months, renewal_notice_days, diffusion, ad_date'
-        ),
-      supabase.from('seen_match_pairs').select('lead_id, mandate_id'),
-      // Un prospect encore posé sur la 1ère colonne du tableau Prospects n'a
-      // pas encore avancé — même convention que l'agent de relance
-      // (lib/rive/relance-agent.ts) pour repérer "pas encore traité".
-      supabase.from('pipeline_columns').select('id').eq('board_type', 'prospects').order('position', { ascending: true }).limit(1).maybeSingle(),
-      // Tous les rendez-vous (pas seulement ceux du mois affiché) — la
-      // navigation entre mois se fait côté client sans aller-retour serveur,
-      // comme c'était déjà le cas avant.
-      supabase
-        .from('appointments')
-        .select('id, lead_id, label, appointment_date, appointment_time, leads(name)')
-        .order('appointment_date', { ascending: true }),
-    ])
+  const [
+    { data: leads },
+    { data: mandates },
+    { data: seen },
+    { data: firstProspectsCol },
+    { data: appointmentsRaw },
+    { data: furnishingRows },
+    { data: kitchenRows },
+    { data: worksRows },
+  ] = await Promise.all([
+    supabase
+      .from('leads')
+      .select(
+        'id, name, category, action_label, action_date, budget, critere_type, critere_lieu, surface_min, pieces_min, created_at, positions'
+      ),
+    supabase
+      .from('mandates')
+      .select(
+        'id, type, stage, is_draft, lead_id, address, property_type, price, surface, pieces, signed_date, sold_date, duration_months, renewal_notice_days, diffusion, ad_date'
+      ),
+    supabase.from('seen_match_pairs').select('lead_id, mandate_id'),
+    // Un prospect encore posé sur la 1ère colonne du tableau Prospects n'a
+    // pas encore avancé — même convention que l'agent de relance
+    // (lib/rive/relance-agent.ts) pour repérer "pas encore traité".
+    supabase.from('pipeline_columns').select('id').eq('board_type', 'prospects').order('position', { ascending: true }).limit(1).maybeSingle(),
+    // Tous les rendez-vous (pas seulement ceux du mois affiché) — la
+    // navigation entre mois se fait côté client sans aller-retour serveur,
+    // comme c'était déjà le cas avant.
+    supabase
+      .from('appointments')
+      .select('id, lead_id, label, appointment_date, appointment_time, leads(name)')
+      .order('appointment_date', { ascending: true }),
+    // Échéances à venir des 3 tableaux de suivi (Ameublement, Cuisine,
+    // Travaux) : seuls les dossiers non terminés nous intéressent ici.
+    supabase
+      .from('furnishing_projects')
+      .select('id, lead_id, statut, date_livraison_ikea, date_livraison_ed, date_pose, leads(name)')
+      .eq('statut', 'en_cours'),
+    supabase
+      .from('kitchen_projects')
+      .select('id, lead_id, statut, date_livraison, date_pose_debut, date_pose_fin, leads(name)')
+      .eq('statut', 'en_cours'),
+    supabase
+      .from('works_projects')
+      .select('id, lead_id, statut, echeance_debut, echeance_fin, leads(name)')
+      .neq('statut', 'termine'),
+  ])
 
   const leadsList = leads ?? []
   const mandatesList = mandates ?? []
@@ -51,6 +73,63 @@ export default async function TodayPage() {
 
   // ---------- 3. À venir (3j) ----------
   const upcoming = leadsList.filter((l) => actionBucket(l.action_date) === 'upcoming')
+
+  // ---------- 4-6. Échéances à venir des tableaux de suivi ----------
+  // Chaque dossier a plusieurs dates clés possibles (livraison, pose,
+  // échéance de travaux...) — on ne retient que la plus proche des 3
+  // prochains jours, comme pour "À venir" côté prospects.
+  const furnishingUpcoming = (furnishingRows ?? [])
+    .map((r) => {
+      const milestone = nearestUpcomingMilestone([
+        { label: 'Livraison IKEA', date: r.date_livraison_ikea },
+        { label: 'Livraison E.D', date: r.date_livraison_ed },
+        { label: 'Pose', date: r.date_pose },
+      ])
+      if (!milestone) return null
+      return {
+        id: r.id,
+        leadId: r.lead_id,
+        leadName: (r.leads as { name: string }[] | null)?.[0]?.name ?? 'Client',
+        milestone,
+      }
+    })
+    .filter((r): r is NonNullable<typeof r> => !!r)
+    .sort((a, b) => a.milestone.date.localeCompare(b.milestone.date))
+
+  const kitchenUpcoming = (kitchenRows ?? [])
+    .map((r) => {
+      const milestone = nearestUpcomingMilestone([
+        { label: 'Livraison', date: r.date_livraison },
+        { label: 'Début pose', date: r.date_pose_debut },
+        { label: 'Fin pose', date: r.date_pose_fin },
+      ])
+      if (!milestone) return null
+      return {
+        id: r.id,
+        leadId: r.lead_id,
+        leadName: (r.leads as { name: string }[] | null)?.[0]?.name ?? 'Client',
+        milestone,
+      }
+    })
+    .filter((r): r is NonNullable<typeof r> => !!r)
+    .sort((a, b) => a.milestone.date.localeCompare(b.milestone.date))
+
+  const worksUpcoming = (worksRows ?? [])
+    .map((r) => {
+      const milestone = nearestUpcomingMilestone([
+        { label: 'Début travaux', date: r.echeance_debut },
+        { label: 'Fin travaux', date: r.echeance_fin },
+      ])
+      if (!milestone) return null
+      return {
+        id: r.id,
+        leadId: r.lead_id,
+        leadName: (r.leads as { name: string }[] | null)?.[0]?.name ?? 'Client',
+        milestone,
+      }
+    })
+    .filter((r): r is NonNullable<typeof r> => !!r)
+    .sort((a, b) => a.milestone.date.localeCompare(b.milestone.date))
 
   const widgets: Widget[] = [
     {
@@ -88,6 +167,39 @@ export default async function TodayPage() {
         primary: l.name,
         secondary: l.action_label ? `${l.action_label} · ${formatDate(l.action_date)}` : formatDate(l.action_date),
         href: `/dashboard/prospects/${l.id}`,
+      })),
+    },
+    {
+      key: 'ameublement',
+      icon: '🛋️',
+      label: 'Ameublement — échéances (3j)',
+      items: furnishingUpcoming.map((r) => ({
+        id: r.id,
+        primary: r.leadName,
+        secondary: `${r.milestone.label} · ${formatDate(r.milestone.date)}`,
+        href: `/dashboard/prospects/${r.leadId}`,
+      })),
+    },
+    {
+      key: 'cuisine',
+      icon: '🍳',
+      label: 'Cuisine — échéances (3j)',
+      items: kitchenUpcoming.map((r) => ({
+        id: r.id,
+        primary: r.leadName,
+        secondary: `${r.milestone.label} · ${formatDate(r.milestone.date)}`,
+        href: `/dashboard/prospects/${r.leadId}`,
+      })),
+    },
+    {
+      key: 'travaux',
+      icon: '🔨',
+      label: 'Travaux — échéances (3j)',
+      items: worksUpcoming.map((r) => ({
+        id: r.id,
+        primary: r.leadName,
+        secondary: `${r.milestone.label} · ${formatDate(r.milestone.date)}`,
+        href: `/dashboard/prospects/${r.leadId}`,
       })),
     },
   ]
