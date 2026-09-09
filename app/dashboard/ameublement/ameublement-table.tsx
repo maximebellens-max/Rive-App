@@ -155,7 +155,7 @@ export default function AmeublementTable({ rows, leadOptions }: { rows: Furnishi
                 </div>
               </td>
               <td className="px-3 py-2">
-                <EditableText value={r.commentaire} onSave={(v) => save(r.id, { commentaire: v })} placeholder="Commentaire" width="w-40" />
+                <EditableText value={r.commentaire} onSave={(v) => save(r.id, { commentaire: v })} placeholder="Commentaire" width="w-64" />
               </td>
               <td className="px-3 py-2">
                 <DeleteRowButton onDelete={() => deleteFurnishingProject(r.id)} />

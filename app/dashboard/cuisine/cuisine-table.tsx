@@ -142,7 +142,7 @@ export default function CuisineTable({ rows, leadOptions }: { rows: KitchenRow[]
                 <EditableText value={r.finitions} onSave={(v) => save(r.id, { finitions: v })} placeholder="Finitions" />
               </td>
               <td className="px-3 py-2">
-                <EditableText value={r.commentaire} onSave={(v) => save(r.id, { commentaire: v })} placeholder="Commentaire" width="w-40" />
+                <EditableText value={r.commentaire} onSave={(v) => save(r.id, { commentaire: v })} placeholder="Commentaire" width="w-64" />
               </td>
               <td className="px-3 py-2">
                 <DeleteRowButton onDelete={() => deleteKitchenProject(r.id)} />

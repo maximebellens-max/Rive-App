@@ -37,9 +37,13 @@ export default async function LocationsPage() {
       : Promise.resolve({ data: [] as { id: string; name: string }[] }),
   ])
 
+  // lead_id est une relation simple (un seul prospect par bien) : Supabase/PostgREST
+  // renvoie donc `leads` comme un objet unique, pas un tableau. Le caster en tableau et
+  // lire [0] renvoyait toujours undefined → "Prospect supprimé" s'affichait même quand
+  // le prospect existait bien.
   const rows = (listings ?? []).map((l) => ({
     ...l,
-    lead: (l.leads as { id: string; name: string }[] | null)?.[0] ?? null,
+    lead: l.leads as unknown as { id: string; name: string } | null,
   }))
 
   const cards: StageCard[] = rows.map((l) => ({

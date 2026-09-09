@@ -17,7 +17,11 @@ export default async function InvestmentDetailPage({ params }: PageProps<'/dashb
     .single()
   if (!project) notFound()
 
-  const lead = (project.leads as { id: string; name: string }[] | null)?.[0] ?? null
+  // lead_id est une relation simple (un seul prospect par projet) : Supabase/PostgREST
+  // renvoie donc `leads` comme un objet unique, pas un tableau. Le caster en tableau et
+  // lire [0] renvoyait toujours undefined → "Prospect supprimé" s'affichait même quand
+  // le prospect existait bien.
+  const lead = project.leads as unknown as { id: string; name: string } | null
 
   return (
     <div className="flex flex-col gap-6">

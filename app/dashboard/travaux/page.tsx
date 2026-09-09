@@ -28,7 +28,11 @@ export default async function TravauxPage() {
   ])
 
   const projects: WorksRow[] = (rows ?? []).map((r) => {
-    const lead = (r.leads as { id: string; name: string }[] | null)?.[0]
+    // lead_id est une relation simple (un seul prospect par dossier) : Supabase/PostgREST
+    // renvoie donc `leads` comme un objet unique, pas un tableau. Le caster en tableau et
+    // lire [0] renvoyait toujours undefined → "Prospect supprimé" s'affichait même quand
+    // le prospect existait bien.
+    const lead = r.leads as unknown as { id: string; name: string } | null
     return {
       id: r.id,
       leadId: lead?.id ?? '',
