@@ -5,8 +5,9 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { FEATURE_KEYS, type Features } from '@/lib/rive/mandates'
 import { maybeCreateCommissionForMandate } from '@/lib/rive/automation'
-import { initialPositions } from '@/lib/rive/pipeline-positions'
+import { firstColumnId, engagedColumnId } from '@/lib/rive/pipeline-positions'
 import { notifyMatchesForMandateId } from '@/lib/rive/match-notify'
+import { notifyNewLead } from '@/lib/rive/new-lead-notify'
 
 export type MandateFormState = { error?: string } | undefined
 
@@ -77,13 +78,26 @@ export async function createMandate(
     const newLeadLastName = str(formData, 'new_lead_last_name')
     if (newLeadFirstName || newLeadLastName) {
       const category = type === 'recherche' ? 'acheteur' : 'vendeur'
-      const positions = await initialPositions(supabase, agencyId, category)
+      const leadName = `${newLeadFirstName} ${newLeadLastName}`.trim()
+      const [catCol, prospectsCol] = await Promise.all([
+        firstColumnId(supabase, agencyId, category),
+        // Ce client est créé parce qu'un mandat est déjà en cours de création
+        // pour lui : ce n'est pas un lead neuf à contacter, donc on évite de
+        // le placer sur la 1ère colonne de Prospects (sous peine de le faire
+        // ressortir à tort dans "Nouveaux prospects à contacter" côté
+        // Aujourd'hui) — voir engagedColumnId.
+        engagedColumnId(supabase, agencyId, 'prospects'),
+      ])
+      const positions: Record<string, string> = {}
+      if (catCol) positions[category] = catCol
+      if (prospectsCol) positions.prospects = prospectsCol
+
       const { data: newLead } = await supabase
         .from('leads')
         .insert({
           agency_id: agencyId,
           assigned_to: userId,
-          name: `${newLeadFirstName} ${newLeadLastName}`.trim(),
+          name: leadName,
           phone: str(formData, 'new_lead_phone'),
           email: str(formData, 'new_lead_email'),
           category,
@@ -94,6 +108,16 @@ export async function createMandate(
         .single()
       leadId = newLead?.id ?? null
       newLeadCreated = !!leadId
+
+      if (leadId) {
+        await notifyNewLead(supabase, agencyId, {
+          id: leadId,
+          name: leadName,
+          category,
+          source: 'Nouveau mandat',
+          ownerId: userId,
+        })
+      }
     }
   }
 

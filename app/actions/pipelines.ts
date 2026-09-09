@@ -2,9 +2,10 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
-import { firstColumnId } from '@/lib/rive/pipeline-positions'
-import { nextColumnColor, CATEGORY_BOARD_TYPES, type BoardType } from '@/lib/rive/pipelines'
+import { firstColumnId, engagedColumnId } from '@/lib/rive/pipeline-positions'
+import { nextColumnColor, CATEGORY_BOARD_TYPES, BOARD_LABELS, type BoardType } from '@/lib/rive/pipelines'
 import { ensureMandateDraftForLead, activateMandateForLead } from '@/lib/rive/automation'
+import { notifyNewLead } from '@/lib/rive/new-lead-notify'
 
 async function getAgencyId() {
   const supabase = await createClient()
@@ -80,19 +81,46 @@ export async function quickAddLead(boardType: BoardType, columnId: string, formD
     positions.prospects = columnId
   } else {
     positions[boardType] = columnId
-    const prospectsCol = await firstColumnId(supabase, agencyId, 'prospects')
+    // Un ajout direct sur la 1ère colonne d'un autre tableau (ex : "Nouveau
+    // lead" côté Vendeur) reste un lead neuf à contacter — même traitement
+    // qu'avant. Un ajout plus loin dans le pipeline (ex : directement sur
+    // "Mandat en cours") a déjà avancé : on évite de le placer sur "Nouveau
+    // lead" côté Prospects, sous peine de le faire ressortir à tort dans
+    // "Nouveaux prospects à contacter" côté Aujourd'hui et dans la 1ère
+    // colonne du tableau Prospects.
+    const targetFirstCol = await firstColumnId(supabase, agencyId, boardType)
+    const prospectsCol =
+      columnId === targetFirstCol
+        ? await firstColumnId(supabase, agencyId, 'prospects')
+        : await engagedColumnId(supabase, agencyId, 'prospects')
     if (prospectsCol) positions.prospects = prospectsCol
   }
 
-  await supabase.from('leads').insert({
-    agency_id: agencyId,
-    assigned_to: userId,
-    name,
-    // Seuls les 3 tableaux de catégorie fixent leads.category (contrainte en
-    // base) — un tableau personnalisé ne catégorise jamais le prospect.
-    category: CATEGORY_BOARD_TYPES.has(boardType) ? boardType : null,
-    positions,
-  })
+  const category = CATEGORY_BOARD_TYPES.has(boardType) ? boardType : null
+
+  const { data: newLead } = await supabase
+    .from('leads')
+    .insert({
+      agency_id: agencyId,
+      assigned_to: userId,
+      name,
+      // Seuls les 3 tableaux de catégorie fixent leads.category (contrainte en
+      // base) — un tableau personnalisé ne catégorise jamais le prospect.
+      category,
+      positions,
+    })
+    .select('id')
+    .single()
+
+  if (newLead?.id) {
+    await notifyNewLead(supabase, agencyId, {
+      id: newLead.id,
+      name,
+      category,
+      source: `Ajout direct — ${BOARD_LABELS[boardType] ?? 'tableau personnalisé'}`,
+      ownerId: userId,
+    })
+  }
 
   revalidateBoard(boardType)
 }

@@ -19,6 +19,30 @@ export async function firstColumnId(
   return data?.id ?? null
 }
 
+// Colonne de repli pour un prospect qui n'est PAS un lead neuf à contacter :
+// ajouté directement plus loin dans un autre pipeline (ex : quick-add sur une
+// colonne "Mandat en cours" du tableau Vendeur), ou créé à la volée depuis un
+// mandat déjà en cours. On évite sa 1ère colonne (qui alimente le widget
+// "Nouveaux prospects à contacter" côté Aujourd'hui et le fait ressortir à
+// tort comme neuf) au profit de sa 3ème colonne par défaut ("Qualifié") — ou
+// à défaut la dernière colonne disponible, si l'agence a un tableau plus
+// court.
+export async function engagedColumnId(
+  supabase: SupabaseClient,
+  agencyId: string,
+  boardType: string
+): Promise<string | null> {
+  const { data } = await supabase
+    .from('pipeline_columns')
+    .select('id')
+    .eq('agency_id', agencyId)
+    .eq('board_type', boardType)
+    .order('position', { ascending: true })
+  const cols = data ?? []
+  if (!cols.length) return null
+  return cols[Math.min(2, cols.length - 1)].id
+}
+
 // Positions initiales d'un nouveau prospect : toujours sur Prospects (1ère
 // colonne), et sur le tableau de sa catégorie si elle est renseignée.
 export async function initialPositions(
