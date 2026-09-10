@@ -1,0 +1,12 @@
+-- Le code prenait automatiquement la première Page Facebook renvoyée par
+-- l'API (pages[0]) sans possibilité de choisir — exactement le même défaut
+-- déjà corrigé pour le compte publicitaire (voir
+-- 00000000000023_meta_ad_account_choice.sql). Si le compte Meta connecté
+-- administre plus d'une Page (ex. une ancienne Page "Hevrest" en plus de la
+-- vraie), Rive peut silencieusement se connecter à la mauvaise — ce qui
+-- expliquerait un page_id qui ne correspond jamais à celui reçu par le
+-- webhook, malgré des reconnexions "réussies".
+-- On stocke désormais la liste complète des Pages disponibles (avec leur
+-- jeton d'accès propre, nécessaire pour s'abonner à leurs leads sans
+-- reconnexion complète) pour permettre de corriger le choix depuis Réglages.
+alter table meta_connections add column if not exists available_pages jsonb not null default '[]'::jsonb;
