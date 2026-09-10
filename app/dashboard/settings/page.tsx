@@ -18,7 +18,7 @@ export default async function SettingsPage({ searchParams }: PageProps<'/dashboa
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('agency_id, role, whatsapp_number, whatsapp_alerts_enabled, whatsapp_sender_phone_number_id')
+    .select('agency_id, role, whatsapp_number, whatsapp_alerts_enabled, whatsapp_sender_phone_number_id, ics_token')
     .eq('id', user.id)
     .single()
 
@@ -98,7 +98,9 @@ export default async function SettingsPage({ searchParams }: PageProps<'/dashboa
         />
       </div>
       <div className="max-w-2xl rounded-2xl border border-neutral-200 bg-surface p-6 shadow-sm">
-        <AgendaSyncSection icsUrl={`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/ics/${agency.ics_token}`} />
+        <AgendaSyncSection
+          icsUrl={`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/ics/agent/${profile.ics_token}`}
+        />
       </div>
       <div className="max-w-2xl rounded-2xl border border-neutral-200 bg-surface p-6 shadow-sm">
         <BackupSection isOwner={profile.role === 'owner'} />

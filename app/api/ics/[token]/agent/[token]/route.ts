@@ -1,13 +1,10 @@
-// Flux ICS public, abonnable depuis un calendrier externe (iPhone, Google
-// Agenda, etc.), TOUS les rendez-vous de l'agence confondus — plus utilisé
-// par défaut dans Réglages depuis l'ajout du flux personnel par agent
-// (app/api/ics/agent/[token]/route.ts, qui ne montre que "mes" rendez-vous),
-// mais laissé en place pour qui voudrait quand même un calendrier unique
-// avec toute l'équipe. Contrairement à /dashboard/agenda/ics (protégé par la
-// session Supabase, utile pour un export ponctuel en étant connecté), cette
-// route n'exige aucune session : elle est protégée par un jeton opaque dans
-// l'URL (agencies.ics_token), le seul mécanisme qu'un client de calendrier
-// externe peut porter (pas d'en-tête personnalisé possible).
+// Flux ICS personnel, un par agent — contrairement à /api/ics/[token]
+// (jeton d'agence, partagé par toute l'équipe), celui-ci ne montre que LES
+// rendez-vous de l'agent concerné : ceux qu'il a créés, plus ceux où il est
+// explicitement coché comme participant (voir app/dashboard/month-calendar.tsx).
+// Comme l'autre flux, protégé par un jeton opaque dans l'URL
+// (profiles.ics_token) et lu via createAdminClient() car il n'y a pas de
+// session pour un client de calendrier externe.
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { icsDtStamp, icsEvent, toCRLF, type ICSAppointment } from '@/lib/rive/ics'
@@ -16,16 +13,21 @@ export async function GET(_request: Request, { params }: { params: Promise<{ tok
   const { token } = await params
   const supabase = createAdminClient()
 
-  const { data: agency } = await supabase.from('agencies').select('id').eq('ics_token', token).maybeSingle()
-  if (!agency) return new NextResponse('Not found', { status: 404 })
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('id, agency_id, full_name')
+    .eq('ics_token', token)
+    .maybeSingle()
+  if (!profile) return new NextResponse('Not found', { status: 404 })
 
-  // Un lead peut désormais avoir plusieurs rendez-vous (table appointments) —
-  // le flux exporte chacun d'entre eux, pas seulement le plus proche. Un
-  // rendez-vous peut aussi n'avoir aucun prospect attaché (RDV libre).
+  // "Mes" rendez-vous : ceux que j'ai créés, plus ceux où je suis coché comme
+  // agent participant — un RDV partagé entre plusieurs agents apparaît donc
+  // sur le calendrier de chacun, pas seulement sur celui de son créateur.
   const { data: appointments } = await supabase
     .from('appointments')
     .select('id, label, lieu, appointment_date, appointment_time, leads(name, notes)')
-    .eq('agency_id', agency.id)
+    .eq('agency_id', profile.agency_id)
+    .or(`created_by.eq.${profile.id},participant_ids.cs.{${profile.id}}`)
 
   const dtstamp = icsDtStamp()
   const events = (appointments ?? [])
@@ -51,7 +53,7 @@ VERSION:2.0
 PRODID:-//Rive//Agenda//FR
 CALSCALE:GREGORIAN
 METHOD:PUBLISH
-X-WR-CALNAME:Rive — Agenda
+X-WR-CALNAME:Rive — ${profile.full_name || 'Agenda'}
 REFRESH-INTERVAL;VALUE=DURATION:PT4H
 ${events}
 END:VCALENDAR

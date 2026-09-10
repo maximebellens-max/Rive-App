@@ -24,8 +24,9 @@ export default function AgendaSyncSection({ icsUrl }: { icsUrl: string }) {
       <div>
         <h2 className="text-sm font-semibold text-neutral-900">Agenda — synchronisation iPhone</h2>
         <p className="mt-1 text-xs text-neutral-500">
-          Ce lien affiche automatiquement tous les rendez-vous Rive dans l&apos;app Calendrier de ton iPhone (ou tout
-          autre calendrier compatible), mis à jour en continu — pas besoin de le réimporter.
+          Ce lien est personnel : il affiche automatiquement tes propres rendez-vous Rive (ceux que tu as créés, plus
+          ceux où tu es coché comme participant) dans l&apos;app Calendrier de ton iPhone — pas ceux des autres
+          agents. Mis à jour en continu, pas besoin de le réimporter.
         </p>
       </div>
 
