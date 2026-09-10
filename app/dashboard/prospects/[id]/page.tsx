@@ -60,10 +60,11 @@ export default async function ProspectDetailPage({ params }: PageProps<'/dashboa
   if (!lead) notFound()
 
   // "✓ Marquer comme contacté" ne s'affiche que tant que le prospect est
-  // encore sur la 1ère colonne de son tableau de catégorie — une fois
-  // déplacé (à la main ou via ce bouton), il disparaît de lui-même.
+  // encore sur la 1ère colonne de son tableau de catégorie ET n'a pas déjà
+  // été marqué traité — une fois cliqué, il disparaît de lui-même (le
+  // bouton ne déplace pas la carte, voir markLeadContacted).
   let isNewProspect = false
-  if (lead.category) {
+  if (lead.category && !lead.marked_contacted) {
     const { data: firstColumn } = await supabase
       .from('pipeline_columns')
       .select('id')

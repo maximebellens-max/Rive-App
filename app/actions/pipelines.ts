@@ -213,33 +213,17 @@ export async function deletePipelineColumn(columnId: string, boardType: BoardTyp
 }
 
 // Raccourci "✓ Traité" — depuis la fiche prospect ou le widget "Nouveaux
-// prospects à contacter" de l'onglet Aujourd'hui, fait avancer le prospect de
-// la 1ère à la 2ème colonne de SON tableau de catégorie (vendeur/acheteur/
-// investisseur — déjà le sien depuis sa création, pas de changement de
-// tableau). Ne fait rien s'il a déjà été déplacé ailleurs à la main, pour ne
-// jamais faire reculer un prospect déjà avancé dans le pipeline.
+// prospects à contacter" de l'onglet Aujourd'hui, sort simplement le
+// prospect de ce widget. Ne touche PAS à sa position dans son tableau
+// (Vendeurs/Acheteurs/Investisseurs) — faire avancer la carte dans le
+// pipeline reste un geste séparé (glisser-déposer), volontairement
+// découplé : "traité pour aujourd'hui" ne veut pas forcément dire "prêt
+// pour l'étape suivante".
 export async function markLeadContacted(leadId: string) {
   const { supabase, agencyId } = await getAgencyId()
   if (!agencyId) return
 
-  const { data: lead } = await supabase.from('leads').select('id, category, positions').eq('id', leadId).single()
-  if (!lead?.category) return
-
-  const boardType = lead.category as BoardType
-  const { data: columns } = await supabase
-    .from('pipeline_columns')
-    .select('id')
-    .eq('agency_id', agencyId)
-    .eq('board_type', boardType)
-    .order('position', { ascending: true })
-
-  const ids = (columns ?? []).map((c) => c.id)
-  if (ids.length < 2) return
-
-  const currentColumnId = (lead.positions as Record<string, string> | null)?.[boardType]
-  if (currentColumnId !== ids[0]) return
-
-  await moveLeadCard(leadId, boardType, ids[1])
+  await supabase.from('leads').update({ marked_contacted: true }).eq('id', leadId)
   revalidatePath('/dashboard')
   revalidatePath(`/dashboard/prospects/${leadId}`)
 }
