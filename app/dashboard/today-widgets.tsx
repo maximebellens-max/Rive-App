@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { markMatchesSeen } from '@/app/actions/matching'
+import { markLeadContacted } from '@/app/actions/pipelines'
 import { CATEGORY_COLOR_HEX, CATEGORY_LABEL } from '@/lib/rive/pipelines'
 
 export type WidgetItem = { id: string; primary: string; secondary?: string; href: string; category?: string | null }
@@ -62,24 +63,41 @@ export default function TodayWidgets({
           <div className="mt-3 flex flex-col gap-2">
             {!current.items.length && <p className="text-sm text-neutral-400">Rien à signaler ici — à jour ✓</p>}
             {current.items.map((item) => (
-              <Link
-                key={item.id}
-                href={item.href}
-                className="flex items-center justify-between rounded-lg border border-neutral-200 px-3 py-2 text-sm hover:border-neutral-300 hover:bg-neutral-50"
-              >
-                <span className="flex min-w-0 items-center gap-1.5">
-                  {item.category && CATEGORY_LABEL[item.category] && (
-                    <span
-                      className="shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium text-white"
-                      style={{ backgroundColor: CATEGORY_COLOR_HEX[item.category] }}
+              <div key={item.id} className="flex items-center gap-2">
+                <Link
+                  href={item.href}
+                  className="flex min-w-0 flex-1 items-center justify-between rounded-lg border border-neutral-200 px-3 py-2 text-sm hover:border-neutral-300 hover:bg-neutral-50"
+                >
+                  <span className="flex min-w-0 items-center gap-1.5">
+                    {item.category && CATEGORY_LABEL[item.category] && (
+                      <span
+                        className="shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium text-white"
+                        style={{ backgroundColor: CATEGORY_COLOR_HEX[item.category] }}
+                      >
+                        {CATEGORY_LABEL[item.category]}
+                      </span>
+                    )}
+                    <span className="truncate font-medium text-neutral-900">{item.primary}</span>
+                  </span>
+                  {item.secondary && <span className="shrink-0 text-neutral-500">{item.secondary}</span>}
+                </Link>
+                {/* Sort simplement le prospect de cette liste, sans avoir à
+                    rouvrir sa fiche ni déplacer sa carte dans son tableau —
+                    les deux restent volontairement découplés. Uniquement sur
+                    "Nouveaux prospects à contacter" : les autres widgets ne
+                    sont pas des prospects tout juste arrivés. */}
+                {current.key === 'newProspects' && (
+                  <form action={markLeadContacted.bind(null, item.id)}>
+                    <button
+                      type="submit"
+                      title="Marquer comme contacté"
+                      className="shrink-0 rounded-lg border border-neutral-300 px-2 py-1.5 text-xs font-medium text-neutral-600 hover:bg-neutral-100"
                     >
-                      {CATEGORY_LABEL[item.category]}
-                    </span>
-                  )}
-                  <span className="truncate font-medium text-neutral-900">{item.primary}</span>
-                </span>
-                {item.secondary && <span className="shrink-0 text-neutral-500">{item.secondary}</span>}
-              </Link>
+                      ✓ Traité
+                    </button>
+                  </form>
+                )}
+              </div>
             ))}
           </div>
         </div>

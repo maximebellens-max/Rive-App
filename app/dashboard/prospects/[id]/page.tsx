@@ -6,6 +6,7 @@ import { formatEUR } from '@/lib/rive/mandates'
 import { RECONTACT_THRESHOLD_DAYS, daysAgo } from '@/lib/rive/today'
 import { generateBriefingBrief, generateRelanceBrief, generateVisitReportBrief } from '@/lib/rive/ai-prompts'
 import { saveAIBriefing, saveAIRelanceDraft, saveAIVisitReport } from '@/app/actions/ai'
+import { markLeadContacted } from '@/app/actions/pipelines'
 import AIBriefPanel from '../../_components/ai-brief-panel'
 import LeadEditForm from './lead-edit-form'
 import HistorySection from './history-section'
@@ -45,15 +46,34 @@ export default async function ProspectDetailPage({ params }: PageProps<'/dashboa
   // grâce à React.cache) au lieu de refaire un aller-retour getUser().
   const { supabase, profile } = await getAuthedProfile()
 
-  // lead/entries/mandate/templates ne dépendent pas les uns des autres :
-  // partent tous en parallèle plutôt qu'à la suite.
-  const [{ data: lead }, { data: entries }, { data: mandate }, { data: templates }] = await Promise.all([
+  // lead/entries/mandate/templates/members ne dépendent pas les uns des
+  // autres : partent tous en parallèle plutôt qu'à la suite.
+  const [{ data: lead }, { data: entries }, { data: mandate }, { data: templates }, { data: members }] = await Promise.all([
     supabase.from('leads').select('*').eq('id', id).single(),
     supabase.from('lead_history_entries').select('id, entry_date, text').eq('lead_id', id).order('entry_date', { ascending: false }),
     supabase.from('mandates').select('id, is_draft, type, address, stage, sold_date').eq('lead_id', id).maybeSingle(),
     supabase.from('message_templates').select('id, name, channel, subject, body').order('created_at', { ascending: true }),
+    profile?.agency_id
+      ? supabase.from('profiles').select('id, full_name').eq('agency_id', profile.agency_id)
+      : Promise.resolve({ data: [] as { id: string; full_name: string }[] }),
   ])
   if (!lead) notFound()
+
+  // "✓ Marquer comme contacté" ne s'affiche que tant que le prospect est
+  // encore sur la 1ère colonne de son tableau de catégorie — une fois
+  // déplacé (à la main ou via ce bouton), il disparaît de lui-même.
+  let isNewProspect = false
+  if (lead.category) {
+    const { data: firstColumn } = await supabase
+      .from('pipeline_columns')
+      .select('id')
+      .eq('agency_id', profile?.agency_id ?? '')
+      .eq('board_type', lead.category)
+      .order('position', { ascending: true })
+      .limit(1)
+      .maybeSingle()
+    isNewProspect = !!firstColumn && (lead.positions as Record<string, string> | null)?.[lead.category] === firstColumn.id
+  }
 
   // Éligible à une relance si vendu depuis 300j+ et sans échange récent.
   const lastHistoryDate = entries?.[0]?.entry_date ?? null
@@ -94,7 +114,19 @@ export default async function ProspectDetailPage({ params }: PageProps<'/dashboa
             <p className="mt-0.5 text-xs text-neutral-400">Reçu le {formatReceivedAt(lead.created_at)}</p>
           )}
         </div>
-        <DeleteLeadButton leadId={lead.id} />
+        <div className="flex shrink-0 items-center gap-2">
+          {isNewProspect && (
+            <form action={markLeadContacted.bind(null, lead.id)}>
+              <button
+                type="submit"
+                className="rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-white hover:bg-accent-hover"
+              >
+                ✓ Marquer comme contacté
+              </button>
+            </form>
+          )}
+          <DeleteLeadButton leadId={lead.id} />
+        </div>
       </div>
 
       {mandate && (
@@ -148,7 +180,7 @@ export default async function ProspectDetailPage({ params }: PageProps<'/dashboa
       )}
 
       <div className="rounded-2xl border border-neutral-200 bg-surface p-6 shadow-sm">
-        <LeadEditForm lead={lead} />
+        <LeadEditForm lead={lead} members={members ?? []} />
       </div>
 
       <MessageSection lead={lead} templates={templates ?? []} agentName={profile?.full_name || ''} />

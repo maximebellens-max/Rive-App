@@ -41,6 +41,7 @@ export type PipelineCard = {
   created_at: string
   columnId: string | null
   assignedTo: string | null
+  collaboratorIds: string[]
   score: number
   aiScore: number | null
   aiReasoning: string
@@ -87,7 +88,11 @@ export default function KanbanBoard({
   const [selectMode, setSelectMode] = useState(false)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [categoryFilter, setCategoryFilter] = useState('all')
-  const [agentFilter, setAgentFilter] = useState('all')
+  // Ensemble vide = "Tous les agents" ; sinon un ou plusieurs agents cochés
+  // (le prospect doit être assigné à l'un d'entre eux). Plus de doublon
+  // "À moi" / propre nom dans la liste : coche directement ton nom parmi
+  // les autres, comme n'importe quel agent.
+  const [agentFilter, setAgentFilter] = useState<Set<string>>(new Set())
   const [, startTransition] = useTransition()
   const router = useRouter()
 
@@ -120,11 +125,10 @@ export default function KanbanBoard({
     () =>
       cards.filter((c) => {
         if (categoryFilter !== 'all' && c.category !== categoryFilter) return false
-        if (agentFilter === 'me') return c.assignedTo === currentUserId
-        if (agentFilter !== 'all') return c.assignedTo === agentFilter
+        if (agentFilter.size > 0 && !agentFilter.has(c.assignedTo ?? '')) return false
         return true
       }),
-    [cards, categoryFilter, agentFilter, currentUserId]
+    [cards, categoryFilter, agentFilter]
   )
 
   const grouped = useMemo(
@@ -205,20 +209,12 @@ export default function KanbanBoard({
             </select>
           )}
           {members.length > 0 && (
-            <select
-              value={agentFilter}
-              onChange={(e) => setAgentFilter(e.target.value)}
-              aria-label="Filtrer par agent"
-              className="rounded-lg border border-neutral-300 bg-surface px-2 py-1.5 text-xs text-neutral-600 outline-none focus:border-accent"
-            >
-              <option value="all">Tous les agents</option>
-              {currentUserId && <option value="me">À moi</option>}
-              {members.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.full_name}
-                </option>
-              ))}
-            </select>
+            <AgentFilterDropdown
+              members={members}
+              selected={agentFilter}
+              onChange={setAgentFilter}
+              currentUserId={currentUserId}
+            />
           )}
         </div>
         <div className="flex rounded-lg border border-neutral-300 p-0.5 text-xs">
@@ -291,6 +287,87 @@ export default function KanbanBoard({
             />
           ))}
           <AddColumnForm boardType={boardType} />
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Sélection multiple d'agents pour filtrer le tableau — remplace l'ancien
+// <select> à choix unique (qui dupliquait "À moi" et son propre nom dans la
+// liste). Aucun agent coché = "Tous les agents".
+function AgentFilterDropdown({
+  members,
+  selected,
+  onChange,
+  currentUserId,
+}: {
+  members: BoardMember[]
+  selected: Set<string>
+  onChange: (next: Set<string>) => void
+  currentUserId?: string
+}) {
+  const [open, setOpen] = useState(false)
+
+  function toggle(id: string) {
+    const next = new Set(selected)
+    if (next.has(id)) next.delete(id)
+    else next.add(id)
+    onChange(next)
+  }
+
+  const label =
+    selected.size === 0
+      ? 'Tous les agents'
+      : selected.size === 1
+        ? members.find((m) => m.id === [...selected][0])?.full_name || '1 agent'
+        : `${selected.size} agents`
+
+  return (
+    <div
+      className="relative"
+      onBlur={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node)) setOpen(false)
+      }}
+    >
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-label="Filtrer par agent"
+        aria-expanded={open}
+        className={`rounded-lg border px-2 py-1.5 text-xs ${
+          selected.size > 0
+            ? 'border-accent bg-accent-soft text-accent'
+            : 'border-neutral-300 bg-surface text-neutral-600 hover:bg-neutral-100'
+        }`}
+      >
+        {label} ▾
+      </button>
+      {open && (
+        <div className="absolute left-0 top-full z-20 mt-1 w-52 rounded-lg border border-neutral-200 bg-surface p-1.5 shadow-md">
+          <button
+            type="button"
+            onClick={() => onChange(new Set())}
+            className="block w-full rounded px-2 py-1.5 text-left text-xs font-medium text-neutral-600 hover:bg-neutral-100"
+          >
+            Tous les agents
+          </button>
+          <div className="my-1 border-t border-neutral-100" />
+          {members.map((m) => (
+            <label
+              key={m.id}
+              className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-xs text-neutral-700 hover:bg-neutral-100"
+            >
+              <input
+                type="checkbox"
+                checked={selected.has(m.id)}
+                onChange={() => toggle(m.id)}
+                className="h-3.5 w-3.5"
+              />
+              {m.full_name || 'Sans nom'}
+              {m.id === currentUserId && <span className="text-neutral-400">(moi)</span>}
+            </label>
+          ))}
         </div>
       )}
     </div>
@@ -460,16 +537,28 @@ function ColumnBlock({
       {!(wide && collapsed) && (
         <>
           <div className="flex flex-col gap-2">
-            {cards.map((card) => (
-              <CardItem
-                key={card.id}
-                card={card}
-                selectMode={selectMode}
-                selected={selected?.has(card.id)}
-                onToggleSelect={() => onToggleSelect?.(card.id)}
-                assignedMember={members.find((m) => m.id === card.assignedTo)}
-              />
-            ))}
+            {cards.map((card) => {
+              // Agent responsable + collaborateurs, dédupliqués (un
+              // collaborateur peut aussi être l'agent responsable selon
+              // comment la fiche a été remplie) — un avatar par agent
+              // impliqué, jamais deux fois le même.
+              const involvedIds = [card.assignedTo, ...card.collaboratorIds].filter(
+                (id, i, arr): id is string => !!id && arr.indexOf(id) === i
+              )
+              const avatarMembers = involvedIds
+                .map((id) => members.find((m) => m.id === id))
+                .filter((m): m is BoardMember => !!m)
+              return (
+                <CardItem
+                  key={card.id}
+                  card={card}
+                  selectMode={selectMode}
+                  selected={selected?.has(card.id)}
+                  onToggleSelect={() => onToggleSelect?.(card.id)}
+                  avatarMembers={avatarMembers}
+                />
+              )
+            })}
             {!cards.length && <p className="px-1 py-2 text-xs text-neutral-400">Aucun prospect ici.</p>}
           </div>
 
@@ -639,13 +728,13 @@ function CardItem({
   selectMode,
   selected,
   onToggleSelect,
-  assignedMember,
+  avatarMembers,
 }: {
   card: PipelineCard
   selectMode?: boolean
   selected?: boolean
   onToggleSelect?: () => void
-  assignedMember?: BoardMember
+  avatarMembers?: BoardMember[]
 }) {
   const effectiveScore = card.aiScore ?? card.score
   const tier = priorityTier(effectiveScore)
@@ -654,8 +743,21 @@ function CardItem({
     <>
       <div className="flex items-start justify-between gap-2">
         <div className="flex min-w-0 items-center gap-1.5">
-          {assignedMember && (
-            <Avatar name={assignedMember.full_name || 'Agent'} avatarUrl={assignedMember.avatar_url} size={18} />
+          {/* Pile d'avatars qui se chevauchent légèrement (agent responsable +
+              collaborateurs) plutôt qu'un seul — sans ça, sur un dossier suivi
+              à plusieurs, seul un agent apparaissait sur la carte. */}
+          {!!avatarMembers?.length && (
+            <span className="flex shrink-0 items-center" title={avatarMembers.map((m) => m.full_name).join(', ')}>
+              {avatarMembers.map((m, i) => (
+                <Avatar
+                  key={m.id}
+                  name={m.full_name || 'Agent'}
+                  avatarUrl={m.avatar_url}
+                  size={18}
+                  className={i > 0 ? '-ml-1.5' : ''}
+                />
+              ))}
+            </span>
           )}
           <span className="min-w-0 truncate font-medium text-neutral-900">{card.name}</span>
         </div>

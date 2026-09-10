@@ -203,6 +203,10 @@ export async function updateLead(
       // comportement voulu.
       spouse_first_name: str(formData, 'spouse_first_name'),
       spouse_last_name: str(formData, 'spouse_last_name'),
+      // Agents supplémentaires impliqués sur ce dossier, en plus de l'agent
+      // responsable — purement informatif (voir migration 046), n'affecte ni
+      // l'onglet Aujourd'hui ni le filtre "agent" ni les commissions.
+      collaborator_ids: formData.getAll('collaborator_ids').map(String).filter(Boolean),
       updated_at: new Date().toISOString(),
     })
     .eq('id', leadId)

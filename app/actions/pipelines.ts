@@ -124,10 +124,18 @@ export async function renamePipelineColumn(columnId: string, boardType: BoardTyp
   revalidateBoard(boardType)
 }
 
+// Écrit désormais un override PERSONNEL (profiles.column_colors), pas la
+// couleur partagée de la colonne (pipeline_columns.color, qui reste la
+// couleur "par défaut" de l'agence pour qui n'a pas fait son propre choix) —
+// chaque agent personnalise ses tableaux sans changer ceux des autres.
 export async function recolorPipelineColumn(columnId: string, boardType: BoardType, color: string) {
-  const { supabase, agencyId } = await getAgencyId()
-  if (!agencyId) return
-  await supabase.from('pipeline_columns').update({ color }).eq('id', columnId).eq('agency_id', agencyId)
+  const { supabase, agencyId, userId } = await getAgencyId()
+  if (!agencyId || !userId) return
+
+  const { data: profile } = await supabase.from('profiles').select('column_colors').eq('id', userId).single()
+  const columnColors = { ...((profile?.column_colors as Record<string, string>) ?? {}), [columnId]: color }
+
+  await supabase.from('profiles').update({ column_colors: columnColors }).eq('id', userId)
   revalidateBoard(boardType)
 }
 
@@ -202,4 +210,36 @@ export async function deletePipelineColumn(columnId: string, boardType: BoardTyp
   await supabase.from('pipeline_columns').delete().eq('id', columnId).eq('agency_id', agencyId)
   revalidateBoard(boardType)
   return undefined
+}
+
+// Raccourci "✓ Traité" — depuis la fiche prospect ou le widget "Nouveaux
+// prospects à contacter" de l'onglet Aujourd'hui, fait avancer le prospect de
+// la 1ère à la 2ème colonne de SON tableau de catégorie (vendeur/acheteur/
+// investisseur — déjà le sien depuis sa création, pas de changement de
+// tableau). Ne fait rien s'il a déjà été déplacé ailleurs à la main, pour ne
+// jamais faire reculer un prospect déjà avancé dans le pipeline.
+export async function markLeadContacted(leadId: string) {
+  const { supabase, agencyId } = await getAgencyId()
+  if (!agencyId) return
+
+  const { data: lead } = await supabase.from('leads').select('id, category, positions').eq('id', leadId).single()
+  if (!lead?.category) return
+
+  const boardType = lead.category as BoardType
+  const { data: columns } = await supabase
+    .from('pipeline_columns')
+    .select('id')
+    .eq('agency_id', agencyId)
+    .eq('board_type', boardType)
+    .order('position', { ascending: true })
+
+  const ids = (columns ?? []).map((c) => c.id)
+  if (ids.length < 2) return
+
+  const currentColumnId = (lead.positions as Record<string, string> | null)?.[boardType]
+  if (currentColumnId !== ids[0]) return
+
+  await moveLeadCard(leadId, boardType, ids[1])
+  revalidatePath('/dashboard')
+  revalidatePath(`/dashboard/prospects/${leadId}`)
 }

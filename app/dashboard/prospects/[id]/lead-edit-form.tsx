@@ -31,7 +31,10 @@ type Lead = {
   marital_status: string
   spouse_first_name: string
   spouse_last_name: string
+  collaborator_ids: string[]
 }
+
+type Member = { id: string; full_name: string }
 
 const inputClass =
   'rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-accent focus:ring-1 focus:ring-accent'
@@ -43,7 +46,7 @@ const labelClass = 'text-sm font-medium text-neutral-700'
 const MARITAL_STATUS_OPTIONS = ['Célibataire', 'Marié(e)', 'Pacsé(e)', 'Concubinage', 'Divorcé(e)', 'Veuf(ve)']
 const MARRIED_STATUSES = ['Marié(e)', 'Pacsé(e)']
 
-export default function LeadEditForm({ lead }: { lead: Lead }) {
+export default function LeadEditForm({ lead, members = [] }: { lead: Lead; members?: Member[] }) {
   const updateWithId = updateLead.bind(null, lead.id)
   const [state, action, pending] = useActionState<LeadFormState, FormData>(updateWithId, undefined)
   const [maritalStatus, setMaritalStatus] = useState(lead.marital_status)
@@ -274,6 +277,33 @@ export default function LeadEditForm({ lead }: { lead: Lead }) {
           </div>
         )}
       </section>
+
+      {members.length > 0 && (
+        <section className="flex flex-col gap-3 border-t border-neutral-100 pt-6">
+          <div>
+            <h2 className="text-sm font-semibold text-neutral-900">Collaborateurs</h2>
+            <p className="mt-1 text-xs text-neutral-500">
+              Agents supplémentaires impliqués sur ce dossier, en plus de l&apos;agent responsable — leur avatar
+              s&apos;affiche aussi sur les cartes. N&apos;affecte ni l&apos;onglet Aujourd&apos;hui de chacun ni les
+              commissions.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-x-4 gap-y-1.5">
+            {members.map((m) => (
+              <label key={m.id} className="flex items-center gap-1.5 text-sm text-neutral-700">
+                <input
+                  type="checkbox"
+                  name="collaborator_ids"
+                  value={m.id}
+                  defaultChecked={lead.collaborator_ids.includes(m.id)}
+                  className="h-4 w-4"
+                />
+                {m.full_name || 'Sans nom'}
+              </label>
+            ))}
+          </div>
+        </section>
+      )}
 
       {state?.error && (
         <p className="text-sm text-danger" role="alert">

@@ -23,25 +23,31 @@ export default async function PipelineBoardPage({ params }: PageProps<'/dashboar
     ? supabase
         .from('leads')
         .select(
-          'id, name, category, phone, email, critere_lieu, critere_type, budget, financement, action_date, created_at, positions, assigned_to, ai_priority_score, ai_priority_reasoning'
+          'id, name, category, phone, email, critere_lieu, critere_type, budget, financement, action_date, created_at, positions, assigned_to, collaborator_ids, ai_priority_score, ai_priority_reasoning'
         )
         .eq('category', bt)
     : supabase
         .from('leads')
         .select(
-          'id, name, category, phone, email, critere_lieu, critere_type, budget, financement, action_date, created_at, positions, assigned_to, ai_priority_score, ai_priority_reasoning'
+          'id, name, category, phone, email, critere_lieu, critere_type, budget, financement, action_date, created_at, positions, assigned_to, collaborator_ids, ai_priority_score, ai_priority_reasoning'
         )
 
-  // Ces 4 requêtes ne dépendent que de bt/profile.agency_id (déjà connus) —
+  // Ces 5 requêtes ne dépendent que de bt/profile.agency_id (déjà connus) —
   // elles partent en parallèle plutôt qu'à la suite les unes des autres.
-  const [{ data: board }, { data: columns }, { data: leadsRaw }, { data: members }] = await Promise.all([
+  const [{ data: board }, { data: columns }, { data: leadsRaw }, { data: members }, { data: myProfile }] = await Promise.all([
     isFixedCategoryBoard
       ? Promise.resolve({ data: null as BoardRow | null })
       : supabase.from('boards').select('id, name, kind').eq('id', bt).eq('agency_id', profile.agency_id).maybeSingle(),
     supabase.from('pipeline_columns').select('id, name, color, is_default').eq('board_type', bt).order('position', { ascending: true }),
     leadsQuery,
     supabase.from('profiles').select('id, full_name, avatar_url').eq('agency_id', profile.agency_id),
+    // Override personnel de couleur de colonne (voir recolorPipelineColumn) —
+    // ne concerne que l'agent connecté, jamais ses collègues.
+    supabase.from('profiles').select('column_colors').eq('id', user.id).single(),
   ])
+
+  const myColumnColors = (myProfile?.column_colors as Record<string, string> | null) ?? {}
+  const columnsWithMyColors = (columns ?? []).map((c) => ({ ...c, color: myColumnColors[c.id] ?? c.color }))
 
   let boardName: string
   let isCustom = false
@@ -88,6 +94,7 @@ export default async function PipelineBoardPage({ params }: PageProps<'/dashboar
     created_at: l.created_at,
     columnId: (l.positions as Record<string, string>)?.[bt] ?? null,
     assignedTo: l.assigned_to,
+    collaboratorIds: (l.collaborator_ids as string[]) ?? [],
     score: leadPriorityScore({
       budget: l.budget,
       financement: l.financement,
@@ -123,7 +130,7 @@ export default async function PipelineBoardPage({ params }: PageProps<'/dashboar
           )}
         </div>
       )}
-      <KanbanBoard boardType={bt} columns={columns ?? []} cards={cards} members={members ?? []} currentUserId={user.id} />
+      <KanbanBoard boardType={bt} columns={columnsWithMyColors} cards={cards} members={members ?? []} currentUserId={user.id} />
     </div>
   )
 }

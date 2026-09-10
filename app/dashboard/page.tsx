@@ -24,7 +24,7 @@ export default async function TodayPage() {
     supabase
       .from('leads')
       .select(
-        'id, name, category, action_label, action_date, budget, critere_type, critere_lieu, surface_min, pieces_min, created_at, positions, assigned_to'
+        'id, name, category, action_label, action_date, budget, critere_type, critere_lieu, surface_min, pieces_min, created_at, positions, assigned_to, marked_contacted'
       ),
     supabase
       .from('mandates')
@@ -104,6 +104,7 @@ export default async function TodayPage() {
     if (!firstColByCategory[c.board_type]) firstColByCategory[c.board_type] = c.id
   }
   const newProspects = myLeadsList.filter((l) => {
+    if (l.marked_contacted) return false
     const cat = l.category
     if (!cat) return false
     const firstCol = firstColByCategory[cat]
