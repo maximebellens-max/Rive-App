@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from 'react'
 import { updateMandate, type MandateFormState } from '@/app/actions/mandates'
-import { CONDITION_LEVELS, DPE_LEVELS, FEATURE_KEYS, PROPERTY_TYPES } from '@/lib/rive/mandates'
+import { CONDITION_LEVELS, DPE_LEVELS, FEATURE_KEYS, PROPERTY_TYPES, propertyHasLand, propertyHasFloor } from '@/lib/rive/mandates'
 import AddressAutocomplete from '../../_components/address-autocomplete'
 
 type Mandate = {
@@ -51,6 +51,9 @@ export default function MandateEditForm({ mandate }: { mandate: Mandate }) {
     undefined
   )
   const [address, setAddress] = useState(mandate.address)
+  const [propertyType, setPropertyType] = useState(mandate.property_type)
+  const showLand = propertyHasLand(propertyType)
+  const showFloor = propertyHasFloor(propertyType)
 
   return (
     <form action={action} className="flex flex-col gap-8">
@@ -63,7 +66,12 @@ export default function MandateEditForm({ mandate }: { mandate: Mandate }) {
           </div>
           <div className="flex flex-col gap-1.5">
             <label className={labelClass}>Type de bien</label>
-            <select name="property_type" defaultValue={mandate.property_type} className={inputClass}>
+            <select
+              name="property_type"
+              value={propertyType}
+              onChange={(e) => setPropertyType(e.target.value)}
+              className={inputClass}
+            >
               <option value="">—</option>
               {PROPERTY_TYPES.map((t) => (
                 <option key={t} value={t}>
@@ -76,25 +84,29 @@ export default function MandateEditForm({ mandate }: { mandate: Mandate }) {
             <label className={labelClass}>Surface (m²)</label>
             <input name="surface" type="number" step="0.1" defaultValue={mandate.surface ?? ''} className={inputClass} />
           </div>
-          <div className="flex flex-col gap-1.5">
-            <label className={labelClass}>Surface du terrain (m²)</label>
-            <input
-              name="land_surface"
-              type="number"
-              step="0.1"
-              placeholder="Pour une maison"
-              defaultValue={mandate.land_surface ?? ''}
-              className={inputClass}
-            />
-          </div>
+          {showLand && (
+            <div className="flex flex-col gap-1.5">
+              <label className={labelClass}>Surface du terrain (m²)</label>
+              <input
+                name="land_surface"
+                type="number"
+                step="0.1"
+                placeholder="Pour une maison"
+                defaultValue={mandate.land_surface ?? ''}
+                className={inputClass}
+              />
+            </div>
+          )}
           <div className="flex flex-col gap-1.5">
             <label className={labelClass}>Pièces</label>
             <input name="pieces" type="number" defaultValue={mandate.pieces ?? ''} className={inputClass} />
           </div>
-          <div className="flex flex-col gap-1.5">
-            <label className={labelClass}>Étage</label>
-            <input name="floor" type="number" defaultValue={mandate.floor ?? ''} className={inputClass} />
-          </div>
+          {showFloor && (
+            <div className="flex flex-col gap-1.5">
+              <label className={labelClass}>Étage</label>
+              <input name="floor" type="number" defaultValue={mandate.floor ?? ''} className={inputClass} />
+            </div>
+          )}
           <div className="flex flex-col gap-1.5">
             <label className={labelClass}>État</label>
             <select name="condition" defaultValue={mandate.condition} className={inputClass}>
@@ -121,10 +133,12 @@ export default function MandateEditForm({ mandate }: { mandate: Mandate }) {
             <label className={labelClass}>Année de construction</label>
             <input name="year_built" type="number" defaultValue={mandate.year_built ?? ''} className={inputClass} />
           </div>
-          <label className="flex items-center gap-2 text-sm text-neutral-700">
-            <input type="checkbox" name="has_elevator" defaultChecked={mandate.has_elevator} className="h-4 w-4" />
-            Ascenseur
-          </label>
+          {showFloor && (
+            <label className="flex items-center gap-2 text-sm text-neutral-700">
+              <input type="checkbox" name="has_elevator" defaultChecked={mandate.has_elevator} className="h-4 w-4" />
+              Ascenseur
+            </label>
+          )}
           <div className="flex flex-col gap-1.5 sm:col-span-2">
             <label className={labelClass}>Travaux récents</label>
             <input name="recent_works" defaultValue={mandate.recent_works} className={inputClass} />

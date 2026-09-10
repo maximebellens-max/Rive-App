@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from 'react'
 import { createMandate, type MandateFormState } from '@/app/actions/mandates'
-import { PROPERTY_TYPES } from '@/lib/rive/mandates'
+import { PROPERTY_TYPES, propertyHasLand } from '@/lib/rive/mandates'
 import { guessCivility } from '@/lib/rive/civility'
 import AddressAutocomplete from '../../_components/address-autocomplete'
 
@@ -201,10 +201,12 @@ export default function NewMandateForm({ leads, draft = false }: { leads: Lead[]
           />
         </div>
 
-        <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium text-neutral-700">Surface du terrain (m²)</label>
-          <input name="land_surface" type="number" step="0.1" placeholder="Pour une maison" className={inputClass} />
-        </div>
+        {propertyHasLand(propertyType) && (
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium text-neutral-700">Surface du terrain (m²)</label>
+            <input name="land_surface" type="number" step="0.1" placeholder="Pour une maison" className={inputClass} />
+          </div>
+        )}
 
         {/* Pas de prix ici : au stade de l'estimation, c'est justement ce
             qu'on cherche à déterminer — il se renseigne plus tard, une fois

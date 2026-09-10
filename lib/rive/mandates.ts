@@ -90,6 +90,56 @@ export type OriginePropriete = {
   prix_acquisition?: string
 }
 
+// Types de bien où "surface du terrain" n'a pas de sens (un appartement ou
+// un parking n'a pas de terrain propre) — pour ne l'afficher que là où elle
+// peut s'appliquer, sur le formulaire du bien.
+export function propertyHasLand(propertyType: string): boolean {
+  return !['Appartement', 'Parking / Box'].includes(propertyType)
+}
+
+// À l'inverse, "étage" et "ascenseur" ne concernent que les biens en
+// immeuble (appartement, local commercial en étage...) — pas une maison ni
+// un terrain. Tant qu'aucun type n'est choisi, les deux helpers laissent
+// tout affiché par défaut (mieux vaut un champ de trop qu'un champ caché à
+// tort).
+export function propertyHasFloor(propertyType: string): boolean {
+  return !['Maison', 'Terrain'].includes(propertyType)
+}
+
+// Pertinence légale d'un diagnostic, quand elle est déductible avec
+// certitude des informations déjà saisies (type de bien, copropriété,
+// année de construction) — jamais pour les diagnostics qui dépendent d'un
+// zonage ou d'une donnée que Rive ne connaît pas (risques termites/ERP,
+// ancienneté d'une installation gaz/électricité) : mieux vaut ne rien
+// affirmer que se tromper sur un point réglementaire. 'unknown' = pas de
+// verdict, affichage neutre comme avant.
+export type DiagnosticRelevance = 'concerned' | 'not_concerned' | 'unknown'
+
+export function diagnosticRelevance(
+  key: DiagnosticKey,
+  input: { enCopropriete: boolean; yearBuilt: number | null }
+): DiagnosticRelevance {
+  switch (key) {
+    case 'dpe':
+      // Obligatoire pour toute vente, sans exception.
+      return 'concerned'
+    case 'carrez':
+      // Le métrage loi Carrez ne s'applique qu'aux lots de copropriété.
+      return input.enCopropriete ? 'concerned' : 'not_concerned'
+    case 'amiante':
+      // Obligatoire pour un permis de construire délivré avant le
+      // 1er juillet 1997.
+      if (input.yearBuilt == null) return 'unknown'
+      return input.yearBuilt < 1997 ? 'concerned' : 'not_concerned'
+    case 'plomb':
+      // CREP obligatoire pour un bien construit avant le 1er janvier 1949.
+      if (input.yearBuilt == null) return 'unknown'
+      return input.yearBuilt < 1949 ? 'concerned' : 'not_concerned'
+    default:
+      return 'unknown'
+  }
+}
+
 // Barème d'honoraires : 5% jusqu'à 800k€, 4% au-delà, plancher 10 000€.
 export function feeForPrice(price: number | null | undefined): number {
   if (!price) return 0

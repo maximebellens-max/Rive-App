@@ -21,6 +21,7 @@ import DiffusionSection from './diffusion-section'
 import PropertyDetailsSection from './property-details-section'
 import MandateFilesSection, { type MandateFile } from './mandate-files-section'
 import { mandateFileUrl } from '@/app/actions/mandate-property'
+import MandateTabs, { type MandateTab } from './mandate-tabs'
 
 export default async function MandateDetailPage({ params }: PageProps<'/dashboard/mandates/[id]'>) {
   const { id } = await params
@@ -206,34 +207,70 @@ export default async function MandateDetailPage({ params }: PageProps<'/dashboar
 
       <PartiesSection mandateId={mandate.id} parties={parties ?? []} />
 
-      <div className="rounded-2xl border border-neutral-200 bg-surface p-6 shadow-sm">
-        <MandateEditForm mandate={mandate} />
-      </div>
+      {(() => {
+        // La fiche s'allonge vite (bien, estimation, suivi commercial,
+        // fiche bien, documents…) — répartie en onglets plutôt qu'empilée
+        // verticalement, pour éviter le trop long défilement. `hidden`
+        // (dans MandateTabs) garde chaque onglet monté, donc aucun état de
+        // formulaire n'est perdu en changeant d'onglet. Un mandat de
+        // recherche (ou encore en brouillon) n'a qu'un seul groupe de
+        // toute façon : pas de barre d'onglets pour un seul onglet.
+        const tabs: MandateTab[] = [
+          {
+            key: 'bien',
+            label: 'Bien & estimation',
+            content: (
+              <>
+                <div className="rounded-2xl border border-neutral-200 bg-surface p-6 shadow-sm">
+                  <MandateEditForm mandate={mandate} />
+                </div>
+                {mandate.type === 'vente' && (
+                  <EstimationSection
+                    mandateId={mandate.id}
+                    mandate={mandate}
+                    comparables={comparables ?? []}
+                    matchingBuyersCount={matchingBuyers.length}
+                  />
+                )}
+              </>
+            ),
+          },
+        ]
 
-      {mandate.type === 'vente' && (
-        <EstimationSection
-          mandateId={mandate.id}
-          mandate={mandate}
-          comparables={comparables ?? []}
-          matchingBuyersCount={matchingBuyers.length}
-        />
-      )}
+        if (mandate.type === 'vente' && !mandate.is_draft) {
+          tabs.push(
+            {
+              key: 'suivi',
+              label: 'Suivi commercial',
+              content: (
+                <>
+                  <VisitsSection mandateId={mandate.id} visits={visits} buyerOptions={buyerOptions} />
+                  <OffersSection mandateId={mandate.id} offers={offers} buyerOptions={buyerOptions} />
+                  <DiffusionSection
+                    mandateId={mandate.id}
+                    diffusion={(mandate.diffusion as Record<string, string>) || {}}
+                    adPlatform={mandate.ad_platform}
+                    adCampaign={mandate.ad_campaign}
+                    adDate={mandate.ad_date}
+                  />
+                </>
+              ),
+            },
+            {
+              key: 'fiche',
+              label: 'Fiche bien',
+              content: <PropertyDetailsSection mandateId={mandate.id} mandate={mandate} lots={lots} />,
+            },
+            {
+              key: 'documents',
+              label: 'Documents',
+              content: <MandateFilesSection mandateId={mandate.id} files={files} />,
+            }
+          )
+        }
 
-      {mandate.type === 'vente' && !mandate.is_draft && (
-        <>
-          <VisitsSection mandateId={mandate.id} visits={visits} buyerOptions={buyerOptions} />
-          <OffersSection mandateId={mandate.id} offers={offers} buyerOptions={buyerOptions} />
-          <DiffusionSection
-            mandateId={mandate.id}
-            diffusion={(mandate.diffusion as Record<string, string>) || {}}
-            adPlatform={mandate.ad_platform}
-            adCampaign={mandate.ad_campaign}
-            adDate={mandate.ad_date}
-          />
-          <PropertyDetailsSection mandateId={mandate.id} mandate={mandate} lots={lots} />
-          <MandateFilesSection mandateId={mandate.id} files={files} />
-        </>
-      )}
+        return tabs.length > 1 ? <MandateTabs tabs={tabs} /> : <div className="flex flex-col gap-6">{tabs[0].content}</div>
+      })()}
     </div>
   )
 }

@@ -1,10 +1,13 @@
 import { addMandateLot, removeMandateLot, updateMandateProperty } from '@/app/actions/mandate-property'
-import { ACQUISITION_MODES, DIAGNOSTIC_TYPES, dateUrgency } from '@/lib/rive/mandates'
+import { ACQUISITION_MODES, DIAGNOSTIC_TYPES, dateUrgency, diagnosticRelevance } from '@/lib/rive/mandates'
 import type { Copropriete, Diagnostics, OriginePropriete } from '@/lib/rive/mandates'
+import CoproprieteFields from './copropriete-fields'
 
 type Lot = { id: string; lot_number: string; designation: string; tantiemes: string }
 
 type Mandate = {
+  property_type: string
+  year_built: number | null
   en_copropriete: boolean
   copropriete: Copropriete | null
   origine_propriete: OriginePropriete | null
@@ -21,6 +24,13 @@ const urgencyDot: Record<string, string> = {
   ok: 'bg-good',
   none: 'bg-neutral-200',
 }
+
+const URGENCY_LEGEND = [
+  { urgency: 'ok', label: 'Valide' },
+  { urgency: 'soon', label: 'Bientôt expiré' },
+  { urgency: 'overdue', label: 'Expiré' },
+  { urgency: 'none', label: 'Non renseigné' },
+] as const
 
 export default function PropertyDetailsSection({
   mandateId,
@@ -90,41 +100,7 @@ export default function PropertyDetailsSection({
 
       <form action={updateWithId} className="flex flex-col gap-6 border-t border-neutral-100 pt-6">
         <section className="flex flex-col gap-3">
-          <label className="flex items-center gap-2 text-sm font-semibold text-neutral-900">
-            <input type="checkbox" name="en_copropriete" defaultChecked={mandate.en_copropriete} className="h-4 w-4" />
-            Bien en copropriété
-          </label>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <div className="flex flex-col gap-1.5">
-              <label className={labelClass}>Nombre de lots de la copropriété</label>
-              <input name="copro_total_lots" defaultValue={copro.total_lots ?? ''} className={inputClass} />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <label className={labelClass}>Charges annuelles (€)</label>
-              <input name="copro_charges_annuelles" defaultValue={copro.charges_annuelles ?? ''} className={inputClass} />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <label className={labelClass}>Fonds travaux (€)</label>
-              <input name="copro_fonds_travaux" defaultValue={copro.fonds_travaux ?? ''} className={inputClass} />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <label className={labelClass}>Syndic</label>
-              <input name="copro_syndic_nom" defaultValue={copro.syndic_nom ?? ''} className={inputClass} />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <label className={labelClass}>Contact du syndic</label>
-              <input name="copro_syndic_contact" defaultValue={copro.syndic_contact ?? ''} className={inputClass} />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <label className={labelClass}>Procédures en cours</label>
-              <input
-                name="copro_procedures_en_cours"
-                placeholder="Aucune, ou en préciser la nature"
-                defaultValue={copro.procedures_en_cours ?? ''}
-                className={inputClass}
-              />
-            </div>
-          </div>
+          <CoproprieteFields defaultChecked={mandate.en_copropriete} copro={copro} />
         </section>
 
         <section className="flex flex-col gap-3 border-t border-neutral-100 pt-6">
@@ -175,18 +151,50 @@ export default function PropertyDetailsSection({
             <h3 className="text-sm font-semibold text-neutral-900">Diagnostics</h3>
             <p className="mt-1 text-xs text-neutral-500">
               Les fichiers justificatifs (rapport de diagnostiqueur…) se déposent dans « Photos & documents »
-              ci-dessous, en les rattachant au diagnostic concerné.
+              ci-dessous, en les rattachant au diagnostic concerné. Le repère « Non concerné » se déduit du type de
+              bien, de la copropriété et de l&apos;année de construction déjà renseignés — vérifie toujours au cas
+              par cas, ça ne remplace pas un avis de diagnostiqueur.
             </p>
+            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
+              {URGENCY_LEGEND.map((l) => (
+                <span key={l.urgency} className="flex items-center gap-1.5 text-xs text-neutral-500">
+                  <span className={`h-2 w-2 shrink-0 rounded-full ${urgencyDot[l.urgency]}`} />
+                  {l.label}
+                </span>
+              ))}
+            </div>
           </div>
           <div className="flex flex-col gap-4">
             {DIAGNOSTIC_TYPES.map((d) => {
               const entry = diagnostics[d.key]
               const urgency = dateUrgency(entry?.date_validite ? new Date(entry.date_validite) : null)
+              const relevance = diagnosticRelevance(d.key, {
+                enCopropriete: mandate.en_copropriete,
+                yearBuilt: mandate.year_built,
+              })
+              const notConcerned = relevance === 'not_concerned'
               return (
-                <div key={d.key} className="grid grid-cols-2 items-end gap-2 sm:grid-cols-5">
-                  <div className="col-span-2 flex items-center gap-2 text-sm font-medium text-neutral-700 sm:col-span-1">
-                    <span className={`h-2 w-2 shrink-0 rounded-full ${urgencyDot[urgency]}`} />
-                    {d.label}
+                <div key={d.key} className={`grid grid-cols-2 items-end gap-2 sm:grid-cols-5 ${notConcerned ? 'opacity-50' : ''}`}>
+                  <div className="col-span-2 flex flex-col gap-1 sm:col-span-1">
+                    <div className="flex items-center gap-2 text-sm font-medium text-neutral-700">
+                      <span className={`h-2 w-2 shrink-0 rounded-full ${urgencyDot[urgency]}`} />
+                      {d.label}
+                    </div>
+                    {relevance === 'concerned' && d.key === 'dpe' && (
+                      <span className="w-fit rounded-full bg-accent-soft px-2 py-0.5 text-[10px] font-medium text-neutral-700">
+                        Obligatoire
+                      </span>
+                    )}
+                    {relevance === 'concerned' && d.key !== 'dpe' && (
+                      <span className="w-fit rounded-full bg-accent-soft px-2 py-0.5 text-[10px] font-medium text-neutral-700">
+                        Concerné
+                      </span>
+                    )}
+                    {notConcerned && (
+                      <span className="w-fit rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] font-medium text-neutral-500">
+                        Non concerné
+                      </span>
+                    )}
                   </div>
                   <div className="flex flex-col gap-1">
                     <label className="text-xs text-neutral-500">Réalisé le</label>
