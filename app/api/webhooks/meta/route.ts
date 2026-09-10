@@ -2,7 +2,8 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { initialPositions } from '@/lib/rive/pipeline-positions'
 import { sendLeadAlertEmail } from '@/lib/rive/email'
-import { notifyTeamNewLeadWhatsApp, notifyTeamAlertWhatsApp } from '@/lib/rive/whatsapp-notify'
+import { notifyTeamAlertWhatsApp } from '@/lib/rive/whatsapp-notify'
+import { CATEGORY_LABEL } from '@/lib/rive/pipelines'
 import {
   appBaseUrl,
   fetchLeadData,
@@ -221,16 +222,20 @@ async function processLeadgenChange(
     leadUrl: `${appBaseUrl()}/dashboard/prospects/${lead.id}`,
   })
 
-  await notifyTeamNewLeadWhatsApp(supabase, connection.agency_id, {
-    name,
-    category,
-    source: leadData.campaignName || 'Meta Ads',
-  })
-
-  // Deuxième message WhatsApp, juste après le premier : les réponses du
-  // formulaire (type de bien, budget, délai...) pour juger tout de suite si
-  // ça vaut le coup de rappeler sans attendre d'ouvrir la fiche. Via le
-  // gabarit générique "rive_alerte" (voir lib/rive/whatsapp-notify.ts).
+  // Un seul message WhatsApp (plutôt que deux séparés) : nom/catégorie/
+  // source ET les réponses du formulaire (type de bien, budget, délai...)
+  // pour juger tout de suite si ça vaut le coup de rappeler, sans avoir à
+  // ouvrir la fiche ni attendre un second message. Via le gabarit générique
+  // "rive_alerte" (titre + corps, voir lib/rive/whatsapp-notify.ts) plutôt
+  // que "rive_nouveau_lead" (structure figée, pas la place d'y ajouter les
+  // réponses du formulaire sans faire réapprouver un nouveau gabarit par
+  // Meta).
+  const categoryLabel = (category && CATEGORY_LABEL[category]) || 'Non classé'
   const details = summarizeLeadDetails(criterType, criterLieu, customAnswers)
-  await notifyTeamAlertWhatsApp(supabase, connection.agency_id, `Détails — ${name}`, details)
+  await notifyTeamAlertWhatsApp(
+    supabase,
+    connection.agency_id,
+    `Nouveau prospect — ${name}`,
+    `Catégorie : ${categoryLabel}\nSource : ${leadData.campaignName || 'Meta Ads'}\n${details}`
+  )
 }
