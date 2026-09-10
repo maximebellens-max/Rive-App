@@ -20,6 +20,17 @@ function pad2(n: number): string {
   return String(n).padStart(2, '0')
 }
 
+// RFC 5545 impose des fins de ligne CRLF (\r\n) pour un flux ICS — nos
+// template literals ne produisent que du \n. La plupart des clients de
+// calendrier tolèrent le \n seul, mais certains (dont, par intermittence,
+// l'app Calendrier d'iPhone sur un calendrier abonné) l'ignorent
+// silencieusement sans afficher d'erreur : le calendrier apparaît vide au
+// lieu de signaler un souci de format. On normalise donc juste avant l'envoi
+// plutôt que dans chaque route, pour ne pas avoir à y penser à chaque appel.
+export function toCRLF(text: string): string {
+  return text.replace(/\r\n/g, '\n').replace(/\n/g, '\r\n')
+}
+
 export function icsDtStamp(): string {
   const now = new Date()
   return (
