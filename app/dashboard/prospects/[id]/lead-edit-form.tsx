@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from 'react'
 import { updateLead, type LeadFormState } from '@/app/actions/leads'
+import { guessCivility } from '@/lib/rive/civility'
 
 type Lead = {
   id: string
@@ -52,6 +53,15 @@ export default function LeadEditForm({ lead }: { lead: Lead }) {
       : MARITAL_STATUS_OPTIONS
   const showSpouseFields = MARRIED_STATUSES.includes(maritalStatus)
 
+  const [category, setCategory] = useState(lead.category ?? '')
+  const isVendeur = category === 'vendeur'
+
+  // Civilité auto-suggérée depuis le prénom (voir lib/rive/civility.ts), mais
+  // reste modifiable à la main — dès que l'agent la change lui-même, on ne
+  // l'écrase plus automatiquement.
+  const [civility, setCivility] = useState(lead.civility)
+  const [civilityTouched, setCivilityTouched] = useState(false)
+
   return (
     <form action={action} className="flex flex-col gap-8">
       <section className="flex flex-col gap-4">
@@ -59,15 +69,30 @@ export default function LeadEditForm({ lead }: { lead: Lead }) {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="flex flex-col gap-1.5">
             <label className={labelClass}>Prénom</label>
-            <input name="first_name" defaultValue={lead.first_name} className={inputClass} />
+            <input
+              name="first_name"
+              defaultValue={lead.first_name}
+              required
+              onChange={(e) => {
+                if (civilityTouched) return
+                const guess = guessCivility(e.target.value)
+                if (guess) setCivility(guess)
+              }}
+              className={inputClass}
+            />
           </div>
           <div className="flex flex-col gap-1.5">
-            <label className={labelClass}>Nom</label>
-            <input name="last_name" defaultValue={lead.last_name} className={inputClass} required />
+            <label className={labelClass}>Nom (facultatif)</label>
+            <input name="last_name" defaultValue={lead.last_name} className={inputClass} />
           </div>
           <div className="flex flex-col gap-1.5">
             <label className={labelClass}>Catégorie</label>
-            <select name="category" defaultValue={lead.category ?? ''} className={inputClass}>
+            <select
+              name="category"
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className={inputClass}
+            >
               <option value="">—</option>
               <option value="acheteur">Acheteur</option>
               <option value="vendeur">Vendeur</option>
@@ -82,6 +107,12 @@ export default function LeadEditForm({ lead }: { lead: Lead }) {
             <label className={labelClass}>Email</label>
             <input name="email" type="email" defaultValue={lead.email} className={inputClass} />
           </div>
+          {isVendeur && (
+            <div className="flex flex-col gap-1.5">
+              <label className={labelClass}>Secteur (ville) du bien</label>
+              <input name="critere_lieu" defaultValue={lead.critere_lieu} className={inputClass} />
+            </div>
+          )}
           <div className="flex flex-col gap-1.5">
             <label className={labelClass}>Source</label>
             <input name="source" placeholder="Bouche à oreille, portail, réseau…" defaultValue={lead.source} className={inputClass} />
@@ -94,45 +125,62 @@ export default function LeadEditForm({ lead }: { lead: Lead }) {
       </section>
 
       <section className="flex flex-col gap-4 border-t border-neutral-100 pt-6">
-        <h2 className="text-sm font-semibold text-neutral-900">Critères</h2>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div className="flex flex-col gap-1.5">
-            <label className={labelClass}>Type de bien recherché / concerné</label>
-            <input name="critere_type" defaultValue={lead.critere_type} className={inputClass} />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <label className={labelClass}>Secteur / lieu</label>
-            <input name="critere_lieu" defaultValue={lead.critere_lieu} className={inputClass} />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <label className={labelClass}>Budget (€)</label>
-            <input name="budget" type="number" defaultValue={lead.budget ?? ''} className={inputClass} />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <label className={labelClass}>Financement</label>
-            <select name="financement" defaultValue={lead.financement} className={inputClass}>
-              <option value="">—</option>
-              <option value="Cash (comptant)">Cash (comptant)</option>
-              <option value="En cours">En cours</option>
-              <option value="Validé">Validé</option>
-              <option value="Refusé">Refusé</option>
-            </select>
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <label className={labelClass}>Pièces min.</label>
-            <input name="pieces_min" type="number" defaultValue={lead.pieces_min ?? ''} className={inputClass} />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <label className={labelClass}>Surface min. (m²)</label>
-            <input name="surface_min" type="number" step="0.1" defaultValue={lead.surface_min ?? ''} className={inputClass} />
-          </div>
-          {lead.category === 'investisseur' && (
-            <div className="flex flex-col gap-1.5">
-              <label className={labelClass}>Rendement visé (%)</label>
-              <input name="rendement_vise" type="number" step="0.1" defaultValue={lead.rendement_vise ?? ''} className={inputClass} />
+        <h2 className="text-sm font-semibold text-neutral-900">{isVendeur ? 'Bien à vendre (aperçu)' : 'Critères'}</h2>
+        {isVendeur ? (
+          <>
+            <p className="text-xs text-neutral-500">
+              Un simple aperçu — le détail complet du bien (lots, copropriété, diagnostics, documents, photos…) se
+              renseigne depuis le mandat, une fois créé.
+            </p>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="flex flex-col gap-1.5">
+                <label className={labelClass}>Type de bien</label>
+                <input name="critere_type" defaultValue={lead.critere_type} className={inputClass} />
+              </div>
+              {/* Le secteur/lieu du bien vendeur se saisit dans "Identité" ci-dessus (seul
+                  input "critere_lieu" du formulaire dans ce cas — pas de doublon ici). */}
             </div>
-          )}
-        </div>
+          </>
+        ) : (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="flex flex-col gap-1.5">
+              <label className={labelClass}>Type de bien recherché</label>
+              <input name="critere_type" defaultValue={lead.critere_type} className={inputClass} />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className={labelClass}>Secteur / lieu</label>
+              <input name="critere_lieu" defaultValue={lead.critere_lieu} className={inputClass} />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className={labelClass}>Budget (€)</label>
+              <input name="budget" type="number" defaultValue={lead.budget ?? ''} className={inputClass} />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className={labelClass}>Financement</label>
+              <select name="financement" defaultValue={lead.financement} className={inputClass}>
+                <option value="">—</option>
+                <option value="Cash (comptant)">Cash (comptant)</option>
+                <option value="En cours">En cours</option>
+                <option value="Validé">Validé</option>
+                <option value="Refusé">Refusé</option>
+              </select>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className={labelClass}>Pièces min.</label>
+              <input name="pieces_min" type="number" defaultValue={lead.pieces_min ?? ''} className={inputClass} />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className={labelClass}>Surface min. (m²)</label>
+              <input name="surface_min" type="number" step="0.1" defaultValue={lead.surface_min ?? ''} className={inputClass} />
+            </div>
+            {category === 'investisseur' && (
+              <div className="flex flex-col gap-1.5">
+                <label className={labelClass}>Rendement visé (%)</label>
+                <input name="rendement_vise" type="number" step="0.1" defaultValue={lead.rendement_vise ?? ''} className={inputClass} />
+              </div>
+            )}
+          </div>
+        )}
       </section>
 
       <section className="flex flex-col gap-4 border-t border-neutral-100 pt-6">
@@ -161,7 +209,15 @@ export default function LeadEditForm({ lead }: { lead: Lead }) {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <div className="flex flex-col gap-1.5">
             <label className={labelClass}>Civilité</label>
-            <select name="civility" defaultValue={lead.civility} className={inputClass}>
+            <select
+              name="civility"
+              value={civility}
+              onChange={(e) => {
+                setCivility(e.target.value)
+                setCivilityTouched(true)
+              }}
+              className={inputClass}
+            >
               <option value="Monsieur">Monsieur</option>
               <option value="Madame">Madame</option>
             </select>

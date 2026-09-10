@@ -1,42 +1,53 @@
-import { createClient } from '@/lib/supabase/server'
-import { formatDate } from '@/lib/rive/mandates'
+import { getAuthedProfile } from '@/lib/supabase/session'
+import { formatDate, formatEUR, feeForPrice } from '@/lib/rive/mandates'
 import { actionBucket, nearestUpcomingMilestone } from '@/lib/rive/today'
 import { computeMatchPairs, type MatchLead, type MatchMandate } from '@/lib/rive/matching'
 import TodayWidgets, { type Widget } from './today-widgets'
 import MonthCalendar, { type AppointmentItem } from './month-calendar'
 
 export default async function TodayPage() {
-  const supabase = await createClient()
+  const { supabase, user } = await getAuthedProfile()
+  const userId = user?.id ?? null
 
   const [
     { data: leads },
     { data: mandates },
     { data: seen },
-    { data: firstProspectsCol },
+    { data: categoryColumnsRaw },
     { data: appointmentsRaw },
     { data: furnishingRows },
     { data: kitchenRows },
     { data: worksRows },
     { data: members },
+    { data: commissionsRaw },
   ] = await Promise.all([
     supabase
       .from('leads')
       .select(
-        'id, name, category, action_label, action_date, budget, critere_type, critere_lieu, surface_min, pieces_min, created_at, positions'
+        'id, name, category, action_label, action_date, budget, critere_type, critere_lieu, surface_min, pieces_min, created_at, positions, assigned_to'
       ),
     supabase
       .from('mandates')
       .select(
-        'id, type, stage, is_draft, lead_id, address, property_type, price, surface, pieces, signed_date, sold_date, duration_months, renewal_notice_days, diffusion, ad_date'
+        'id, type, stage, is_draft, lead_id, address, property_type, price, surface, pieces, signed_date, sold_date, duration_months, renewal_notice_days, diffusion, ad_date, assigned_to'
       ),
     supabase.from('seen_match_pairs').select('lead_id, mandate_id'),
-    // Un prospect encore posé sur la 1ère colonne du tableau Prospects n'a
-    // pas encore avancé — même convention que l'agent de relance
-    // (lib/rive/relance-agent.ts) pour repérer "pas encore traité".
-    supabase.from('pipeline_columns').select('id').eq('board_type', 'prospects').order('position', { ascending: true }).limit(1).maybeSingle(),
+    // Un prospect encore posé sur la 1ère colonne du tableau de sa propre
+    // catégorie (Vendeur/Acheteur/Investisseur — plus de tableau "Prospects"
+    // séparé) n'a pas encore avancé — même convention que l'agent de relance
+    // (lib/rive/relance-agent.ts) pour repérer "pas encore traité". Toutes
+    // colonnes des 3 tableaux en une requête, réduites ensuite à la 1ère de
+    // chacun.
+    supabase
+      .from('pipeline_columns')
+      .select('id, board_type')
+      .in('board_type', ['vendeur', 'acheteur', 'investisseur'])
+      .order('position', { ascending: true }),
     // Tous les rendez-vous (pas seulement ceux du mois affiché) — la
     // navigation entre mois se fait côté client sans aller-retour serveur,
-    // comme c'était déjà le cas avant.
+    // comme c'était déjà le cas avant. L'agenda reste partagé par toute
+    // l'agence (les RDV concernent souvent plusieurs agents) — seuls les
+    // widgets ci-dessous, eux, sont recentrés sur l'agent connecté.
     supabase
       .from('appointments')
       .select('id, lead_id, label, lieu, appointment_date, appointment_time, participant_ids, leads(name)')
@@ -45,43 +56,64 @@ export default async function TodayPage() {
     // Travaux) : seuls les dossiers non terminés nous intéressent ici.
     supabase
       .from('furnishing_projects')
-      .select('id, lead_id, statut, date_livraison_ikea, date_livraison_ed, date_pose, leads(name, category)')
+      .select('id, lead_id, statut, date_livraison_ikea, date_livraison_ed, date_pose, leads(name, category, assigned_to)')
       .eq('statut', 'en_cours'),
     supabase
       .from('kitchen_projects')
-      .select('id, lead_id, statut, date_livraison, date_pose_debut, date_pose_fin, leads(name, category)')
+      .select('id, lead_id, statut, date_livraison, date_pose_debut, date_pose_fin, leads(name, category, assigned_to)')
       .eq('statut', 'en_cours'),
     supabase
       .from('works_projects')
-      .select('id, lead_id, statut, echeance_debut, echeance_fin, leads(name, category)')
+      .select('id, lead_id, statut, echeance_debut, echeance_fin, leads(name, category, assigned_to)')
       .neq('statut', 'termine'),
     // Équipe de l'agence, pour la liste "participants" du formulaire de RDV.
     supabase.from('profiles').select('id, full_name'),
+    // Commissions de l'agent connecté (jointure sur le mandat pour filtrer
+    // par assigned_to, absent de la table commissions elle-même).
+    supabase.from('commissions').select('amount, paid_date, mandates(assigned_to)'),
   ])
 
   const leadsList = leads ?? []
   const mandatesList = mandates ?? []
+  // "Aujourd'hui" est le tableau de bord de l'agent connecté, pas celui de
+  // toute l'agence : les widgets ci-dessous (hors agenda, resté partagé) ne
+  // portent que sur ses propres prospects.
+  const myLeadsList = leadsList.filter((l) => l.assigned_to === userId)
 
   // ---------- 1. Nouveaux rapprochements acheteur ↔ bien ----------
-  const matchPairs = computeMatchPairs(leadsList as MatchLead[], mandatesList as MatchMandate[])
+  // Rapprochements pour LES prospects de l'agent, contre TOUT le stock actif
+  // de l'agence (un bien confié à un collègue reste un match valable).
+  const matchPairs = computeMatchPairs(myLeadsList as MatchLead[], mandatesList as MatchMandate[])
   const seenSet = new Set((seen ?? []).map((s) => `${s.lead_id}|${s.mandate_id}`))
   const newMatches = matchPairs.filter((p) => !seenSet.has(`${p.leadId}|${p.mandateId}`))
-  const leadById = new Map(leadsList.map((l) => [l.id, l]))
+  const leadById = new Map(myLeadsList.map((l) => [l.id, l]))
   const mandateById = new Map(mandatesList.map((m) => [m.id, m]))
 
   // ---------- 2. Nouveaux prospects à contacter ----------
-  const newProspects = leadsList.filter(
-    (l) => firstProspectsCol && (l.positions as Record<string, string> | null)?.prospects === firstProspectsCol.id
-  )
+  // Réduit la liste des colonnes (triée par position) à la 1ère colonne
+  // rencontrée pour chaque tableau de catégorie.
+  const firstColByCategory: Record<string, string> = {}
+  for (const c of categoryColumnsRaw ?? []) {
+    if (!firstColByCategory[c.board_type]) firstColByCategory[c.board_type] = c.id
+  }
+  const newProspects = myLeadsList.filter((l) => {
+    const cat = l.category
+    if (!cat) return false
+    const firstCol = firstColByCategory[cat]
+    return !!firstCol && (l.positions as Record<string, string> | null)?.[cat] === firstCol
+  })
 
-  // ---------- 3. À venir (3j) ----------
-  const upcoming = leadsList.filter((l) => actionBucket(l.action_date) === 'upcoming')
+  // ---------- 3. À venir (7j) ----------
+  const upcoming = myLeadsList.filter((l) => actionBucket(l.action_date) === 'upcoming')
 
   // ---------- 4-6. Échéances à venir des tableaux de suivi ----------
   // Chaque dossier a plusieurs dates clés possibles (livraison, pose,
   // échéance de travaux...) — on ne retient que la plus proche des 3
-  // prochains jours, comme pour "À venir" côté prospects.
+  // prochains jours, comme pour "À venir" côté prospects. Ne garde que les
+  // dossiers du client de l'agent connecté (même filtre que les autres
+  // widgets).
   const furnishingUpcoming = (furnishingRows ?? [])
+    .filter((r) => (r.leads as { assigned_to: string | null }[] | null)?.[0]?.assigned_to === userId)
     .map((r) => {
       const milestone = nearestUpcomingMilestone([
         { label: 'Livraison IKEA', date: r.date_livraison_ikea },
@@ -101,6 +133,7 @@ export default async function TodayPage() {
     .sort((a, b) => a.milestone.date.localeCompare(b.milestone.date))
 
   const kitchenUpcoming = (kitchenRows ?? [])
+    .filter((r) => (r.leads as { assigned_to: string | null }[] | null)?.[0]?.assigned_to === userId)
     .map((r) => {
       const milestone = nearestUpcomingMilestone([
         { label: 'Livraison', date: r.date_livraison },
@@ -120,6 +153,7 @@ export default async function TodayPage() {
     .sort((a, b) => a.milestone.date.localeCompare(b.milestone.date))
 
   const worksUpcoming = (worksRows ?? [])
+    .filter((r) => (r.leads as { assigned_to: string | null }[] | null)?.[0]?.assigned_to === userId)
     .map((r) => {
       const milestone = nearestUpcomingMilestone([
         { label: 'Début travaux', date: r.echeance_debut },
@@ -136,6 +170,23 @@ export default async function TodayPage() {
     })
     .filter((r): r is NonNullable<typeof r> => !!r)
     .sort((a, b) => a.milestone.date.localeCompare(b.milestone.date))
+
+  // ---------- 7. Commissions & chiffre d'affaires à venir ----------
+  // Commissions en attente de paiement sur les mandats de l'agent (le lien
+  // se fait par le mandat, la table commissions ne porte pas assigned_to
+  // elle-même). CA à venir : honoraires projetés (barème feeForPrice) des
+  // mandats de VENTE en cours de l'agent, ni brouillon ni déjà vendus — les
+  // mandats de recherche n'ont pas de barème fixe, leur commission reste
+  // saisie à la main une fois conclue, donc pas de projection fiable ici.
+  const myPendingCommissions = (commissionsRaw ?? [])
+    .filter(
+      (c) => (c.mandates as unknown as { assigned_to: string | null } | null)?.assigned_to === userId && !c.paid_date
+    )
+    .reduce((sum, c) => sum + (c.amount || 0), 0)
+
+  const myUpcomingRevenue = mandatesList
+    .filter((m) => m.assigned_to === userId && m.type === 'vente' && !m.is_draft && m.stage !== 'vendu')
+    .reduce((sum, m) => sum + feeForPrice(m.price), 0)
 
   const widgets: Widget[] = [
     {
@@ -169,7 +220,7 @@ export default async function TodayPage() {
     {
       key: 'upcoming',
       icon: '🗓️',
-      label: 'À venir (3j)',
+      label: 'À venir (7j)',
       items: upcoming.map((l) => ({
         id: l.id,
         primary: l.name,
@@ -181,7 +232,7 @@ export default async function TodayPage() {
     {
       key: 'ameublement',
       icon: '🛋️',
-      label: 'Ameublement — échéances (3j)',
+      label: 'Ameublement — échéances (7j)',
       items: furnishingUpcoming.map((r) => ({
         id: r.id,
         primary: r.leadName,
@@ -193,7 +244,7 @@ export default async function TodayPage() {
     {
       key: 'cuisine',
       icon: '🍳',
-      label: 'Cuisine — échéances (3j)',
+      label: 'Cuisine — échéances (7j)',
       items: kitchenUpcoming.map((r) => ({
         id: r.id,
         primary: r.leadName,
@@ -205,7 +256,7 @@ export default async function TodayPage() {
     {
       key: 'travaux',
       icon: '🔨',
-      label: 'Travaux — échéances (3j)',
+      label: 'Travaux — échéances (7j)',
       items: worksUpcoming.map((r) => ({
         id: r.id,
         primary: r.leadName,
@@ -251,6 +302,11 @@ export default async function TodayPage() {
         <p className="mt-1 text-sm text-neutral-500">Ce qui a besoin de toi, sans avoir à rouvrir chaque fiche.</p>
       </div>
 
+      <div className="grid grid-cols-2 gap-4 sm:max-w-md">
+        <MoneyTile label="Commissions en attente" value={formatEUR(myPendingCommissions)} />
+        <MoneyTile label="CA à venir (mandats en cours)" value={formatEUR(myUpcomingRevenue)} />
+      </div>
+
       <TodayWidgets widgets={widgets} matchPairs={newMatches} />
 
       <div className="flex flex-col gap-3">
@@ -264,6 +320,15 @@ export default async function TodayPage() {
           memberOptions={(members ?? []).map((m) => ({ id: m.id, name: m.full_name || 'Agent' }))}
         />
       </div>
+    </div>
+  )
+}
+
+function MoneyTile({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-2xl border border-neutral-200 bg-surface p-4 shadow-sm">
+      <p className="text-xs text-neutral-500">{label}</p>
+      <p className="mt-1 text-xl font-semibold tabular-nums">{value}</p>
     </div>
   )
 }

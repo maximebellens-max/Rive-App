@@ -82,8 +82,8 @@ export default function LeadCombobox({
   }
 
   function submitCreate() {
-    if (!createLastName.trim()) {
-      setCreateError('Le nom est obligatoire.')
+    if (!createFirstName.trim()) {
+      setCreateError('Le prénom est obligatoire.')
       return
     }
     startTransition(async () => {

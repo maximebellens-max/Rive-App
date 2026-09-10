@@ -15,14 +15,13 @@ export const COLUMN_COLOR_HEX: Record<string, string> = {
   sand: '#b79d75',
 }
 
-export const BOARD_TYPES = ['prospects', 'vendeur', 'acheteur', 'investisseur'] as const
+export const BOARD_TYPES = ['vendeur', 'acheteur', 'investisseur'] as const
 
-// Un identifiant de tableau : soit l'un des 4 tableaux fixes ci-dessus, soit
+// Un identifiant de tableau : soit l'un des 3 tableaux fixes ci-dessus, soit
 // l'id d'un tableau personnalisé (table `boards`, ligne kind='custom').
 export type BoardType = string
 
 export const BOARD_LABELS: Record<string, string> = {
-  prospects: 'Prospects',
   vendeur: 'Vendeurs',
   acheteur: 'Acheteurs',
   investisseur: 'Investisseurs',

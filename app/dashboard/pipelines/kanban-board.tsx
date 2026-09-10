@@ -112,9 +112,10 @@ export default function KanbanBoard({
     setSelectMode(false)
   }
 
-  // Filtres rapides (catégorie + agent) — utiles surtout sur Prospects,
-  // devenu un tableau où les 3 catégories se mélangent depuis que "Client
-  // actif" y est intégré.
+  // Filtres rapides (catégorie + agent) — le filtre catégorie n'a d'intérêt
+  // que sur un tableau personnalisé (les 3 tableaux de catégorie fixes sont
+  // masqués via CATEGORY_BOARD_TYPES ci-dessous, un tel tableau ne contenant
+  // par construction qu'une seule catégorie).
   const filteredCards = useMemo(
     () =>
       cards.filter((c) => {
@@ -414,6 +415,10 @@ function ColumnBlock({
   members: BoardMember[]
 }) {
   const [dragOver, setDragOver] = useState(false)
+  // Pliage par colonne, uniquement pertinent en vue Liste (en Kanban les
+  // colonnes sont déjà étroites côte à côte) — une agence avec beaucoup de
+  // prospects par colonne devenait vite illisible en liste.
+  const [collapsed, setCollapsed] = useState(false)
 
   return (
     <div
@@ -432,23 +437,42 @@ function ColumnBlock({
         wide ? 'w-full' : 'w-72'
       } ${dragOver ? 'border-accent ring-1 ring-accent' : 'border-neutral-200'}`}
     >
-      <ColumnHeader column={column} boardType={boardType} count={cards.length} />
-
-      <div className="flex flex-col gap-2">
-        {cards.map((card) => (
-          <CardItem
-            key={card.id}
-            card={card}
-            selectMode={selectMode}
-            selected={selected?.has(card.id)}
-            onToggleSelect={() => onToggleSelect?.(card.id)}
-            assignedMember={members.find((m) => m.id === card.assignedTo)}
-          />
-        ))}
-        {!cards.length && <p className="px-1 py-2 text-xs text-neutral-400">Aucun prospect ici.</p>}
+      <div className="flex items-center gap-2">
+        {wide && (
+          <button
+            type="button"
+            onClick={() => setCollapsed((v) => !v)}
+            aria-label={collapsed ? 'Déplier la colonne' : 'Plier la colonne'}
+            aria-expanded={!collapsed}
+            className="shrink-0 rounded p-0.5 text-neutral-400 hover:bg-neutral-200 hover:text-neutral-600"
+          >
+            <span className={`inline-block text-xs transition-transform ${collapsed ? '-rotate-90' : ''}`}>▾</span>
+          </button>
+        )}
+        <div className="min-w-0 flex-1">
+          <ColumnHeader column={column} boardType={boardType} count={cards.length} />
+        </div>
       </div>
 
-      <QuickAddForm boardType={boardType} columnId={column.id} />
+      {!(wide && collapsed) && (
+        <>
+          <div className="flex flex-col gap-2">
+            {cards.map((card) => (
+              <CardItem
+                key={card.id}
+                card={card}
+                selectMode={selectMode}
+                selected={selected?.has(card.id)}
+                onToggleSelect={() => onToggleSelect?.(card.id)}
+                assignedMember={members.find((m) => m.id === card.assignedTo)}
+              />
+            ))}
+            {!cards.length && <p className="px-1 py-2 text-xs text-neutral-400">Aucun prospect ici.</p>}
+          </div>
+
+          <QuickAddForm boardType={boardType} columnId={column.id} />
+        </>
+      )}
     </div>
   )
 }

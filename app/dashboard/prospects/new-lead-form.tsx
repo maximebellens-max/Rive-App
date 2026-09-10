@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState, useRef, useEffect } from 'react'
+import { useActionState, useRef, useEffect, useState } from 'react'
 import { createLead, type LeadFormState } from '@/app/actions/leads'
 
 export default function NewLeadForm() {
@@ -9,10 +9,12 @@ export default function NewLeadForm() {
     undefined
   )
   const formRef = useRef<HTMLFormElement>(null)
+  const [category, setCategory] = useState('acheteur')
 
   useEffect(() => {
     if (!pending && !state?.error) {
       formRef.current?.reset()
+      setCategory('acheteur')
     }
   }, [pending, state])
 
@@ -31,17 +33,18 @@ export default function NewLeadForm() {
       <input
         name="first_name"
         placeholder="Prénom"
+        required
         className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-accent focus:ring-1 focus:ring-accent"
       />
       <input
         name="last_name"
-        placeholder="Nom"
-        required
+        placeholder="Nom (facultatif)"
         className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-accent focus:ring-1 focus:ring-accent"
       />
       <select
         name="category"
-        defaultValue="acheteur"
+        value={category}
+        onChange={(e) => setCategory(e.target.value)}
         className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-accent focus:ring-1 focus:ring-accent"
       >
         <option value="acheteur">Acheteur</option>
@@ -61,7 +64,7 @@ export default function NewLeadForm() {
       />
       <input
         name="critere_lieu"
-        placeholder="Secteur recherché"
+        placeholder={category === 'vendeur' ? 'Secteur (ville) du bien' : 'Secteur recherché'}
         className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-accent focus:ring-1 focus:ring-accent sm:col-span-2"
       />
 

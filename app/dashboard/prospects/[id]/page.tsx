@@ -18,6 +18,14 @@ const CATEGORY_LABEL: Record<string, string> = {
   investisseur: 'Investisseur',
 }
 
+// Pluriel, pour le lien de retour vers le tableau de la catégorie (nom du
+// nav — voir app/dashboard/layout.tsx).
+const CATEGORY_LABEL_PLURAL: Record<string, string> = {
+  acheteur: 'Acheteurs',
+  vendeur: 'Vendeurs',
+  investisseur: 'Investisseurs',
+}
+
 // Affichée en toutes lettres sur la fiche (plutôt qu'en relatif type "il y a
 // 2 j") : sert de repère fixe pour caler un rappel ou un suivi, contrairement
 // à un horodatage relatif qui change de sens à chaque relecture.
@@ -71,8 +79,11 @@ export default async function ProspectDetailPage({ params }: PageProps<'/dashboa
     <div className="flex flex-col gap-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <Link href="/dashboard/prospects" className="text-sm text-neutral-500 hover:underline">
-            ← Prospects
+          <Link
+            href={lead.category ? `/dashboard/pipelines/${lead.category}` : '/dashboard'}
+            className="text-sm text-neutral-500 hover:underline"
+          >
+            ← {lead.category ? CATEGORY_LABEL_PLURAL[lead.category] ?? 'Retour' : "Aujourd'hui"}
           </Link>
           <h1 className="mt-1 text-xl font-semibold tracking-tight">{lead.name}</h1>
           <p className="mt-1 text-sm text-neutral-500">

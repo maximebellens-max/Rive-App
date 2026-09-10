@@ -1,6 +1,6 @@
-// Aide serveur partagée : calcule/ajuste la position d'un prospect dans les
-// tableaux Kanban (Prospects + tableau de sa catégorie). Utilisé par les
-// server actions de app/actions/leads.ts et app/actions/pipelines.ts.
+// Aide serveur partagée : calcule/ajuste la position d'un prospect dans le
+// tableau Kanban de sa catégorie (Vendeur/Acheteur/Investisseur). Utilisé par
+// les server actions de app/actions/leads.ts et app/actions/pipelines.ts.
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 export async function firstColumnId(
@@ -35,24 +35,27 @@ export async function lastColumnId(
   return data?.id ?? null
 }
 
-// La colonne "Client actif" du tableau Prospects (une étape par défaut parmi
-// les autres, pas un tableau séparé) : un prospect y bascule automatiquement
-// dès qu'un mandat (vente ou recherche) est signé/activé pour lui. Recherchée
-// par son nom plutôt que par sa position, car une agence peut avoir ajouté
-// ses propres étapes après elle sur ce même tableau.
-export async function clientColumnId(supabase: SupabaseClient, agencyId: string): Promise<string | null> {
+// Colonne d'un tableau retrouvée par son nom plutôt que par sa position —
+// utile pour une étape par défaut précise (ex. "RDV 2 finalisé" sur
+// Vendeurs) qui peut se décaler si l'agence a ajouté ses propres colonnes.
+export async function columnIdByName(
+  supabase: SupabaseClient,
+  agencyId: string,
+  boardType: string,
+  name: string
+): Promise<string | null> {
   const { data } = await supabase
     .from('pipeline_columns')
     .select('id')
     .eq('agency_id', agencyId)
-    .eq('board_type', 'prospects')
-    .eq('name', 'Client actif')
+    .eq('board_type', boardType)
+    .eq('name', name)
     .maybeSingle()
   return data?.id ?? null
 }
 
 // Colonne de repli pour un prospect qui n'est PAS un lead neuf à contacter :
-// ajouté directement plus loin dans un autre pipeline (ex : quick-add sur une
+// ajouté directement plus loin dans son pipeline (ex : quick-add sur une
 // colonne "Mandat en cours" du tableau Vendeur), ou créé à la volée depuis un
 // mandat déjà en cours. On évite sa 1ère colonne (qui alimente le widget
 // "Nouveaux prospects à contacter" côté Aujourd'hui et le fait ressortir à
@@ -75,16 +78,17 @@ export async function engagedColumnId(
   return cols[Math.min(2, cols.length - 1)].id
 }
 
-// Positions initiales d'un nouveau prospect : toujours sur Prospects (1ère
-// colonne), et sur le tableau de sa catégorie si elle est renseignée.
+// Positions initiales d'un nouveau prospect : la 1ère colonne du tableau de
+// sa catégorie (Vendeur/Acheteur/Investisseur) si elle est renseignée — plus
+// de tableau "Prospects" séparé à alimenter en double depuis qu'il a été
+// retiré (un lead sans catégorie n'apparaît alors sur aucun tableau tant
+// qu'elle n'est pas précisée).
 export async function initialPositions(
   supabase: SupabaseClient,
   agencyId: string,
   category: string | null
 ): Promise<Record<string, string>> {
   const positions: Record<string, string> = {}
-  const prospectsCol = await firstColumnId(supabase, agencyId, 'prospects')
-  if (prospectsCol) positions.prospects = prospectsCol
   if (category) {
     const catCol = await firstColumnId(supabase, agencyId, category)
     if (catCol) positions[category] = catCol
@@ -94,8 +98,7 @@ export async function initialPositions(
 
 // Recalcule les positions quand la catégorie d'un prospect change : retire sa
 // position sur l'ancien tableau de catégorie, ajoute la 1ère colonne du
-// nouveau tableau (si elle n'y est pas déjà), et garantit toujours une
-// position sur Prospects.
+// nouveau tableau (si elle n'y est pas déjà).
 export async function reconcilePositionsOnCategoryChange(
   supabase: SupabaseClient,
   agencyId: string,
@@ -104,11 +107,6 @@ export async function reconcilePositionsOnCategoryChange(
   newCategory: string | null
 ): Promise<Record<string, string>> {
   const positions = { ...currentPositions }
-
-  if (!positions.prospects) {
-    const prospectsCol = await firstColumnId(supabase, agencyId, 'prospects')
-    if (prospectsCol) positions.prospects = prospectsCol
-  }
 
   if (oldCategory !== newCategory) {
     if (oldCategory) delete positions[oldCategory]

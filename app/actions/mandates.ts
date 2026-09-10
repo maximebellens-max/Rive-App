@@ -5,9 +5,10 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { FEATURE_KEYS, type Features } from '@/lib/rive/mandates'
 import { maybeCreateCommissionForMandate, moveLeadToClientColumn } from '@/lib/rive/automation'
-import { firstColumnId, engagedColumnId } from '@/lib/rive/pipeline-positions'
+import { engagedColumnId } from '@/lib/rive/pipeline-positions'
 import { notifyMatchesForMandateId } from '@/lib/rive/match-notify'
 import { notifyNewLead } from '@/lib/rive/new-lead-notify'
+import { guessCivility } from '@/lib/rive/civility'
 
 export type MandateFormState = { error?: string } | undefined
 
@@ -69,9 +70,9 @@ export async function createMandate(
   let leadId = str(formData, 'lead_id') || null
   let newLeadCreated = false
 
-  // Nouveau client créé à la volée depuis le formulaire (au lieu de passer
-  // par l'onglet Prospects) : rejoint automatiquement le pipeline de sa
-  // catégorie, déduite du type de mandat (vente → vendeur, recherche →
+  // Nouveau client créé à la volée depuis le formulaire (au lieu de le
+  // saisir d'abord sur son tableau) : rejoint automatiquement le pipeline de
+  // sa catégorie, déduite du type de mandat (vente → vendeur, recherche →
   // acheteur).
   if (!leadId) {
     const newLeadFirstName = str(formData, 'new_lead_first_name')
@@ -79,29 +80,31 @@ export async function createMandate(
     if (newLeadFirstName || newLeadLastName) {
       const category = type === 'recherche' ? 'acheteur' : 'vendeur'
       const leadName = `${newLeadFirstName} ${newLeadLastName}`.trim()
-      const [catCol, prospectsCol] = await Promise.all([
-        firstColumnId(supabase, agencyId, category),
-        // Ce client est créé parce qu'un mandat est déjà en cours de création
-        // pour lui : ce n'est pas un lead neuf à contacter, donc on évite de
-        // le placer sur la 1ère colonne de Prospects (sous peine de le faire
-        // ressortir à tort dans "Nouveaux prospects à contacter" côté
-        // Aujourd'hui) — voir engagedColumnId.
-        engagedColumnId(supabase, agencyId, 'prospects'),
-      ])
+      // Ce client est créé parce qu'un mandat est déjà en cours de création
+      // pour lui : ce n'est pas un lead neuf à contacter, donc on évite de le
+      // placer sur la 1ère colonne de son tableau de catégorie (sous peine de
+      // le faire ressortir à tort dans "Nouveaux prospects à contacter" côté
+      // Aujourd'hui, et de déclencher la relance "sans retour") — direction
+      // sa 3ème colonne par défaut à la place, voir engagedColumnId.
+      const catCol = await engagedColumnId(supabase, agencyId, category)
       const positions: Record<string, string> = {}
       if (catCol) positions[category] = catCol
-      if (prospectsCol) positions.prospects = prospectsCol
 
+      // "name" est une colonne calculée (first_name + last_name, voir
+      // migration 038) : impossible d'y écrire directement, d'où l'usage de
+      // first_name/last_name ici plutôt que du "leadName" concaténé (qui ne
+      // sert plus qu'à l'affichage de la notification juste après).
       const { data: newLead } = await supabase
         .from('leads')
         .insert({
           agency_id: agencyId,
           assigned_to: userId,
-          name: leadName,
+          first_name: newLeadFirstName,
+          last_name: newLeadLastName,
           phone: str(formData, 'new_lead_phone'),
           email: str(formData, 'new_lead_email'),
           category,
-          civility: str(formData, 'new_lead_civility') || 'Monsieur',
+          civility: str(formData, 'new_lead_civility') || guessCivility(newLeadFirstName) || 'Monsieur',
           positions,
         })
         .select('id')
@@ -197,14 +200,14 @@ export async function createMandate(
   await notifyMatchesForMandateId(supabase, agencyId, data.id)
 
   // Un mandat créé directement (pas un brouillon) signifie que ce prospect
-  // est déjà client — il rejoint "Client actif" côté Prospects tout de
-  // suite, sans attendre un passage par le pipeline Vendeur/Acheteur/
-  // Investisseur.
+  // est déjà client — il rejoint tout de suite la dernière colonne de son
+  // propre pipeline (Vendeur/Investisseur), sans attendre d'y être glissé à
+  // la main.
   if (leadId && !isDraft) {
     await moveLeadToClientColumn(supabase, agencyId, leadId)
   }
 
-  if (newLeadCreated) revalidatePath('/dashboard/prospects')
+  if (newLeadCreated) revalidatePath('/dashboard/pipelines', 'layout')
   revalidatePath(isDraft ? '/dashboard/estimations' : '/dashboard/mandates')
   redirect(`/dashboard/mandates/${data.id}`)
 }

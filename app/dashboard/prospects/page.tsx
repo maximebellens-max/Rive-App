@@ -1,88 +1,11 @@
-import { createClient } from '@/lib/supabase/server'
-import NewLeadForm from './new-lead-form'
-import KanbanBoard from '../pipelines/kanban-board'
-import { leadPriorityScore } from '@/lib/rive/pipelines'
+import { redirect } from 'next/navigation'
 
-export default async function ProspectsPage() {
-  const supabase = await createClient()
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  const { data: profile } = user
-    ? await supabase.from('profiles').select('agency_id').eq('id', user.id).single()
-    : { data: null }
-
-  const [{ data: columns }, { data: leads }, { data: members }] = await Promise.all([
-    supabase
-      .from('pipeline_columns')
-      .select('id, name, color, is_default')
-      .eq('board_type', 'prospects')
-      .order('position', { ascending: true }),
-    supabase
-      .from('leads')
-      .select(
-        'id, name, category, phone, email, critere_lieu, critere_type, budget, financement, action_date, created_at, positions, assigned_to, ai_priority_score, ai_priority_reasoning'
-      )
-      .order('created_at', { ascending: false }),
-    profile?.agency_id
-      ? supabase.from('profiles').select('id, full_name, avatar_url').eq('agency_id', profile.agency_id)
-      : Promise.resolve({ data: [] as { id: string; full_name: string; avatar_url: string }[] }),
-  ])
-
-  const leadIds = (leads ?? []).map((l) => l.id)
-  const { data: historyRows } = leadIds.length
-    ? await supabase
-        .from('lead_history_entries')
-        .select('lead_id, entry_date')
-        .in('lead_id', leadIds)
-        .order('entry_date', { ascending: false })
-    : { data: [] as { lead_id: string; entry_date: string }[] }
-
-  const lastHistory: Record<string, string> = {}
-  for (const row of historyRows ?? []) {
-    if (!lastHistory[row.lead_id]) lastHistory[row.lead_id] = row.entry_date
-  }
-
-  const cards = (leads ?? []).map((l) => ({
-    id: l.id,
-    name: l.name,
-    category: l.category,
-    phone: l.phone,
-    email: l.email,
-    critere_lieu: l.critere_lieu,
-    critere_type: l.critere_type,
-    budget: l.budget,
-    financement: l.financement,
-    action_date: l.action_date,
-    created_at: l.created_at,
-    columnId: (l.positions as Record<string, string>)?.prospects ?? null,
-    assignedTo: l.assigned_to,
-    score: leadPriorityScore({
-      budget: l.budget,
-      financement: l.financement,
-      critere_lieu: l.critere_lieu,
-      phone: l.phone,
-      action_date: l.action_date,
-      created_at: l.created_at,
-      last_history_date: lastHistory[l.id] ?? null,
-    }),
-    aiScore: l.ai_priority_score,
-    aiReasoning: l.ai_priority_reasoning,
-  }))
-
-  return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-xl font-semibold tracking-tight">Prospects</h1>
-        <p className="mt-1 text-sm text-neutral-500">
-          {leads?.length ?? 0} prospect{(leads?.length ?? 0) > 1 ? 's' : ''}
-        </p>
-      </div>
-
-      <NewLeadForm />
-
-      <KanbanBoard boardType="prospects" columns={columns ?? []} cards={cards} members={members ?? []} currentUserId={user?.id} />
-    </div>
-  )
+// L'onglet "Prospects" a été retiré (doublon avec Vendeurs/Acheteurs/
+// Investisseurs — tout prospect, saisi à la main ou reçu via Meta, tombe
+// désormais directement dans l'un de ces 3 tableaux). Cette page ne reste
+// que pour rediriger un ancien favori/lien vers Aujourd'hui plutôt que
+// d'afficher une 404. La fiche d'un prospect (/dashboard/prospects/[id])
+// reste, elle, inchangée.
+export default function ProspectsPage() {
+  redirect('/dashboard')
 }

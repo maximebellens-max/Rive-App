@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/server'
 import { initialPositions, reconcilePositionsOnCategoryChange } from '@/lib/rive/pipeline-positions'
 import { notifyMatchesForLeadId } from '@/lib/rive/match-notify'
 import { notifyNewLead } from '@/lib/rive/new-lead-notify'
+import { guessCivility } from '@/lib/rive/civility'
 
 export type LeadFormState = { error?: string } | undefined
 
@@ -47,8 +48,11 @@ export async function createLead(
   const category = str(formData, 'category') || null
   const critereLieu = str(formData, 'critere_lieu')
 
-  if (!lastName) {
-    return { error: 'Le nom du prospect est obligatoire.' }
+  // Le nom de famille n'est plus obligatoire (un prospect saisi rapidement
+  // n'a parfois qu'un prénom pour l'instant) — le prénom, lui, reste
+  // nécessaire pour identifier la fiche.
+  if (!firstName) {
+    return { error: 'Le prénom du prospect est obligatoire.' }
   }
   if (category && !['acheteur', 'vendeur', 'investisseur'].includes(category)) {
     return { error: 'Catégorie invalide.' }
@@ -66,6 +70,7 @@ export async function createLead(
       assigned_to: userId,
       first_name: firstName,
       last_name: lastName,
+      civility: guessCivility(firstName) ?? 'Monsieur',
       phone,
       email,
       category,
@@ -89,7 +94,7 @@ export async function createLead(
     })
   }
 
-  revalidatePath('/dashboard/prospects')
+  if (category) revalidatePath(`/dashboard/pipelines/${category}`)
 }
 
 // Création rapide depuis un tableau de suivi (Ameublement, Cuisine, Travaux,
@@ -102,7 +107,7 @@ export async function createLeadQuick(
 ): Promise<{ error: string } | { lead: { id: string; name: string } }> {
   const first = firstName.trim()
   const last = lastName.trim()
-  if (!last) return { error: 'Le nom du client est obligatoire.' }
+  if (!first) return { error: 'Le prénom du client est obligatoire.' }
 
   const { supabase, agencyId, userId } = await getAgencyId()
   if (!agencyId) return { error: 'Session expirée, reconnecte-toi.' }
@@ -116,6 +121,7 @@ export async function createLeadQuick(
       assigned_to: userId,
       first_name: first,
       last_name: last,
+      civility: guessCivility(first) ?? 'Monsieur',
       positions,
     })
     .select('id, name')
@@ -131,7 +137,6 @@ export async function createLeadQuick(
     ownerId: userId,
   })
 
-  revalidatePath('/dashboard/prospects')
   return { lead: newLead as { id: string; name: string } }
 }
 
@@ -143,8 +148,9 @@ export async function updateLead(
   const { supabase, agencyId } = await getAgencyId()
   if (!agencyId) return { error: 'Session expirée, reconnecte-toi.' }
 
+  const firstName = str(formData, 'first_name')
   const lastName = str(formData, 'last_name')
-  if (!lastName) return { error: 'Le nom du prospect est obligatoire.' }
+  if (!firstName) return { error: 'Le prénom du prospect est obligatoire.' }
 
   const newCategory = str(formData, 'category') || null
 
@@ -206,7 +212,7 @@ export async function updateLead(
   await notifyMatchesForLeadId(supabase, agencyId, leadId)
 
   revalidatePath(`/dashboard/prospects/${leadId}`)
-  revalidatePath('/dashboard/prospects')
+  revalidatePath('/dashboard/pipelines', 'layout')
   return undefined
 }
 
@@ -214,9 +220,11 @@ export async function deleteLead(leadId: string) {
   const { supabase, agencyId } = await getAgencyId()
   if (!agencyId) return
 
+  const { data: lead } = await supabase.from('leads').select('category').eq('id', leadId).maybeSingle()
+
   await supabase.from('leads').delete().eq('id', leadId)
-  revalidatePath('/dashboard/prospects')
-  redirect('/dashboard/prospects')
+  revalidatePath('/dashboard/pipelines', 'layout')
+  redirect(lead?.category ? `/dashboard/pipelines/${lead.category}` : '/dashboard')
 }
 
 // Actions groupées depuis la sélection multiple (vue kanban/liste) :
@@ -230,7 +238,6 @@ export async function bulkDeleteLeads(leadIds: string[]) {
 
   await supabase.from('leads').delete().eq('agency_id', agencyId).in('id', leadIds)
 
-  revalidatePath('/dashboard/prospects')
   revalidatePath('/dashboard/pipelines', 'layout')
 }
 
@@ -240,7 +247,6 @@ export async function bulkAssignLeads(leadIds: string[], assignedTo: string) {
 
   await supabase.from('leads').update({ assigned_to: assignedTo }).eq('agency_id', agencyId).in('id', leadIds)
 
-  revalidatePath('/dashboard/prospects')
   revalidatePath('/dashboard/pipelines', 'layout')
 }
 

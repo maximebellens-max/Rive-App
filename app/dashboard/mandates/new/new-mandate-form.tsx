@@ -3,6 +3,7 @@
 import { useActionState, useState } from 'react'
 import { createMandate, type MandateFormState } from '@/app/actions/mandates'
 import { PROPERTY_TYPES } from '@/lib/rive/mandates'
+import { guessCivility } from '@/lib/rive/civility'
 import AddressAutocomplete from '../../_components/address-autocomplete'
 
 type Lead = {
@@ -33,6 +34,11 @@ export default function NewMandateForm({ leads, draft = false }: { leads: Lead[]
   // automatiquement le pipeline Vendeurs (ou Acheteurs pour un mandat de
   // recherche), sans avoir à repasser par l'onglet Prospects.
   const [contactMode, setContactMode] = useState<'existing' | 'new'>('existing')
+
+  // Civilité auto-suggérée depuis le prénom du nouveau contact, modifiable à
+  // la main (voir lib/rive/civility.ts).
+  const [newLeadCivility, setNewLeadCivility] = useState('Monsieur')
+  const [newLeadCivilityTouched, setNewLeadCivilityTouched] = useState(false)
 
   function handleLeadChange(leadId: string) {
     const lead = leads.find((l) => l.id === leadId)
@@ -113,12 +119,29 @@ export default function NewMandateForm({ leads, draft = false }: { leads: Lead[]
           ) : (
             <>
               <div className="mt-1.5 grid grid-cols-2 gap-2 sm:grid-cols-4">
-                <select name="new_lead_civility" defaultValue="Monsieur" className={inputClass}>
+                <select
+                  name="new_lead_civility"
+                  value={newLeadCivility}
+                  onChange={(e) => {
+                    setNewLeadCivility(e.target.value)
+                    setNewLeadCivilityTouched(true)
+                  }}
+                  className={inputClass}
+                >
                   <option value="Monsieur">Monsieur</option>
                   <option value="Madame">Madame</option>
                 </select>
-                <input name="new_lead_first_name" placeholder="Prénom" className={inputClass} />
-                <input name="new_lead_last_name" placeholder="Nom" className={inputClass} />
+                <input
+                  name="new_lead_first_name"
+                  placeholder="Prénom"
+                  onChange={(e) => {
+                    if (newLeadCivilityTouched) return
+                    const guess = guessCivility(e.target.value)
+                    if (guess) setNewLeadCivility(guess)
+                  }}
+                  className={inputClass}
+                />
+                <input name="new_lead_last_name" placeholder="Nom (facultatif)" className={inputClass} />
                 <input name="new_lead_phone" placeholder="Téléphone" className={inputClass} />
                 <input
                   name="new_lead_email"
@@ -129,8 +152,7 @@ export default function NewMandateForm({ leads, draft = false }: { leads: Lead[]
               </div>
               <p className="mt-1 text-xs text-neutral-400">
                 Ce contact sera créé automatiquement dans{' '}
-                {draft ? 'le pipeline Vendeurs' : 'le pipeline correspondant'} — inutile de le ressaisir dans
-                Prospects.
+                {draft ? 'le pipeline Vendeurs' : 'le pipeline correspondant'} — inutile de le ressaisir ailleurs.
               </p>
             </>
           )}

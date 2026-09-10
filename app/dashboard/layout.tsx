@@ -11,7 +11,6 @@ const NAV_GROUPS: { label: string; links: { href: string; label: string }[] }[] 
     label: 'Vue d’ensemble',
     links: [
       { href: '/dashboard', label: 'Aujourd’hui' },
-      { href: '/dashboard/prospects', label: 'Prospects' },
       { href: '/dashboard/sectors', label: 'Secteurs' },
       { href: '/dashboard/performance', label: 'Performance' },
       { href: '/dashboard/campaigns', label: 'Campagnes' },

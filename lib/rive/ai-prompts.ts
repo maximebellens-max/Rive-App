@@ -172,6 +172,28 @@ export function generateNoResponseRelanceBrief(leadName: string, step: 'j3' | 'j
     .join('\n')
 }
 
+const VENDEUR_STALL_STEP_LABEL: Record<'j7' | 'j15' | 'j30', string> = {
+  j7: '1 semaine',
+  j15: '2 semaines',
+  j30: '1 mois',
+}
+
+// Vendeur dont le 2e RDV (estimation) a eu lieu mais qui n'a toujours pas
+// signé de mandat — étape "RDV 2 finalisé" du tableau Vendeurs.
+export function generateVendeurStallBrief(leadName: string, step: 'j7' | 'j15' | 'j30', daysSince: number): string {
+  return [
+    `Rédige un court message professionnel, pas pressant, pour relancer un propriétaire dont le rendez-vous d'estimation a eu lieu mais qui n'a toujours pas signé de mandat de vente, en proposant un échange pour faire le point.`,
+    ``,
+    `Nom : ${leadName}`,
+    `RDV d'estimation terminé depuis ${daysSince} jours (${VENDEUR_STALL_STEP_LABEL[step]}), toujours sans mandat signé.`,
+    step === 'j30'
+      ? `Ça fait un mois : reste factuel et propose franchement de faire le point, sans donner l'impression d'insister.`
+      : null,
+  ]
+    .filter(Boolean)
+    .join('\n')
+}
+
 export function generateAnniversaryBrief(leadName: string, address: string, years: number, category: string | null): string {
   const isVendeur = category === 'vendeur'
   return [
@@ -217,6 +239,7 @@ export function generateEstimationFollowupBrief(leadName: string, address: strin
     `Estimation réalisée il y a ${daysSince} jours, sans suite depuis.`,
   ].join('\n')
 }
+
 // Rapport hebdomadaire automatique (voir lib/rive/weekly-report.ts) : synthèse
 // factuelle envoyée par WhatsApp à l'équipe chaque lundi matin.
 export function generateWeeklyReportBrief(stats: {

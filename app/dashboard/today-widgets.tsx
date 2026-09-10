@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { markMatchesSeen } from '@/app/actions/matching'
-import { CATEGORY_COLOR_HEX } from '@/lib/rive/pipelines'
+import { CATEGORY_COLOR_HEX, CATEGORY_LABEL } from '@/lib/rive/pipelines'
 
 export type WidgetItem = { id: string; primary: string; secondary?: string; href: string; category?: string | null }
 export type Widget = { key: string; icon: string; label: string; items: WidgetItem[] }
@@ -68,11 +68,13 @@ export default function TodayWidgets({
                 className="flex items-center justify-between rounded-lg border border-neutral-200 px-3 py-2 text-sm hover:border-neutral-300 hover:bg-neutral-50"
               >
                 <span className="flex min-w-0 items-center gap-1.5">
-                  {item.category && CATEGORY_COLOR_HEX[item.category] && (
+                  {item.category && CATEGORY_LABEL[item.category] && (
                     <span
-                      className="h-2 w-2 shrink-0 rounded-full"
+                      className="shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium text-white"
                       style={{ backgroundColor: CATEGORY_COLOR_HEX[item.category] }}
-                    />
+                    >
+                      {CATEGORY_LABEL[item.category]}
+                    </span>
                   )}
                   <span className="truncate font-medium text-neutral-900">{item.primary}</span>
                 </span>

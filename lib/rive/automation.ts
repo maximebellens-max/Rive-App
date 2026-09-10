@@ -5,7 +5,7 @@
 // crée automatiquement la commission.
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { feeForPrice } from './mandates'
-import { clientColumnId } from './pipeline-positions'
+import { lastColumnId } from './pipeline-positions'
 
 type LeadRow = {
   id: string
@@ -38,22 +38,21 @@ export async function ensureMandateDraftForLead(supabase: SupabaseClient, lead: 
   })
 }
 
-// Fait basculer un prospect sur la colonne "Client actif" du tableau
-// Prospects dès qu'un mandat non-brouillon existe pour lui — quel que soit le
-// chemin emprunté (glisser-déposer jusqu'à la dernière colonne d'un pipeline
-// de catégorie, création directe depuis "Nouveau mandat", activation
-// manuelle d'un brouillon). Ne touche qu'à sa position Prospects — ses
-// éventuelles positions Vendeur/Acheteur/Investisseur restent inchangées ici
-// (moveLeadCard s'occupe de les garder synchronisées quand on avance depuis
-// ces tableaux-là).
+// Fait basculer un prospect sur la dernière colonne de son propre tableau de
+// catégorie ("Mandat signé" côté Vendeur, "Mandat de recherche" côté
+// Investisseur) dès qu'un mandat non-brouillon existe pour lui — quel que
+// soit le chemin emprunté (glisser-déposer jusqu'à cette colonne, création
+// directe depuis "Nouveau mandat", activation manuelle d'un brouillon). Sans
+// effet pour un acheteur (son pipeline n'a pas de notion de mandat signé) ou
+// un prospect sans catégorie.
 export async function moveLeadToClientColumn(supabase: SupabaseClient, agencyId: string, leadId: string) {
-  const clientCol = await clientColumnId(supabase, agencyId)
-  if (!clientCol) return
+  const { data: lead } = await supabase.from('leads').select('positions, category').eq('id', leadId).single()
+  if (!lead || (lead.category !== 'vendeur' && lead.category !== 'investisseur')) return
 
-  const { data: lead } = await supabase.from('leads').select('positions').eq('id', leadId).single()
-  if (!lead) return
+  const lastCol = await lastColumnId(supabase, agencyId, lead.category)
+  if (!lastCol) return
 
-  const positions = { ...((lead.positions as Record<string, string>) ?? {}), prospects: clientCol }
+  const positions = { ...((lead.positions as Record<string, string>) ?? {}), [lead.category]: lastCol }
   await supabase.from('leads').update({ positions }).eq('id', leadId)
 }
 
