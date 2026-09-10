@@ -21,6 +21,20 @@ function whatsappCredentials(phoneNumberId?: string): { accessToken: string; pho
   return { accessToken, phoneNumberId: resolvedPhoneNumberId }
 }
 
+// Meta rejette un paramètre de gabarit contenant un retour à la ligne (ou
+// plus de 4 espaces/tabulations d'affilée) — l'envoi échoue net (erreur
+// renvoyée par l'API, jamais visible côté destinataire, seulement dans les
+// logs serveur). "rive_alerte" est le seul gabarit dont le corps combine
+// plusieurs lignes (détails d'un lead Meta, texte + lien sur sa propre
+// ligne...) : on remplace ici les retours à la ligne par un séparateur
+// lisible plutôt que de compter sur chaque appelant pour y penser.
+function sanitizeTemplateParam(text: string): string {
+  return text
+    .replace(/\s*[\r\n]+\s*/g, ' · ')
+    .replace(/[ \t]{2,}/g, ' ')
+    .trim()
+}
+
 export async function sendWhatsAppTemplate({
   to,
   templateName,
@@ -51,7 +65,7 @@ export async function sendWhatsAppTemplate({
         name: templateName,
         language: { code: 'fr' },
         components: params.length
-          ? [{ type: 'body', parameters: params.map((text) => ({ type: 'text', text })) }]
+          ? [{ type: 'body', parameters: params.map((text) => ({ type: 'text', text: sanitizeTemplateParam(text) })) }]
           : [],
       },
     }),
