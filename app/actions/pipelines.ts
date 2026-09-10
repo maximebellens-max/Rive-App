@@ -37,14 +37,24 @@ export async function moveLeadCard(leadId: string, boardType: BoardType, columnI
 
   const { data: lead } = await supabase
     .from('leads')
-    .select('id, agency_id, category, name, critere_lieu, critere_type, surface_min, budget, positions')
+    .select('id, agency_id, category, name, critere_lieu, critere_type, surface_min, budget')
     .eq('id', leadId)
     .single()
   if (!lead) return
 
-  const positions = { ...((lead.positions as Record<string, string>) ?? {}), [boardType]: columnId }
-
-  await supabase.from('leads').update({ positions }).eq('id', leadId)
+  // Fusion atomique côté SQL (voir migration 049 : set_lead_board_position)
+  // plutôt qu'un lire-modifier-réécrire en JS — évite d'écraser un
+  // enregistrement de fiche concurrent qui toucherait aussi positions
+  // (c'est ce qui faisait "disparaître" certains prospects du tableau).
+  const { error: moveError } = await supabase.rpc('set_lead_board_position', {
+    p_lead_id: leadId,
+    p_board_type: boardType,
+    p_column_id: columnId,
+  })
+  if (moveError) {
+    console.error('[moveLeadCard] échec de la mise à jour de position', moveError)
+    return
+  }
 
   // Chaîne d'automatisation : entrer dans l'avant-dernière colonne (étape
   // estimation) crée un brouillon de mandat ; entrer dans la dernière colonne

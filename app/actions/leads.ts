@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { initialPositions, reconcilePositionsOnCategoryChange } from '@/lib/rive/pipeline-positions'
+import { initialPositions, firstColumnId } from '@/lib/rive/pipeline-positions'
 import { notifyMatchesForLeadId } from '@/lib/rive/match-notify'
 import { notifyNewLead } from '@/lib/rive/new-lead-notify'
 import { guessCivility } from '@/lib/rive/civility'
@@ -154,28 +154,21 @@ export async function updateLead(
 
   const newCategory = str(formData, 'category') || null
 
-  const { data: existing } = await supabase
-    .from('leads')
-    .select('category, positions')
-    .eq('id', leadId)
-    .single()
-
-  const positions = existing
-    ? await reconcilePositionsOnCategoryChange(
-        supabase,
-        agencyId,
-        (existing.positions as Record<string, string>) ?? {},
-        existing.category,
-        newCategory
-      )
-    : undefined
+  // Uniquement pour savoir si la catégorie change (voir plus bas) — ne sert
+  // PLUS à recalculer "positions" ici : le faire à partir d'une lecture
+  // faite en tout début d'action, puis réécrire l'objet entier, pouvait
+  // écraser un déplacement de carte concurrent (glisser-déposer sur le
+  // tableau) qui aurait modifié "positions" entre-temps — c'est ce qui
+  // faisait disparaître certains prospects du tableau après un simple
+  // enregistrement de fiche. La fiche ne touche donc plus du tout à
+  // "positions" quand la catégorie ne change pas.
+  const { data: existing } = await supabase.from('leads').select('category').eq('id', leadId).single()
 
   const { error } = await supabase
     .from('leads')
     .update({
       first_name: str(formData, 'first_name'),
       last_name: lastName,
-      ...(positions ? { positions } : {}),
       phone: str(formData, 'phone'),
       email: str(formData, 'email'),
       category: str(formData, 'category') || null,
@@ -212,6 +205,21 @@ export async function updateLead(
     .eq('id', leadId)
 
   if (error) return { error: 'Impossible d’enregistrer les modifications.' }
+
+  // Uniquement si la catégorie a réellement changé : retire la position sur
+  // l'ancien tableau et ajoute la 1ère colonne du nouveau, en un seul UPDATE
+  // atomique côté SQL (voir migration 049) — jamais de lecture puis
+  // réécriture de l'objet "positions" entier ici non plus.
+  if (existing && existing.category !== newCategory) {
+    const newColumnId = newCategory ? await firstColumnId(supabase, agencyId, newCategory) : null
+    const { error: reconcileError } = await supabase.rpc('reconcile_lead_category_position', {
+      p_lead_id: leadId,
+      p_old_board_type: existing.category,
+      p_new_board_type: newCategory,
+      p_new_column_id: newColumnId,
+    })
+    if (reconcileError) console.error('[updateLead] échec de la réconciliation de position', reconcileError)
+  }
 
   await notifyMatchesForLeadId(supabase, agencyId, leadId)
 

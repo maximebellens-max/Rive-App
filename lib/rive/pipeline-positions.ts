@@ -96,25 +96,8 @@ export async function initialPositions(
   return positions
 }
 
-// Recalcule les positions quand la catégorie d'un prospect change : retire sa
-// position sur l'ancien tableau de catégorie, ajoute la 1ère colonne du
-// nouveau tableau (si elle n'y est pas déjà).
-export async function reconcilePositionsOnCategoryChange(
-  supabase: SupabaseClient,
-  agencyId: string,
-  currentPositions: Record<string, string>,
-  oldCategory: string | null,
-  newCategory: string | null
-): Promise<Record<string, string>> {
-  const positions = { ...currentPositions }
-
-  if (oldCategory !== newCategory) {
-    if (oldCategory) delete positions[oldCategory]
-    if (newCategory && !positions[newCategory]) {
-      const col = await firstColumnId(supabase, agencyId, newCategory)
-      if (col) positions[newCategory] = col
-    }
-  }
-
-  return positions
-}
+// Le recalcul des positions lors d'un changement de catégorie se fait
+// désormais en un seul UPDATE atomique côté SQL (voir migration 049 :
+// reconcile_lead_category_position, appelée depuis app/actions/leads.ts) —
+// plus de fonction JS de lire-modifier-réécrire ici, pour ne plus risquer
+// d'écraser un déplacement de carte concurrent.

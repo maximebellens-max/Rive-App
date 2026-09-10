@@ -46,14 +46,20 @@ export async function ensureMandateDraftForLead(supabase: SupabaseClient, lead: 
 // effet pour un acheteur (son pipeline n'a pas de notion de mandat signé) ou
 // un prospect sans catégorie.
 export async function moveLeadToClientColumn(supabase: SupabaseClient, agencyId: string, leadId: string) {
-  const { data: lead } = await supabase.from('leads').select('positions, category').eq('id', leadId).single()
+  const { data: lead } = await supabase.from('leads').select('category').eq('id', leadId).single()
   if (!lead || (lead.category !== 'vendeur' && lead.category !== 'investisseur')) return
 
   const lastCol = await lastColumnId(supabase, agencyId, lead.category)
   if (!lastCol) return
 
-  const positions = { ...((lead.positions as Record<string, string>) ?? {}), [lead.category]: lastCol }
-  await supabase.from('leads').update({ positions }).eq('id', leadId)
+  // Fusion atomique côté SQL (voir migration 049), pas de lire-modifier-
+  // réécrire de tout l'objet positions — même raison que dans moveLeadCard.
+  const { error } = await supabase.rpc('set_lead_board_position', {
+    p_lead_id: leadId,
+    p_board_type: lead.category,
+    p_column_id: lastCol,
+  })
+  if (error) console.error('[moveLeadToClientColumn] échec de la mise à jour de position', error)
 }
 
 // Active le brouillon de mandat existant pour ce lead (ou en crée un directement

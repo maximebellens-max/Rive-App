@@ -173,13 +173,20 @@ export default function KanbanBoard({
     const card = cards.find((c) => c.id === leadId)
     if (!card || effectiveColumnId(card) === columnId) return
     setOverride((prev) => ({ ...prev, [leadId]: columnId }))
-    startTransition(() => {
-      moveLeadCard(leadId, boardType, columnId)
-    })
     const col = columns.find((c) => c.id === columnId)
-    if (col && columnSuggestsAppointment(col.name) && !card.action_date) {
-      router.push(`/dashboard/prospects/${leadId}`)
-    }
+    const shouldNavigate = !!(col && columnSuggestsAppointment(col.name) && !card.action_date)
+    // On attend la fin du déplacement côté serveur avant de naviguer vers la
+    // fiche — sinon l'agent peut arriver sur la fiche et l'enregistrer
+    // (ajouter une note + une relance, par exemple) avant que le
+    // déplacement de carte ait fini d'écrire en base, ce qui pouvait faire
+    // disparaître le prospect du tableau (voir migration 049 pour le
+    // correctif côté base de données).
+    startTransition(async () => {
+      await moveLeadCard(leadId, boardType, columnId)
+      if (shouldNavigate) {
+        router.push(`/dashboard/prospects/${leadId}`)
+      }
+    })
   }
 
   return (
