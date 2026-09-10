@@ -437,7 +437,10 @@ function ColumnBlock({
         wide ? 'w-full' : 'w-72'
       } ${dragOver ? 'border-accent ring-1 ring-accent' : 'border-neutral-200'}`}
     >
-      <div className="flex items-center gap-2">
+      {/* Titre de colonne figé (sticky) en haut du viewport pendant le
+          défilement vertical — une colonne bien remplie peut vite dépasser la
+          hauteur d'écran, sans ça on perd de vue son nom en scrollant. */}
+      <div className="sticky top-0 z-10 -mx-3 -mt-3 flex items-center gap-2 rounded-t-2xl bg-neutral-50 px-3 pb-2 pt-3">
         {wide && (
           <button
             type="button"

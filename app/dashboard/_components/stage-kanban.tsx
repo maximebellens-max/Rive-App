@@ -37,7 +37,11 @@ export default function StageKanban({
         const colCards = cards.filter((c) => (override[c.id] ?? c.meta) === col.value)
         return (
           <div key={col.value} className="flex w-72 shrink-0 flex-col gap-2">
-            <div className="flex items-center gap-2 px-1">
+            {/* Titre de colonne figé (sticky) en haut du viewport pendant le
+                défilement vertical — une colonne bien remplie peut vite
+                dépasser la hauteur d'écran, sans ça on perd de vue son nom en
+                scrollant. */}
+            <div className="sticky top-0 z-10 flex items-center gap-2 bg-neutral-50 px-1 py-1">
               <span
                 className="h-2.5 w-2.5 rounded-full ring-1 ring-black/10"
                 style={{ backgroundColor: COLUMN_COLOR_HEX[col.color] ?? '#64748b' }}

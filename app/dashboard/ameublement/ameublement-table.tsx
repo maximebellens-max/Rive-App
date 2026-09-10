@@ -61,7 +61,12 @@ export default function AmeublementTable({ rows, leadOptions }: { rows: Furnishi
       <table className="w-full text-left text-sm">
         <thead className="border-b border-neutral-200 text-neutral-500">
           <tr>
-            <th className="whitespace-nowrap px-3 py-2.5 font-medium">Nom</th>
+            {/* Colonne figée (sticky) pendant le défilement horizontal — le
+                tableau a beaucoup de colonnes, sans elle on perd de vue à qui
+                appartient la ligne dès qu'on scrolle vers la droite. */}
+            <th className="sticky left-0 z-20 whitespace-nowrap border-r border-neutral-200 bg-surface px-3 py-2.5 font-medium">
+              Nom
+            </th>
             <th className="whitespace-nowrap px-3 py-2.5 font-medium">Statut</th>
             <th className="whitespace-nowrap px-3 py-2.5 font-medium">Paiement client</th>
             <th className="whitespace-nowrap px-3 py-2.5 font-medium">Monteur</th>
@@ -85,8 +90,8 @@ export default function AmeublementTable({ rows, leadOptions }: { rows: Furnishi
             </tr>
           )}
           {rows.map((r) => (
-            <tr key={r.id} className="border-b border-neutral-100 last:border-0 hover:bg-neutral-50">
-              <td className="whitespace-nowrap px-3 py-2">
+            <tr key={r.id} className="group border-b border-neutral-100 last:border-0 hover:bg-neutral-50">
+              <td className="sticky left-0 z-10 whitespace-nowrap border-r border-neutral-200 bg-surface px-3 py-2 group-hover:bg-neutral-50">
                 <Link href={`/dashboard/prospects/${r.leadId}`} className="font-medium text-neutral-900 hover:underline">
                   {r.leadName}
                 </Link>
