@@ -3,6 +3,7 @@
 import { useActionState, useState } from 'react'
 import { updateLead, type LeadFormState } from '@/app/actions/leads'
 import { guessCivility } from '@/lib/rive/civility'
+import { useSavedFlash } from '../../_components/use-saved-flash'
 
 type Lead = {
   id: string
@@ -49,6 +50,7 @@ const MARRIED_STATUSES = ['Marié(e)', 'Pacsé(e)']
 export default function LeadEditForm({ lead, members = [] }: { lead: Lead; members?: Member[] }) {
   const updateWithId = updateLead.bind(null, lead.id)
   const [state, action, pending] = useActionState<LeadFormState, FormData>(updateWithId, undefined)
+  const justSaved = useSavedFlash(pending)
   const [maritalStatus, setMaritalStatus] = useState(lead.marital_status)
   const maritalStatusOptions =
     lead.marital_status && !MARITAL_STATUS_OPTIONS.includes(lead.marital_status)
@@ -314,9 +316,11 @@ export default function LeadEditForm({ lead, members = [] }: { lead: Lead; membe
       <button
         type="submit"
         disabled={pending}
-        className="w-fit rounded-lg bg-accent px-5 py-2.5 text-sm font-medium text-white transition hover:bg-accent-hover disabled:opacity-60"
+        className={`w-fit rounded-lg px-5 py-2.5 text-sm font-medium text-white transition disabled:opacity-60 ${
+          justSaved && !state?.error ? 'bg-good' : 'bg-accent hover:bg-accent-hover'
+        }`}
       >
-        {pending ? 'Enregistrement…' : 'Enregistrer'}
+        {pending ? 'Enregistrement…' : justSaved && !state?.error ? '✓ Enregistré' : 'Enregistrer'}
       </button>
     </form>
   )

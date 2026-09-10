@@ -76,23 +76,30 @@ export default function KanbanBoard({
   cards,
   members = [],
   currentUserId,
+  isOwner = false,
 }: {
   boardType: BoardType
   columns: PipelineColumn[]
   cards: PipelineCard[]
   members?: BoardMember[]
   currentUserId?: string
+  isOwner?: boolean
 }) {
   const [viewMode, setViewMode] = useState<'kanban' | 'list' | 'agent'>('kanban')
   const [override, setOverride] = useState<Record<string, string>>({})
   const [selectMode, setSelectMode] = useState(false)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [categoryFilter, setCategoryFilter] = useState('all')
-  // Ensemble vide = "Tous les agents" ; sinon un ou plusieurs agents cochés
-  // (le prospect doit être assigné à l'un d'entre eux). Plus de doublon
-  // "À moi" / propre nom dans la liste : coche directement ton nom parmi
-  // les autres, comme n'importe quel agent.
-  const [agentFilter, setAgentFilter] = useState<Set<string>>(new Set())
+  // Par défaut, chacun ne voit que ses propres prospects ("moi" présélectionné)
+  // plutôt que tout le tableau de l'agence — évite d'avoir à filtrer soi-même
+  // à chaque ouverture. Reste ajustable à tout moment via le menu ; le
+  // raccourci "Tous les agents" (vue agence complète) n'est proposé qu'aux
+  // owners (voir isOwner), les autres peuvent quand même cocher
+  // individuellement des collègues s'ils en ont besoin.
+  const [agentFilter, setAgentFilter] = useState<Set<string>>(
+    () => new Set(currentUserId ? [currentUserId] : [])
+  )
+  const [search, setSearch] = useState('')
   const [, startTransition] = useTransition()
   const router = useRouter()
 
@@ -121,15 +128,15 @@ export default function KanbanBoard({
   // que sur un tableau personnalisé (les 3 tableaux de catégorie fixes sont
   // masqués via CATEGORY_BOARD_TYPES ci-dessous, un tel tableau ne contenant
   // par construction qu'une seule catégorie).
-  const filteredCards = useMemo(
-    () =>
-      cards.filter((c) => {
-        if (categoryFilter !== 'all' && c.category !== categoryFilter) return false
-        if (agentFilter.size > 0 && !agentFilter.has(c.assignedTo ?? '')) return false
-        return true
-      }),
-    [cards, categoryFilter, agentFilter]
-  )
+  const filteredCards = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    return cards.filter((c) => {
+      if (categoryFilter !== 'all' && c.category !== categoryFilter) return false
+      if (agentFilter.size > 0 && !agentFilter.has(c.assignedTo ?? '')) return false
+      if (q && !c.name.toLowerCase().includes(q)) return false
+      return true
+    })
+  }, [cards, categoryFilter, agentFilter, search])
 
   const grouped = useMemo(
     () =>
@@ -221,8 +228,17 @@ export default function KanbanBoard({
               selected={agentFilter}
               onChange={setAgentFilter}
               currentUserId={currentUserId}
+              isOwner={isOwner}
             />
           )}
+          <input
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="🔎 Rechercher un nom…"
+            aria-label="Rechercher un prospect"
+            className="w-40 rounded-lg border border-neutral-300 bg-surface px-2 py-1.5 text-xs text-neutral-600 outline-none placeholder:text-neutral-400 focus:w-56 focus:border-accent"
+          />
         </div>
         <div className="flex rounded-lg border border-neutral-300 p-0.5 text-xs">
           <button
@@ -308,11 +324,13 @@ function AgentFilterDropdown({
   selected,
   onChange,
   currentUserId,
+  isOwner = false,
 }: {
   members: BoardMember[]
   selected: Set<string>
   onChange: (next: Set<string>) => void
   currentUserId?: string
+  isOwner?: boolean
 }) {
   const [open, setOpen] = useState(false)
 
@@ -326,9 +344,11 @@ function AgentFilterDropdown({
   const label =
     selected.size === 0
       ? 'Tous les agents'
-      : selected.size === 1
-        ? members.find((m) => m.id === [...selected][0])?.full_name || '1 agent'
-        : `${selected.size} agents`
+      : selected.size === 1 && selected.has(currentUserId ?? '')
+        ? 'Moi'
+        : selected.size === 1
+          ? members.find((m) => m.id === [...selected][0])?.full_name || '1 agent'
+          : `${selected.size} agents`
 
   return (
     <div
@@ -352,13 +372,27 @@ function AgentFilterDropdown({
       </button>
       {open && (
         <div className="absolute left-0 top-full z-20 mt-1 w-52 rounded-lg border border-neutral-200 bg-surface p-1.5 shadow-md">
-          <button
-            type="button"
-            onClick={() => onChange(new Set())}
-            className="block w-full rounded px-2 py-1.5 text-left text-xs font-medium text-neutral-600 hover:bg-neutral-100"
-          >
-            Tous les agents
-          </button>
+          {currentUserId && (
+            <button
+              type="button"
+              onClick={() => onChange(new Set([currentUserId]))}
+              className="block w-full rounded px-2 py-1.5 text-left text-xs font-medium text-neutral-600 hover:bg-neutral-100"
+            >
+              Moi seulement
+            </button>
+          )}
+          {/* Vue agence complète (aucun filtre) réservée aux owners — les
+              autres agents peuvent quand même cocher des collègues un par un
+              ci-dessous si besoin, mais pas tout voir d'un coup par défaut. */}
+          {isOwner && (
+            <button
+              type="button"
+              onClick={() => onChange(new Set())}
+              className="block w-full rounded px-2 py-1.5 text-left text-xs font-medium text-neutral-600 hover:bg-neutral-100"
+            >
+              Tous les agents
+            </button>
+          )}
           <div className="my-1 border-t border-neutral-100" />
           {members.map((m) => (
             <label

@@ -130,7 +130,14 @@ export default async function PipelineBoardPage({ params }: PageProps<'/dashboar
           )}
         </div>
       )}
-      <KanbanBoard boardType={bt} columns={columnsWithMyColors} cards={cards} members={members ?? []} currentUserId={user.id} />
+      <KanbanBoard
+        boardType={bt}
+        columns={columnsWithMyColors}
+        cards={cards}
+        members={members ?? []}
+        currentUserId={user.id}
+        isOwner={profile.role === 'owner'}
+      />
     </div>
   )
 }

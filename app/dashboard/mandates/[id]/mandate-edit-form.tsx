@@ -4,6 +4,7 @@ import { useActionState, useState } from 'react'
 import { updateMandate, type MandateFormState } from '@/app/actions/mandates'
 import { CONDITION_LEVELS, DPE_LEVELS, FEATURE_KEYS, PROPERTY_TYPES, propertyHasLand, propertyHasFloor } from '@/lib/rive/mandates'
 import AddressAutocomplete from '../../_components/address-autocomplete'
+import { useSavedFlash } from '../../_components/use-saved-flash'
 
 type Mandate = {
   id: string
@@ -50,6 +51,7 @@ export default function MandateEditForm({ mandate }: { mandate: Mandate }) {
     updateWithId,
     undefined
   )
+  const justSaved = useSavedFlash(pending)
   const [address, setAddress] = useState(mandate.address)
   const [propertyType, setPropertyType] = useState(mandate.property_type)
   const showLand = propertyHasLand(propertyType)
@@ -340,9 +342,11 @@ export default function MandateEditForm({ mandate }: { mandate: Mandate }) {
       <button
         type="submit"
         disabled={pending}
-        className="w-fit rounded-lg bg-accent px-5 py-2.5 text-sm font-medium text-white transition hover:bg-accent-hover disabled:opacity-60"
+        className={`w-fit rounded-lg px-5 py-2.5 text-sm font-medium text-white transition disabled:opacity-60 ${
+          justSaved && !state?.error ? 'bg-good' : 'bg-accent hover:bg-accent-hover'
+        }`}
       >
-        {pending ? 'Enregistrement…' : 'Enregistrer'}
+        {pending ? 'Enregistrement…' : justSaved && !state?.error ? '✓ Enregistré' : 'Enregistrer'}
       </button>
     </form>
   )
