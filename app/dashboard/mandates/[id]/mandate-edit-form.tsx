@@ -54,6 +54,7 @@ export default function MandateEditForm({ mandate }: { mandate: Mandate }) {
   const [propertyType, setPropertyType] = useState(mandate.property_type)
   const showLand = propertyHasLand(propertyType)
   const showFloor = propertyHasFloor(propertyType)
+  const [stage, setStage] = useState(mandate.stage)
 
   return (
     <form action={action} className="flex flex-col gap-8">
@@ -298,16 +299,25 @@ export default function MandateEditForm({ mandate }: { mandate: Mandate }) {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
               <label className={labelClass}>Étape</label>
-              <select name="stage" defaultValue={mandate.stage} className={inputClass}>
+              <select
+                name="stage"
+                value={stage}
+                onChange={(e) => setStage(e.target.value)}
+                className={inputClass}
+              >
                 <option value="en_cours">En cours</option>
                 <option value="compromis_signe">Compromis signé</option>
                 <option value="vendu">Vendu</option>
               </select>
             </div>
-            <div className="flex flex-col gap-1.5">
-              <label className={labelClass}>Date de vente</label>
-              <input name="sold_date" type="date" defaultValue={mandate.sold_date ?? ''} className={inputClass} />
-            </div>
+            {/* La date de vente n'a de sens qu'une fois le mandat passé à
+                "Vendu" — inutile de l'afficher dès "En cours". */}
+            {stage === 'vendu' && (
+              <div className="flex flex-col gap-1.5">
+                <label className={labelClass}>Date de vente</label>
+                <input name="sold_date" type="date" defaultValue={mandate.sold_date ?? ''} className={inputClass} />
+              </div>
+            )}
           </div>
         </section>
       )}

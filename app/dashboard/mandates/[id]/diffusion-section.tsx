@@ -1,3 +1,6 @@
+'use client'
+
+import { useState } from 'react'
 import { updateDiffusion } from '@/app/actions/mandate-activity'
 import { DIFFUSION_PORTALS, AD_PLATFORMS } from '@/lib/rive/diffusion'
 
@@ -18,6 +21,11 @@ export default function DiffusionSection({
   adCampaign: string
   adDate: string | null
 }) {
+  // "Nom de la campagne" et "Date de lancement" ne servent à rien tant
+  // qu'aucune plateforme publicitaire n'est choisie — masqués jusque-là.
+  const [platform, setPlatform] = useState(adPlatform)
+  const showCampaignFields = !!platform
+
   return (
     <form action={updateDiffusion.bind(null, mandateId)} className="flex flex-col gap-4 rounded-2xl border border-neutral-200 bg-surface p-5 shadow-sm">
       <h2 className="text-sm font-semibold text-neutral-900">Diffusion</h2>
@@ -38,7 +46,12 @@ export default function DiffusionSection({
       <div className="grid grid-cols-1 gap-3 border-t border-neutral-100 pt-4 sm:grid-cols-3">
         <div className="flex flex-col gap-1.5">
           <label className={labelClass}>Campagne publicitaire</label>
-          <select name="ad_platform" defaultValue={adPlatform} className={inputClass}>
+          <select
+            name="ad_platform"
+            value={platform}
+            onChange={(e) => setPlatform(e.target.value)}
+            className={inputClass}
+          >
             <option value="">—</option>
             {AD_PLATFORMS.map((p) => (
               <option key={p} value={p}>
@@ -47,14 +60,18 @@ export default function DiffusionSection({
             ))}
           </select>
         </div>
-        <div className="flex flex-col gap-1.5">
-          <label className={labelClass}>Nom de la campagne</label>
-          <input name="ad_campaign" defaultValue={adCampaign} className={inputClass} />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <label className={labelClass}>Date de lancement</label>
-          <input name="ad_date" type="date" defaultValue={adDate ?? ''} className={inputClass} />
-        </div>
+        {showCampaignFields && (
+          <>
+            <div className="flex flex-col gap-1.5">
+              <label className={labelClass}>Nom de la campagne</label>
+              <input name="ad_campaign" defaultValue={adCampaign} className={inputClass} />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className={labelClass}>Date de lancement</label>
+              <input name="ad_date" type="date" defaultValue={adDate ?? ''} className={inputClass} />
+            </div>
+          </>
+        )}
       </div>
 
       <button type="submit" className="w-fit rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover">
