@@ -77,12 +77,19 @@ export default async function TodayPage() {
   const mandatesList = mandates ?? []
   // "Aujourd'hui" est le tableau de bord de l'agent connecté, pas celui de
   // toute l'agence : les widgets ci-dessous (hors agenda, resté partagé) ne
-  // portent que sur ses propres prospects.
-  const myLeadsList = leadsList.filter((l) => l.assigned_to === userId)
+  // portent que sur ses propres prospects — PLUS les prospects sans agent
+  // assigné (ex. lead Meta dont la campagne n'a pas de propriétaire choisi
+  // dans Réglages → Meta Ads : owner_id peut être laissé vide). Sans ce
+  // deuxième cas, un prospect non assigné serait invisible dans l'onglet
+  // "Aujourd'hui" de TOUS les agents (personne n'est censé "le voir" tant
+  // que personne ne l'a pris en charge) — corrigé après un cas réel où un
+  // nouveau lead Meta n'apparaissait dans le widget de personne.
+  const myLeadsList = leadsList.filter((l) => l.assigned_to === userId || l.assigned_to === null)
 
   // ---------- 1. Nouveaux rapprochements acheteur ↔ bien ----------
-  // Rapprochements pour LES prospects de l'agent, contre TOUT le stock actif
-  // de l'agence (un bien confié à un collègue reste un match valable).
+  // Rapprochements pour LES prospects de l'agent (+ non assignés), contre
+  // TOUT le stock actif de l'agence (un bien confié à un collègue reste un
+  // match valable).
   const matchPairs = computeMatchPairs(myLeadsList as MatchLead[], mandatesList as MatchMandate[])
   const seenSet = new Set((seen ?? []).map((s) => `${s.lead_id}|${s.mandate_id}`))
   const newMatches = matchPairs.filter((p) => !seenSet.has(`${p.leadId}|${p.mandateId}`))
