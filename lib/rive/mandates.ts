@@ -40,6 +40,56 @@ export const FEATURE_KEYS = [
 
 export type Features = Partial<Record<(typeof FEATURE_KEYS)[number]['key'], boolean>>
 
+// Diagnostics techniques obligatoires en France pour une vente (liste
+// standard) — suivis avec leur date de réalisation, leur date de validité
+// et leur résultat, en plus des photos/documents justificatifs (voir
+// mandate_files, filtrable par `diagnostic_type` = une de ces clés). Le DPE
+// garde en parallèle sa propre note simple (colonne `dpe`, A à G, utilisée
+// par le moteur d'estimation ci-dessous) — ces dates ne la remplacent pas.
+export const DIAGNOSTIC_TYPES = [
+  { key: 'dpe', label: 'DPE — performance énergétique' },
+  { key: 'amiante', label: 'Amiante' },
+  { key: 'plomb', label: 'Plomb (CREP)' },
+  { key: 'parasitaire', label: 'État parasitaire (termites)' },
+  { key: 'gaz', label: 'Gaz' },
+  { key: 'electricite', label: 'Électricité' },
+  { key: 'erp', label: 'État des risques et pollutions (ERP)' },
+  { key: 'carrez', label: 'Métrage loi Carrez' },
+  { key: 'assainissement', label: 'Assainissement non collectif' },
+] as const
+
+export type DiagnosticKey = (typeof DIAGNOSTIC_TYPES)[number]['key']
+export type DiagnosticEntry = { date_realisation: string; date_validite: string; resultat: string }
+export type Diagnostics = Partial<Record<DiagnosticKey, DiagnosticEntry>>
+
+export const ACQUISITION_MODES = [
+  { value: 'achat', label: 'Achat' },
+  { value: 'succession', label: 'Succession' },
+  { value: 'donation', label: 'Donation' },
+  { value: 'construction', label: 'Construction' },
+  { value: 'echange', label: 'Échange' },
+] as const
+
+// Informations de la copropriété elle-même (pas d'un lot en particulier) —
+// voir mandate_lots pour la liste des lots (appartement, cave, parking…)
+// portés par ce mandat, chacun avec son propre numéro et ses tantièmes.
+export type Copropriete = {
+  total_lots?: string
+  charges_annuelles?: string
+  syndic_nom?: string
+  syndic_contact?: string
+  procedures_en_cours?: string
+  fonds_travaux?: string
+}
+
+export type OriginePropriete = {
+  date_acquisition?: string
+  mode_acquisition?: string
+  notaire?: string
+  reference_acte?: string
+  prix_acquisition?: string
+}
+
 // Barème d'honoraires : 5% jusqu'à 800k€, 4% au-delà, plancher 10 000€.
 export function feeForPrice(price: number | null | undefined): number {
   if (!price) return 0

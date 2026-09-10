@@ -18,6 +18,9 @@ import ActivateMandateButton from './activate-mandate-button'
 import VisitsSection from './visits-section'
 import OffersSection from './offers-section'
 import DiffusionSection from './diffusion-section'
+import PropertyDetailsSection from './property-details-section'
+import MandateFilesSection, { type MandateFile } from './mandate-files-section'
+import { mandateFileUrl } from '@/app/actions/mandate-property'
 
 export default async function MandateDetailPage({ params }: PageProps<'/dashboard/mandates/[id]'>) {
   const { id } = await params
@@ -60,32 +63,46 @@ export default async function MandateDetailPage({ params }: PageProps<'/dashboar
     lead_name?: string
   }[] = []
   let buyerOptions: { id: string; name: string }[] = []
+  let lots: { id: string; lot_number: string; designation: string; tantiemes: string }[] = []
+  let files: MandateFile[] = []
 
-  // Visites, offres, diffusion et acheteurs correspondants n'ont de sens
-  // qu'une fois le bien réellement en commercialisation — inutile de les
-  // charger tant que le mandat n'est qu'un brouillon d'estimation.
+  // Visites, offres, diffusion, fiche bien (copropriété/diagnostics/photos)
+  // et acheteurs correspondants n'ont de sens qu'une fois le bien réellement
+  // en commercialisation — inutile de les charger tant que le mandat n'est
+  // qu'un brouillon d'estimation.
   if (mandate.type === 'vente' && !mandate.is_draft) {
     // Une seule requête "acheteurs" (avec les colonnes de correspondance),
     // réutilisée à la fois pour la liste déroulante (buyerOptions) et pour
     // le calcul des acheteurs correspondants — au lieu de 2 requêtes quasi
     // identiques comme avant.
-    const [{ data: visitRows }, { data: offerRows }, { data: buyers }] = await Promise.all([
-      supabase
-        .from('mandate_visits')
-        .select('id, lead_id, buyer_name, visit_date, feedback, leads ( name )')
-        .eq('mandate_id', id)
-        .order('visit_date', { ascending: false }),
-      supabase
-        .from('mandate_offers')
-        .select('id, lead_id, buyer_name, amount, offer_date, status, leads ( name )')
-        .eq('mandate_id', id)
-        .order('offer_date', { ascending: false }),
-      supabase
-        .from('leads')
-        .select('id, name, category, budget, critere_type, critere_lieu, surface_min, pieces_min')
-        .eq('category', 'acheteur')
-        .order('name', { ascending: true }),
-    ])
+    const [{ data: visitRows }, { data: offerRows }, { data: buyers }, { data: lotRows }, { data: fileRows }] =
+      await Promise.all([
+        supabase
+          .from('mandate_visits')
+          .select('id, lead_id, buyer_name, visit_date, feedback, leads ( name )')
+          .eq('mandate_id', id)
+          .order('visit_date', { ascending: false }),
+        supabase
+          .from('mandate_offers')
+          .select('id, lead_id, buyer_name, amount, offer_date, status, leads ( name )')
+          .eq('mandate_id', id)
+          .order('offer_date', { ascending: false }),
+        supabase
+          .from('leads')
+          .select('id, name, category, budget, critere_type, critere_lieu, surface_min, pieces_min')
+          .eq('category', 'acheteur')
+          .order('name', { ascending: true }),
+        supabase
+          .from('mandate_lots')
+          .select('id, lot_number, designation, tantiemes')
+          .eq('mandate_id', id)
+          .order('position', { ascending: true }),
+        supabase
+          .from('mandate_files')
+          .select('id, category, diagnostic_type, label, storage_path, size_bytes')
+          .eq('mandate_id', id)
+          .order('position', { ascending: true }),
+      ])
 
     visits = (visitRows ?? []).map((v) => ({
       ...v,
@@ -96,6 +113,18 @@ export default async function MandateDetailPage({ params }: PageProps<'/dashboar
       lead_name: (o.leads as unknown as { name: string } | null)?.name,
     }))
     buyerOptions = (buyers ?? []).map((b) => ({ id: b.id, name: b.name }))
+    lots = lotRows ?? []
+
+    // URL signée par fichier (bucket privé, jamais d'URL publique directe) —
+    // générées en une passe après coup plutôt que dans le select ci-dessus,
+    // qui ne peut pas appeler le Storage.
+    files = await Promise.all(
+      (fileRows ?? []).map(async (f) => ({
+        ...f,
+        category: f.category as 'photo' | 'document',
+        url: await mandateFileUrl(f.storage_path),
+      }))
+    )
 
     if (bienIsActive(mandate as MatchMandate)) {
       matchingBuyers = (buyers ?? []).filter((l) => leadMatchesBien(l as MatchLead, mandate as MatchMandate))
@@ -201,6 +230,8 @@ export default async function MandateDetailPage({ params }: PageProps<'/dashboar
             adCampaign={mandate.ad_campaign}
             adDate={mandate.ad_date}
           />
+          <PropertyDetailsSection mandateId={mandate.id} mandate={mandate} lots={lots} />
+          <MandateFilesSection mandateId={mandate.id} files={files} />
         </>
       )}
     </div>

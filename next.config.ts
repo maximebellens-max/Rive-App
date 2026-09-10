@@ -29,6 +29,16 @@ const cspHeader = `
   .trim();
 
 const nextConfig: NextConfig = {
+  // Par défaut, une Server Action est limitée à 1 Mo de payload — trop
+  // court pour l'envoi de photos de bien ou de PDF de diagnostics (fiche
+  // mandat). Relevé à 10 Mo ; l'hébergement peut appliquer sa propre limite
+  // indépendante (ex. Vercel), auquel cas suggérer de compresser le fichier
+  // reste la solution si un envoi échoue malgré tout.
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '10mb',
+    },
+  },
   async headers() {
     return [
       {
