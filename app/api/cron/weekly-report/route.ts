@@ -2,6 +2,11 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { runWeeklyReportForAgency } from '@/lib/rive/weekly-report'
 
+// Voir app/api/cron/daily-whatsapp/route.ts : sans cette déclaration,
+// Vercel peut ne jamais ré-exécuter la fonction au déclenchement planifié
+// (ni la loguer).
+export const dynamic = 'force-dynamic'
+
 export async function GET(request: NextRequest) {
   const auth = request.headers.get('authorization')
   if (!process.env.CRON_SECRET || auth !== `Bearer ${process.env.CRON_SECRET}`) {

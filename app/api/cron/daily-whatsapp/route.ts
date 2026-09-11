@@ -25,6 +25,13 @@ const BRIEF_MAX_LENGTH = 900
 // Vercel Cron (voir vercel.json), jamais par un navigateur : Vercel envoie
 // automatiquement `Authorization: Bearer $CRON_SECRET` sur ses propres
 // appels, d'où la vérification ci-dessous.
+// Empêche Next.js de mettre cette route en cache / de l'évaluer comme
+// statique — sans ça, un appel cron planifié peut silencieusement ne
+// jamais ré-exécuter la fonction (ni même apparaître dans les logs Vercel),
+// symptôme documenté par Vercel pour les routes de cron sans cette
+// déclaration.
+export const dynamic = 'force-dynamic'
+
 export async function GET(request: NextRequest) {
   const auth = request.headers.get('authorization')
   if (!process.env.CRON_SECRET || auth !== `Bearer ${process.env.CRON_SECRET}`) {

@@ -11,6 +11,10 @@ import { runRelanceAgent } from '@/lib/rive/relance-agent'
 // quotidien séparé du digest RDV/mandats (voir /api/cron/daily-whatsapp)
 // pour rester lisible malgré le nombre de déclencheurs, même s'ils
 // partagent la même table de dédoublonnage.
+// Voir daily-whatsapp/route.ts : sans cette déclaration, Vercel peut ne
+// jamais ré-exécuter la fonction au déclenchement planifié (ni la loguer).
+export const dynamic = 'force-dynamic'
+
 export async function GET(request: NextRequest) {
   const auth = request.headers.get('authorization')
   if (!process.env.CRON_SECRET || auth !== `Bearer ${process.env.CRON_SECRET}`) {
