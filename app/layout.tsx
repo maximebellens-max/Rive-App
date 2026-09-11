@@ -1,15 +1,17 @@
 import type { Metadata } from "next";
-// Polices du prototype, auto-hébergées via @fontsource (fichiers woff2 servis
-// depuis notre propre build, aucune requête vers fonts.googleapis.com) :
-// Archivo pour les titres, Manrope pour le texte courant, IBM Plex Mono pour
-// les données chiffrées (perf, montants).
-import "@fontsource/archivo/600.css";
-import "@fontsource/archivo/700.css";
-import "@fontsource/archivo/800.css";
-import "@fontsource/manrope/400.css";
-import "@fontsource/manrope/500.css";
-import "@fontsource/manrope/600.css";
-import "@fontsource/manrope/700.css";
+// Polices auto-hébergées via @fontsource (fichiers woff2 servis depuis notre
+// propre build, aucune requête vers fonts.googleapis.com) : Inter pour tout
+// le texte de l'appli — titres et texte courant — plutôt que la paire
+// Archivo/Manrope d'avant, pour se rapprocher du rendu "un seul système de
+// police" façon SF Pro sur macOS/iOS (dessin très proche, mais utilisable
+// partout, contrairement à SF Pro qui n'est utilisable sur le web que sur
+// les appareils Apple eux-mêmes). IBM Plex Mono reste à part pour les
+// données chiffrées (perf, montants) — non concerné par ce changement.
+import "@fontsource/inter/400.css";
+import "@fontsource/inter/500.css";
+import "@fontsource/inter/600.css";
+import "@fontsource/inter/700.css";
+import "@fontsource/inter/800.css";
 import "@fontsource/ibm-plex-mono/500.css";
 import "./globals.css";
 
