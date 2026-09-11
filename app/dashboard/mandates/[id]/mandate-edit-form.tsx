@@ -342,8 +342,8 @@ export default function MandateEditForm({ mandate }: { mandate: Mandate }) {
       <button
         type="submit"
         disabled={pending}
-        className={`w-fit rounded-lg px-5 py-2.5 text-sm font-medium text-white transition disabled:opacity-60 ${
-          justSaved && !state?.error ? 'bg-good' : 'bg-accent hover:bg-accent-hover'
+        className={`w-fit rounded-lg px-5 py-2.5 text-sm font-medium transition disabled:opacity-60 ${
+          justSaved && !state?.error ? 'bg-good text-good-ink' : 'bg-accent text-accent-ink hover:bg-accent-hover'
         }`}
       >
         {pending ? 'Enregistrement…' : justSaved && !state?.error ? '✓ Enregistré' : 'Enregistrer'}

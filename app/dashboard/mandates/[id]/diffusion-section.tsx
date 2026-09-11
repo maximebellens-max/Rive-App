@@ -74,7 +74,7 @@ export default function DiffusionSection({
         )}
       </div>
 
-      <button type="submit" className="w-fit rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover">
+      <button type="submit" className="w-fit rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-ink hover:bg-accent-hover">
         Enregistrer la diffusion
       </button>
     </form>

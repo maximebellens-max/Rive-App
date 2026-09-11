@@ -231,7 +231,7 @@ export default function PropertyDetailsSection({
 
         <button
           type="submit"
-          className="w-fit rounded-lg bg-accent px-5 py-2.5 text-sm font-medium text-white transition hover:bg-accent-hover"
+          className="w-fit rounded-lg bg-accent px-5 py-2.5 text-sm font-medium text-accent-ink transition hover:bg-accent-hover"
         >
           Enregistrer
         </button>

@@ -333,8 +333,8 @@ export default async function EstimationSection({
             <p className="text-sm text-neutral-600">
               Prix ajusté au m² : <span className="font-medium tabular-nums">{formatEUR(estimation.adjustedM2)}</span>
             </p>
-            <div className="rounded-xl bg-accent px-5 py-4 text-white">
-              <p className="text-xs text-neutral-300">Fourchette estimée</p>
+            <div className="rounded-xl bg-accent px-5 py-4 text-accent-ink">
+              <p className="text-xs text-accent-ink/70">Fourchette estimée</p>
               <p className="mt-1 text-2xl font-semibold tabular-nums">
                 {formatEUR(estimation.low)} — {formatEUR(estimation.high)}
               </p>
@@ -355,7 +355,7 @@ export default async function EstimationSection({
         prompt={generateListingBrief(mandate)}
         initialValue={mandate.ai_listing}
         onSave={saveAIListing.bind(null, mandateId)}
-        generateLabel="Rédiger l'annonce"
+        generateLabel="Rédiger l’annonce"
       />
     </div>
   )

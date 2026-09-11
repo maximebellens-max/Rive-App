@@ -77,7 +77,7 @@ export default function NewLeadForm() {
       <button
         type="submit"
         disabled={pending}
-        className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition hover:bg-accent-hover disabled:opacity-60 sm:col-span-2 sm:w-fit"
+        className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition hover:bg-accent-hover disabled:opacity-60 sm:col-span-2 sm:w-fit"
       >
         {pending ? 'Ajout…' : 'Ajouter'}
       </button>

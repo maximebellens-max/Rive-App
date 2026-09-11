@@ -170,7 +170,7 @@ export default async function MandatesPage() {
         </div>
         <Link
           href="/dashboard/mandates/new"
-          className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover"
+          className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-ink hover:bg-accent-hover"
         >
           Nouveau mandat
         </Link>

@@ -120,7 +120,7 @@ export default async function ProspectDetailPage({ params }: PageProps<'/dashboa
             <form action={markLeadContacted.bind(null, lead.id)}>
               <button
                 type="submit"
-                className="rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-white hover:bg-accent-hover"
+                className="rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-accent-ink hover:bg-accent-hover"
               >
                 ✓ Marquer comme contacté
               </button>

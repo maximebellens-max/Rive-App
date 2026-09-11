@@ -103,7 +103,7 @@ export default function MessageSection({
           <button
             type="button"
             onClick={copy}
-            className="w-fit rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-white hover:bg-accent-hover"
+            className="w-fit rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-accent-ink hover:bg-accent-hover"
           >
             {copied ? 'Copié ✓' : 'Copier'}
           </button>

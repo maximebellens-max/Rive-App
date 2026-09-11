@@ -11,7 +11,7 @@ export default function ActivateMandateButton({ mandateId }: { mandateId: string
       type="button"
       disabled={pending}
       onClick={() => startTransition(() => activateMandateDraft(mandateId))}
-      className="rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-60"
+      className="rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-accent-ink hover:bg-accent-hover disabled:opacity-60"
     >
       {pending ? 'Passage en mandat…' : 'Passer au mandat signé'}
     </button>
