@@ -68,7 +68,7 @@ export default function AIBriefPanel({
         type="button"
         onClick={save}
         disabled={pending || !value}
-        className="w-fit rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-60"
+        className="w-fit rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-accent-ink hover:bg-accent-hover disabled:opacity-60"
       >
         {saved ? 'Enregistré ✓' : 'Enregistrer'}
       </button>

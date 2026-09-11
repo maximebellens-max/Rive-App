@@ -181,7 +181,7 @@ export default function LeadCombobox({
                     type="button"
                     disabled={isPending}
                     onClick={submitCreate}
-                    className="rounded-lg bg-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-accent-hover disabled:opacity-60"
+                    className="rounded-lg bg-accent px-3 py-1.5 text-xs font-medium text-accent-ink hover:bg-accent-hover disabled:opacity-60"
                   >
                     {isPending ? 'Création…' : 'Créer et sélectionner'}
                   </button>

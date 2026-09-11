@@ -111,7 +111,7 @@ export default function MonthCalendar({
           <button
             type="button"
             onClick={() => setAddingDate(todayStr)}
-            className="rounded-lg bg-accent px-2.5 py-1.5 text-xs font-medium text-white hover:bg-accent-hover"
+            className="rounded-lg bg-accent px-2.5 py-1.5 text-xs font-medium text-accent-ink hover:bg-accent-hover"
           >
             + Rendez-vous
           </button>
@@ -149,7 +149,7 @@ export default function MonthCalendar({
                   type="button"
                   onClick={() => setAddingDate(isAdding ? null : dateStr)}
                   aria-label={`Ajouter un rendez-vous le ${day} ${MONTH_FULL_FR[month]}`}
-                  className="h-4 w-4 rounded text-xs font-bold leading-none text-neutral-300 opacity-0 transition hover:bg-accent hover:text-white group-hover/day:opacity-100"
+                  className="h-4 w-4 rounded text-xs font-bold leading-none text-neutral-300 opacity-0 transition hover:bg-accent hover:text-accent-ink group-hover/day:opacity-100"
                 >
                   +
                 </button>
@@ -315,7 +315,7 @@ function AppointmentModal({
             <button
               type="submit"
               disabled={pending}
-              className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-50"
+              className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-ink hover:bg-accent-hover disabled:opacity-50"
             >
               {pending ? 'Ajout…' : 'Ajouter le rendez-vous'}
             </button>
@@ -379,7 +379,7 @@ function AppointmentChip({ appointment }: { appointment: AppointmentItem }) {
           })
         }}
         aria-label={`Annuler le rendez-vous avec ${appointment.leadName}`}
-        className="shrink-0 rounded px-1 text-[10px] leading-none text-neutral-400 opacity-0 hover:bg-danger hover:text-white group-hover/item:opacity-100"
+        className="shrink-0 rounded px-1 text-[10px] leading-none text-neutral-400 opacity-0 hover:bg-danger hover:text-danger-ink group-hover/item:opacity-100"
       >
         ✕
       </button>

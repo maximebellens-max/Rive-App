@@ -4,6 +4,7 @@ import { actionBucket, nearestUpcomingMilestone } from '@/lib/rive/today'
 import { computeMatchPairs, type MatchLead, type MatchMandate } from '@/lib/rive/matching'
 import TodayWidgets, { type Widget } from './today-widgets'
 import MonthCalendar, { type AppointmentItem } from './month-calendar'
+import Card from './_components/card'
 
 export default async function TodayPage() {
   const { supabase, user } = await getAuthedProfile()
@@ -334,9 +335,9 @@ export default async function TodayPage() {
 
 function MoneyTile({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-neutral-200 bg-surface p-4 shadow-sm">
+    <Card>
       <p className="text-xs text-neutral-500">{label}</p>
       <p className="mt-1 text-xl font-semibold tabular-nums">{value}</p>
-    </div>
+    </Card>
   )
 }

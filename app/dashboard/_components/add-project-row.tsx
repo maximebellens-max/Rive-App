@@ -59,7 +59,7 @@ export default function AddProjectRow({
           <button
             type="submit"
             disabled={pending}
-            className="shrink-0 rounded-lg bg-accent px-3 py-2 text-xs font-medium text-white hover:bg-accent-hover disabled:opacity-50"
+            className="shrink-0 rounded-lg bg-accent px-3 py-2 text-xs font-medium text-accent-ink hover:bg-accent-hover disabled:opacity-50"
           >
             {pending ? '…' : 'Ajouter'}
           </button>

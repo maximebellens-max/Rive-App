@@ -13,6 +13,7 @@ import {
 } from '@/app/actions/pipelines'
 import { bulkDeleteLeads, bulkAssignLeads } from '@/app/actions/leads'
 import Avatar from '../_components/avatar'
+import SegmentedControl from '../_components/segmented-control'
 import {
   COLUMN_COLORS,
   COLUMN_COLOR_HEX,
@@ -240,29 +241,15 @@ export default function KanbanBoard({
             className="w-40 rounded-lg border border-neutral-300 bg-surface px-2 py-1.5 text-xs text-neutral-600 outline-none placeholder:text-neutral-400 focus:w-56 focus:border-accent"
           />
         </div>
-        <div className="flex rounded-lg border border-neutral-300 p-0.5 text-xs">
-          <button
-            type="button"
-            onClick={() => setViewMode('kanban')}
-            className={`rounded px-2.5 py-1 font-medium ${viewMode === 'kanban' ? 'bg-accent text-white' : 'text-neutral-600'}`}
-          >
-            Kanban
-          </button>
-          <button
-            type="button"
-            onClick={() => setViewMode('list')}
-            className={`rounded px-2.5 py-1 font-medium ${viewMode === 'list' ? 'bg-accent text-white' : 'text-neutral-600'}`}
-          >
-            Liste
-          </button>
-          <button
-            type="button"
-            onClick={() => setViewMode('agent')}
-            className={`rounded px-2.5 py-1 font-medium ${viewMode === 'agent' ? 'bg-accent text-white' : 'text-neutral-600'}`}
-          >
-            Par agent
-          </button>
-        </div>
+        <SegmentedControl
+          value={viewMode}
+          onChange={setViewMode}
+          options={[
+            { value: 'kanban', label: 'Kanban' },
+            { value: 'list', label: 'Liste' },
+            { value: 'agent', label: 'Par agent' },
+          ]}
+        />
       </div>
 
       {selectMode && (
@@ -498,7 +485,7 @@ function BulkActionBar({
             type="button"
             disabled={pending}
             onClick={runDelete}
-            className="rounded bg-danger px-2 py-1 font-medium text-white disabled:opacity-50"
+            className="rounded bg-danger px-2 py-1 font-medium text-danger-ink disabled:opacity-50"
           >
             Confirmer
           </button>
@@ -684,7 +671,7 @@ function ColumnHeader({ column, boardType, count }: { column: PipelineColumn; bo
               setConfirmingDelete(false)
             })
           }}
-          className="shrink-0 rounded bg-danger px-1.5 py-0.5 text-xs text-white"
+          className="shrink-0 rounded bg-danger px-1.5 py-0.5 text-xs text-danger-ink"
         >
           Confirmer ?
         </button>
@@ -728,7 +715,7 @@ function AddColumnForm({ boardType }: { boardType: BoardType }) {
         className="w-56 rounded-lg border border-neutral-300 px-2.5 py-1.5 text-sm outline-none focus:border-accent"
         onBlur={() => setTimeout(() => setOpen(false), 150)}
       />
-      <button type="submit" className="w-fit rounded-lg bg-accent px-3 py-1.5 text-xs font-medium text-white">
+      <button type="submit" className="w-fit rounded-lg bg-accent px-3 py-1.5 text-xs font-medium text-accent-ink">
         Ajouter
       </button>
     </form>
