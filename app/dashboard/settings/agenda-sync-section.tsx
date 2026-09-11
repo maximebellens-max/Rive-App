@@ -76,7 +76,7 @@ export default function AgendaSyncSection({ icsUrl }: { icsUrl: string }) {
                 setConfirmingReset(false)
               })
             }
-            className="rounded bg-danger px-2 py-1 font-medium text-white disabled:opacity-50"
+            className="rounded bg-danger px-2 py-1 font-medium text-danger-ink disabled:opacity-50"
           >
             Confirmer
           </button>

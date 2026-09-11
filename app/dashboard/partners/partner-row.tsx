@@ -34,7 +34,7 @@ export default function PartnerRow({ partner }: { partner: Partner }) {
         <input name="email" defaultValue={partner.email} className={inputClass} />
         <input name="notes" defaultValue={partner.notes} className={`${inputClass} sm:col-span-2`} />
         <div className="flex gap-2 sm:col-span-2">
-          <button type="submit" className="rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-white">
+          <button type="submit" className="rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-accent-ink">
             Enregistrer
           </button>
           <button type="button" onClick={() => setEditing(false)} className="text-sm text-neutral-500">
@@ -72,7 +72,7 @@ export default function PartnerRow({ partner }: { partner: Partner }) {
           <button
             type="button"
             onClick={() => startTransition(() => deletePartner(partner.id))}
-            className="rounded-lg bg-danger px-2 py-1 text-xs text-white"
+            className="rounded-lg bg-danger px-2 py-1 text-xs text-danger-ink"
           >
             Confirmer ?
           </button>

@@ -32,7 +32,7 @@ export default async function EstimationsPage() {
         </div>
         <Link
           href="/dashboard/mandates/new?draft=1"
-          className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover"
+          className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-ink hover:bg-accent-hover"
         >
           Nouvelle estimation
         </Link>

@@ -82,7 +82,7 @@ export default function NotificationBell({ notifications }: { notifications: Not
           <path d="M13.73 21a2 2 0 0 1-3.46 0" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
         {unreadCount > 0 && (
-          <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-danger px-1 text-[10px] font-semibold text-white">
+          <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-danger px-1 text-[10px] font-semibold text-danger-ink">
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}

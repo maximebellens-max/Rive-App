@@ -72,7 +72,7 @@ export default async function CampaignsPage({ searchParams }: PageProps<'/dashbo
             key={r.key}
             href={`/dashboard/campaigns?range=${r.key}`}
             className={`rounded px-2.5 py-1 font-medium ${
-              r.key === range.key ? 'bg-accent text-white' : 'text-neutral-600 hover:text-neutral-900'
+              r.key === range.key ? 'bg-accent text-accent-ink' : 'text-neutral-600 hover:text-neutral-900'
             }`}
           >
             {r.label}

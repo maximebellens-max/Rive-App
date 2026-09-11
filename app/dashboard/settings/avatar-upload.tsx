@@ -67,7 +67,7 @@ export default function AvatarUpload({ name, avatarUrl }: { name: string; avatar
         title="Changer ma photo de profil"
       >
         <Avatar name={name} avatarUrl={preview} size={36} />
-        <span className="absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-accent text-[9px] text-white ring-2 ring-surface">
+        <span className="absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-accent text-[9px] text-accent-ink ring-2 ring-surface">
           ✎
         </span>
       </button>
