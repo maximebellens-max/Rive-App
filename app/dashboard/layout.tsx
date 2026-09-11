@@ -5,51 +5,7 @@ import { logout } from '@/app/actions/auth'
 import { createBoard } from '@/app/actions/boards'
 import NotificationBell, { type NotificationItem } from './notification-bell'
 import ThemeToggle from './theme-toggle'
-
-const NAV_GROUPS: { label: string; links: { href: string; label: string }[] }[] = [
-  {
-    label: 'Vue d’ensemble',
-    links: [
-      { href: '/dashboard', label: 'Aujourd’hui' },
-      { href: '/dashboard/sectors', label: 'Secteurs' },
-      { href: '/dashboard/performance', label: 'Performance' },
-      { href: '/dashboard/campaigns', label: 'Campagnes' },
-    ],
-  },
-  {
-    label: 'Pipelines',
-    links: [
-      { href: '/dashboard/pipelines/vendeur', label: 'Vendeurs' },
-      { href: '/dashboard/pipelines/acheteur', label: 'Acheteurs' },
-      { href: '/dashboard/pipelines/investisseur', label: 'Investisseurs' },
-    ],
-  },
-  {
-    label: 'Gestion',
-    links: [
-      { href: '/dashboard/estimations', label: 'Estimations' },
-      { href: '/dashboard/mandates', label: 'Mandats' },
-      { href: '/dashboard/commissions', label: 'Commissions' },
-      { href: '/dashboard/investments', label: 'Projets investisseur' },
-      { href: '/dashboard/locations', label: 'Location' },
-    ],
-  },
-  {
-    label: 'Suivi chantiers',
-    links: [
-      { href: '/dashboard/ameublement', label: 'Ameublement' },
-      { href: '/dashboard/cuisine', label: 'Cuisine' },
-      { href: '/dashboard/travaux', label: 'Travaux' },
-    ],
-  },
-  {
-    label: 'Outils',
-    links: [
-      { href: '/dashboard/partners', label: 'Contacts pro' },
-      { href: '/dashboard/templates', label: 'Modèles' },
-    ],
-  },
-]
+import SidebarNav from './sidebar-nav'
 
 export default async function DashboardLayout({
   children,
@@ -131,52 +87,8 @@ export default async function DashboardLayout({
         </div>
       </header>
       <div className="mx-auto flex w-full max-w-7xl flex-1 gap-8 px-4 py-8">
-        <aside className="hidden w-48 shrink-0 flex-col gap-6 md:flex">
-          {NAV_GROUPS.map((group) => (
-            <div key={group.label} className="flex flex-col gap-1">
-              <span className="px-2 text-xs font-semibold uppercase tracking-wide text-neutral-400">
-                {group.label}
-              </span>
-              {group.links.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className="rounded-lg px-2 py-1.5 text-sm text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900"
-                >
-                  {link.label}
-                </Link>
-              ))}
-            </div>
-          ))}
-          <div className="flex flex-col gap-1">
-            <span className="px-2 text-xs font-semibold uppercase tracking-wide text-neutral-400">
-              Tableaux personnalisés
-            </span>
-            {(customBoards ?? []).map((board) => (
-              <Link
-                key={board.id}
-                href={`/dashboard/pipelines/${board.id}`}
-                className="truncate rounded-lg px-2 py-1.5 text-sm text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900"
-              >
-                {board.name}
-              </Link>
-            ))}
-            <form action={createBoard} className="flex gap-1 px-2 pt-1">
-              <input
-                name="name"
-                placeholder="Nouveau tableau…"
-                aria-label="Nom du nouveau tableau"
-                className="min-w-0 flex-1 rounded-lg border border-neutral-200 px-2 py-1 text-xs outline-none focus:border-accent"
-              />
-              <button
-                type="submit"
-                aria-label="Créer le tableau"
-                className="shrink-0 rounded-lg border border-neutral-200 px-2 py-1 text-xs font-medium text-neutral-600 hover:bg-neutral-100"
-              >
-                +
-              </button>
-            </form>
-          </div>
+        <aside className="hidden w-52 shrink-0 flex-col gap-6 md:flex">
+          <SidebarNav customBoards={customBoards ?? []} createBoard={createBoard} />
         </aside>
         <main className="min-w-0 flex-1">{children}</main>
       </div>
