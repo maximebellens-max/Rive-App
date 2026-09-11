@@ -95,7 +95,7 @@ export default function InvestmentEditForm({ project }: { project: Project }) {
       <button
         type="submit"
         disabled={pending}
-        className="w-fit rounded-lg bg-accent px-5 py-2.5 text-sm font-medium text-white transition hover:bg-accent-hover disabled:opacity-60"
+        className="w-fit rounded-lg bg-accent px-5 py-2.5 text-sm font-medium text-accent-ink transition hover:bg-accent-hover disabled:opacity-60"
       >
         {pending ? 'Enregistrement…' : 'Enregistrer'}
       </button>

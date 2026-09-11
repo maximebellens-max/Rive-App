@@ -48,7 +48,7 @@ export default function NewCommissionForm({ options }: { options: MandateOption[
       <button
         type="submit"
         disabled={pending}
-        className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-60"
+        className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-ink hover:bg-accent-hover disabled:opacity-60"
       >
         {pending ? 'Ajout…' : 'Ajouter'}
       </button>
