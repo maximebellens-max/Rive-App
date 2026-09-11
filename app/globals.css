@@ -129,6 +129,20 @@ body {
   color: var(--color-neutral-900);
 }
 
+/* Coupe toutes les transitions/animations pour les personnes ayant demandé
+   "réduire les animations" dans leur système — plutôt que de préfixer
+   chaque classe Tailwind avec motion-safe: au cas par cas (facile à oublier
+   sur un nouvel ajout), une seule règle globale couvre toute l'app,
+   maintenant et pour les futurs ajouts (survol des cartes Kanban, etc.). */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 h1,
 h2,
 h3 {

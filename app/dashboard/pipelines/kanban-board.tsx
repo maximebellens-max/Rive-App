@@ -538,7 +538,7 @@ function ColumnBlock({
         const leadId = e.dataTransfer.getData('text/plain')
         if (leadId) onDrop(leadId)
       }}
-      className={`flex shrink-0 flex-col gap-2 rounded-2xl border bg-neutral-50 p-3 ${
+      className={`flex shrink-0 flex-col gap-2 rounded-2xl border bg-neutral-50 p-3 transition-colors duration-150 ${
         wide ? 'w-full' : 'w-72'
       } ${dragOver ? 'border-accent ring-1 ring-accent' : 'border-neutral-200'}`}
     >
@@ -766,6 +766,10 @@ function CardItem({
 }) {
   const effectiveScore = card.aiScore ?? card.score
   const tier = priorityTier(effectiveScore)
+  // Légère transparence pendant le glisser-déposer (comme les icônes du
+  // Finder macOS) : donne un vrai retour visuel sur la carte qu'on déplace,
+  // là où avant seule la colonne cible changeait d'apparence.
+  const [isDragging, setIsDragging] = useState(false)
 
   const content = (
     <>
@@ -827,7 +831,7 @@ function CardItem({
     return (
       <div
         style={categoryBorderStyle}
-        className={`flex items-start gap-2 rounded-xl border p-3 text-sm shadow-sm ${
+        className={`flex items-start gap-2 rounded-xl border p-3 text-sm shadow-sm transition-colors duration-150 ${
           selected ? 'border-accent bg-accent-soft' : 'border-neutral-200 bg-surface'
         }`}
       >
@@ -849,9 +853,15 @@ function CardItem({
     <Link
       href={`/dashboard/prospects/${card.id}`}
       draggable
-      onDragStart={(e) => e.dataTransfer.setData('text/plain', card.id)}
+      onDragStart={(e) => {
+        e.dataTransfer.setData('text/plain', card.id)
+        setIsDragging(true)
+      }}
+      onDragEnd={() => setIsDragging(false)}
       style={categoryBorderStyle}
-      className="flex cursor-grab flex-col gap-1.5 rounded-xl border border-neutral-200 bg-surface p-3 text-sm shadow-sm active:cursor-grabbing"
+      className={`flex cursor-grab flex-col gap-1.5 rounded-xl border border-neutral-200 bg-surface p-3 text-sm shadow-sm transition-all duration-150 hover:-translate-y-0.5 hover:border-neutral-300 hover:shadow-md active:cursor-grabbing ${
+        isDragging ? 'opacity-40' : ''
+      }`}
     >
       {content}
     </Link>
