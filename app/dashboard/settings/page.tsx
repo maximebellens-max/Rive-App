@@ -6,6 +6,7 @@ import BackupSection from './backup-section'
 import MetaSection from './meta-section'
 import WhatsAppSection from './whatsapp-section'
 import AgendaSyncSection from './agenda-sync-section'
+import SettingsShell, { type SettingsSection } from './settings-shell'
 
 export default async function SettingsPage({ searchParams }: PageProps<'/dashboard/settings'>) {
   const supabase = await createClient()
@@ -62,49 +63,85 @@ export default async function SettingsPage({ searchParams }: PageProps<'/dashboa
     return aActive - bActive
   })
 
-  return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-xl font-semibold tracking-tight">Réglages de l&apos;agence</h1>
-        <p className="mt-1 text-sm text-neutral-500">
-          Ces informations servent à générer tes mandats.
-        </p>
-      </div>
-      <div className="max-w-2xl rounded-2xl border border-neutral-200 bg-surface p-6 shadow-sm">
-        <AgencySettingsForm agency={agency} />
-      </div>
-      <div className="max-w-2xl rounded-2xl border border-neutral-200 bg-surface p-6 shadow-sm">
+  const metaSuccessMessage = typeof params?.meta === 'string' ? params.meta : undefined
+  const metaErrorMessage = typeof params?.meta_error === 'string' ? params.meta_error : undefined
+
+  const sections: SettingsSection[] = [
+    {
+      id: 'general',
+      label: 'Général',
+      title: 'Réglages de l’agence',
+      description: 'Ces informations servent à générer tes mandats.',
+      content: <AgencySettingsForm agency={agency} />,
+    },
+    {
+      id: 'equipe',
+      label: 'Équipe',
+      title: 'Équipe',
+      description: 'Gère les membres de ton agence et leurs accès.',
+      content: (
         <TeamSection
           isOwner={profile.role === 'owner'}
           currentUserId={user.id}
           members={members ?? []}
           invites={invites ?? []}
         />
-      </div>
-      <div className="max-w-2xl rounded-2xl border border-neutral-200 bg-surface p-6 shadow-sm">
+      ),
+    },
+    {
+      id: 'publicite',
+      label: 'Publicité & Leads',
+      title: 'Publicité & Leads',
+      description: 'Connecte Meta (Facebook/Instagram) pour récupérer automatiquement tes leads publicitaires.',
+      content: (
         <MetaSection
           connection={metaConnection ?? null}
           campaigns={sortedCampaigns}
           members={members ?? []}
-          successMessage={typeof params?.meta === 'string' ? params.meta : undefined}
-          errorMessage={typeof params?.meta_error === 'string' ? params.meta_error : undefined}
+          successMessage={metaSuccessMessage}
+          errorMessage={metaErrorMessage}
         />
-      </div>
-      <div className="max-w-2xl rounded-2xl border border-neutral-200 bg-surface p-6 shadow-sm">
+      ),
+    },
+    {
+      id: 'whatsapp',
+      label: 'WhatsApp',
+      title: 'WhatsApp',
+      description: 'Reçois une alerte WhatsApp pour chaque nouveau lead ou rendez-vous.',
+      content: (
         <WhatsAppSection
           whatsappNumber={profile.whatsapp_number ?? ''}
           whatsappAlertsEnabled={profile.whatsapp_alerts_enabled ?? false}
           whatsappSenderPhoneNumberId={profile.whatsapp_sender_phone_number_id ?? ''}
         />
-      </div>
-      <div className="max-w-2xl rounded-2xl border border-neutral-200 bg-surface p-6 shadow-sm">
+      ),
+    },
+    {
+      id: 'agenda',
+      label: 'Agenda',
+      title: 'Agenda',
+      description: 'Synchronise tes rendez-vous Rive avec l’app Calendrier de ton iPhone.',
+      content: (
         <AgendaSyncSection
           icsUrl={`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/ics/agent/${profile.ics_token}`}
         />
-      </div>
-      <div className="max-w-2xl rounded-2xl border border-neutral-200 bg-surface p-6 shadow-sm">
-        <BackupSection isOwner={profile.role === 'owner'} />
-      </div>
-    </div>
-  )
+      ),
+    },
+    {
+      id: 'sauvegarde',
+      label: 'Sauvegarde',
+      title: 'Sauvegarde',
+      description: 'Exporte ou restaure l’ensemble des données de l’agence.',
+      content: <BackupSection isOwner={profile.role === 'owner'} />,
+    },
+  ]
+
+  // Un retour depuis la connexion Meta (succès ou erreur) doit rouvrir
+  // directement sur "Publicité & Leads", sinon le message atterrirait sur
+  // une catégorie qui ne l'affiche pas. Sinon, ?section=... (mis à jour au
+  // clic dans le menu, voir settings-shell.tsx) ou "Général" par défaut.
+  const requestedSection = typeof params?.section === 'string' ? params.section : undefined
+  const initialSectionId = metaSuccessMessage || metaErrorMessage ? 'publicite' : requestedSection || 'general'
+
+  return <SettingsShell sections={sections} initialSectionId={initialSectionId} />
 }
