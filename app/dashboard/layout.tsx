@@ -6,6 +6,7 @@ import { createBoard } from '@/app/actions/boards'
 import NotificationBell, { type NotificationItem } from './notification-bell'
 import ThemeToggle from './theme-toggle'
 import SidebarNav from './sidebar-nav'
+import AccountMenu from './account-menu'
 
 export default async function DashboardLayout({
   children,
@@ -68,21 +69,13 @@ export default async function DashboardLayout({
           <div className="flex items-center gap-3 text-sm text-neutral-500">
             <ThemeToggle />
             <NotificationBell notifications={notifications} />
-            <Link href="/dashboard/settings" className="hover:text-neutral-900">
-              Réglages
-            </Link>
-            <span>
-              {profile?.full_name || user.email}
-              {agencyName ? ` · ${agencyName}` : ''}
-            </span>
-            <form action={logout}>
-              <button
-                type="submit"
-                className="rounded-lg border border-neutral-300 px-3 py-1.5 text-neutral-700 hover:bg-neutral-100"
-              >
-                Déconnexion
-              </button>
-            </form>
+            <AccountMenu
+              name={profile?.full_name || ''}
+              email={user.email || ''}
+              agencyName={agencyName}
+              avatarUrl={profile?.avatar_url}
+              logoutAction={logout}
+            />
           </div>
         </div>
       </header>
