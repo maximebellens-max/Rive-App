@@ -21,7 +21,6 @@ export type FurnishingRow = {
   commentaire: string
   commandeIkea: string
   commandeEd: string
-  poseur: string
   dateLivraisonIkea: string | null
   dateLivraisonEd: string | null
   datePose: string | null
@@ -45,7 +44,7 @@ const COMMANDE_OPTIONS = [
   { value: 'recu', label: 'Reçu', tone: 'success' as const },
 ]
 
-const COL_COUNT = 13
+const COL_COUNT = 12
 
 export default function AmeublementTable({ rows, leadOptions }: { rows: FurnishingRow[]; leadOptions: LeadOption[] }) {
   const [, startTransition] = useTransition()
@@ -75,7 +74,6 @@ export default function AmeublementTable({ rows, leadOptions }: { rows: Furnishi
             <th className="whitespace-nowrap px-3 py-2.5 font-medium">Architecte</th>
             <th className="whitespace-nowrap px-3 py-2.5 font-medium">Commande IKEA</th>
             <th className="whitespace-nowrap px-3 py-2.5 font-medium">Commande E.D</th>
-            <th className="whitespace-nowrap px-3 py-2.5 font-medium">Poseur</th>
             <th className="whitespace-nowrap px-3 py-2.5 font-medium">Livraison / Pose</th>
             <th className="whitespace-nowrap px-3 py-2.5 font-medium">Commentaire</th>
             <th className="w-8 px-3 py-2.5" />
@@ -139,9 +137,6 @@ export default function AmeublementTable({ rows, leadOptions }: { rows: Furnishi
                   options={COMMANDE_OPTIONS}
                   onSave={(v) => save(r.id, { commande_ed: v })}
                 />
-              </td>
-              <td className="px-3 py-2">
-                <EditableText value={r.poseur} onSave={(v) => save(r.id, { poseur: v })} placeholder="Nom du poseur" />
               </td>
               <td className="px-3 py-2">
                 <div className="flex flex-col gap-1">

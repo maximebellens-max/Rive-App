@@ -16,7 +16,7 @@ export default async function AmeublementPage() {
     supabase
       .from('furnishing_projects')
       .select(
-        'id, statut, paiement_client, monteur, marge_ht, avant_projet, architecte_paiement, commentaire, commande_ikea, commande_ed, poseur, date_livraison_ikea, date_livraison_ed, date_pose, leads ( id, name )'
+        'id, statut, paiement_client, monteur, marge_ht, avant_projet, architecte_paiement, commentaire, commande_ikea, commande_ed, date_livraison_ikea, date_livraison_ed, date_pose, leads ( id, name )'
       )
       .order('created_at', { ascending: false }),
     profile?.agency_id
@@ -43,7 +43,6 @@ export default async function AmeublementPage() {
       commentaire: r.commentaire,
       commandeIkea: r.commande_ikea,
       commandeEd: r.commande_ed,
-      poseur: r.poseur,
       dateLivraisonIkea: r.date_livraison_ikea,
       dateLivraisonEd: r.date_livraison_ed,
       datePose: r.date_pose,

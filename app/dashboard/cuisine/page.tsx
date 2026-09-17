@@ -16,7 +16,7 @@ export default async function CuisinePage() {
     supabase
       .from('kitchen_projects')
       .select(
-        'id, statut, paiement, marge_ht, conception, commentaire, metre, commande_ikea, poseur, date_livraison, date_pose_debut, date_pose_fin, finitions, leads ( id, name )'
+        'id, statut, paiement, marge_ht, conception, commentaire, metre, commande_ikea, date_livraison, date_pose_debut, date_pose_fin, leads ( id, name )'
       )
       .order('created_at', { ascending: false }),
     profile?.agency_id
@@ -41,11 +41,9 @@ export default async function CuisinePage() {
       commentaire: r.commentaire,
       metre: r.metre,
       commandeIkea: r.commande_ikea,
-      poseur: r.poseur,
       dateLivraison: r.date_livraison,
       datePoseDebut: r.date_pose_debut,
       datePoseFin: r.date_pose_fin,
-      finitions: r.finitions,
     }
   })
 

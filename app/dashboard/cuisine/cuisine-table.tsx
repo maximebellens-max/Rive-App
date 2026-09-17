@@ -19,11 +19,9 @@ export type KitchenRow = {
   commentaire: string
   metre: string
   commandeIkea: string
-  poseur: string
   dateLivraison: string | null
   datePoseDebut: string | null
   datePoseFin: string | null
-  finitions: string
 }
 
 const STATUT_OPTIONS = [
@@ -48,7 +46,7 @@ const COMMANDE_OPTIONS = [
   { value: 'recu', label: 'Reçu', tone: 'success' as const },
 ]
 
-const COL_COUNT = 12
+const COL_COUNT = 10
 
 export default function CuisineTable({ rows, leadOptions }: { rows: KitchenRow[]; leadOptions: LeadOption[] }) {
   const [, startTransition] = useTransition()
@@ -76,9 +74,7 @@ export default function CuisineTable({ rows, leadOptions }: { rows: KitchenRow[]
             <th className="whitespace-nowrap px-3 py-2.5 font-medium">Conception</th>
             <th className="whitespace-nowrap px-3 py-2.5 font-medium">Métré</th>
             <th className="whitespace-nowrap px-3 py-2.5 font-medium">Commande IKEA</th>
-            <th className="whitespace-nowrap px-3 py-2.5 font-medium">Poseur</th>
             <th className="whitespace-nowrap px-3 py-2.5 font-medium">Livraison / Pose</th>
-            <th className="whitespace-nowrap px-3 py-2.5 font-medium">Finitions</th>
             <th className="whitespace-nowrap px-3 py-2.5 font-medium">Commentaire</th>
             <th className="w-8 px-3 py-2.5" />
           </tr>
@@ -125,9 +121,6 @@ export default function CuisineTable({ rows, leadOptions }: { rows: KitchenRow[]
                 />
               </td>
               <td className="px-3 py-2">
-                <EditableText value={r.poseur} onSave={(v) => save(r.id, { poseur: v })} placeholder="Nom du poseur" />
-              </td>
-              <td className="px-3 py-2">
                 <div className="flex flex-col gap-1">
                   <div className="flex items-center gap-1">
                     <span className="w-16 shrink-0 text-[10px] text-neutral-400">Livraison</span>
@@ -142,9 +135,6 @@ export default function CuisineTable({ rows, leadOptions }: { rows: KitchenRow[]
                     <EditableDate value={r.datePoseFin} onSave={(v) => save(r.id, { date_pose_fin: v })} />
                   </div>
                 </div>
-              </td>
-              <td className="px-3 py-2">
-                <EditableText value={r.finitions} onSave={(v) => save(r.id, { finitions: v })} placeholder="Finitions" />
               </td>
               <td className="px-3 py-2">
                 <EditableText value={r.commentaire} onSave={(v) => save(r.id, { commentaire: v })} placeholder="Commentaire" width="w-64" />
