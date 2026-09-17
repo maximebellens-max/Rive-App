@@ -6,6 +6,7 @@ import { createBoard } from '@/app/actions/boards'
 import NotificationBell, { type NotificationItem } from './notification-bell'
 import ThemeToggle from './theme-toggle'
 import SidebarNav from './sidebar-nav'
+import MobileNav from './mobile-nav'
 import AccountMenu from './account-menu'
 import InstallPrompt from './_components/install-prompt'
 
@@ -64,9 +65,12 @@ export default async function DashboardLayout({
     <div className="flex min-h-screen flex-col">
       <header className="border-b border-neutral-200 bg-surface">
         <div className="flex items-center justify-between px-4 py-3">
-          <Link href="/dashboard" className="text-lg font-semibold tracking-tight">
-            Rive
-          </Link>
+          <div className="flex items-center gap-1">
+            <MobileNav customBoards={customBoards ?? []} createBoard={createBoard} />
+            <Link href="/dashboard" className="text-lg font-semibold tracking-tight">
+              Rive
+            </Link>
+          </div>
           <div className="flex items-center gap-3 text-sm text-neutral-500">
             <ThemeToggle />
             <NotificationBell notifications={notifications} />

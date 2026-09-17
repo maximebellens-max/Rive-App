@@ -255,3 +255,25 @@ export function LogOutIcon(props: IconProps) {
     </Icon>
   )
 }
+
+// Bouton "ouvrir le menu" du tiroir de navigation mobile (voir
+// app/dashboard/mobile-nav.tsx).
+export function MenuIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <line x1="4" x2="20" y1="12" y2="12" />
+      <line x1="4" x2="20" y1="6" y2="6" />
+      <line x1="4" x2="20" y1="18" y2="18" />
+    </Icon>
+  )
+}
+
+// Bouton "fermer" du tiroir de navigation mobile.
+export function XIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M18 6 6 18" />
+      <path d="m6 6 12 12" />
+    </Icon>
+  )
+}

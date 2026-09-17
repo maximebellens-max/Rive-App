@@ -177,6 +177,11 @@ export default function KanbanBoard({
     return groups.sort((a, b) => b.cards.length - a.cards.length)
   }, [filteredCards, members])
 
+  // Déplace une carte vers une autre étape — appelée à la fois par le
+  // glisser-déposer (souris, voir ColumnBlock) et par le menu "Déplacer
+  // vers" de chaque carte (tactile, voir MoveMenu) : sur mobile le
+  // glisser-déposer HTML5 ne se déclenche pas du tout au doigt, ce menu est
+  // donc la seule façon de changer une carte d'étape depuis un téléphone.
   function handleDrop(leadId: string, columnId: string) {
     const card = cards.find((c) => c.id === leadId)
     if (!card || effectiveColumnId(card) === columnId) return
@@ -274,7 +279,13 @@ export default function KanbanBoard({
               </div>
               <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                 {memberCards.map((card) => (
-                  <CardItem key={card.id} card={card} />
+                  <CardItem
+                    key={card.id}
+                    card={card}
+                    columns={columns}
+                    currentColumnId={effectiveColumnId(card)}
+                    onMove={handleDrop}
+                  />
                 ))}
               </div>
             </div>
@@ -290,6 +301,8 @@ export default function KanbanBoard({
               boardType={boardType}
               wide={viewMode === 'list'}
               onDrop={(leadId) => handleDrop(leadId, column.id)}
+              onMove={handleDrop}
+              allColumns={columns}
               selectMode={selectMode}
               selected={selected}
               onToggleSelect={toggleSelected}
@@ -504,6 +517,8 @@ function ColumnBlock({
   boardType,
   wide,
   onDrop,
+  onMove,
+  allColumns,
   selectMode,
   selected,
   onToggleSelect,
@@ -514,6 +529,8 @@ function ColumnBlock({
   boardType: BoardType
   wide: boolean
   onDrop: (leadId: string) => void
+  onMove: (cardId: string, columnId: string) => void
+  allColumns: PipelineColumn[]
   selectMode?: boolean
   selected?: Set<string>
   onToggleSelect?: (id: string) => void
@@ -584,6 +601,9 @@ function ColumnBlock({
                   selected={selected?.has(card.id)}
                   onToggleSelect={() => onToggleSelect?.(card.id)}
                   avatarMembers={avatarMembers}
+                  columns={allColumns}
+                  currentColumnId={column.id}
+                  onMove={onMove}
                 />
               )
             })}
@@ -745,6 +765,75 @@ function QuickAddForm({ boardType, columnId }: { boardType: BoardType; columnId:
   )
 }
 
+// Menu "Déplacer vers" affiché sur chaque carte — seule façon de changer
+// une carte d'étape sur écran tactile, le glisser-déposer HTML5 utilisé
+// pour la souris (voir ColumnBlock) ne se déclenchant pas au doigt. Reste
+// aussi utile sur ordinateur pour déplacer une carte sans avoir à la
+// glisser jusqu'à une colonne hors champ.
+function MoveMenu({
+  columns,
+  currentColumnId,
+  onMove,
+}: {
+  columns: PipelineColumn[]
+  currentColumnId: string | null
+  onMove: (columnId: string) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const targets = columns.filter((c) => c.id !== currentColumnId)
+
+  if (!targets.length) return null
+
+  return (
+    <div
+      className="relative"
+      onBlur={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node)) setOpen(false)
+      }}
+    >
+      <button
+        type="button"
+        onClick={(e) => {
+          e.preventDefault()
+          e.stopPropagation()
+          setOpen((v) => !v)
+        }}
+        aria-label="Déplacer vers une autre étape"
+        aria-expanded={open}
+        className="rounded px-1 py-0.5 text-xs leading-none text-neutral-300 hover:bg-neutral-100 hover:text-neutral-600"
+      >
+        ⇄
+      </button>
+      {open && (
+        <div className="absolute right-0 top-5 z-20 w-44 rounded-lg border border-neutral-200 bg-surface p-1 shadow-md">
+          <p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-neutral-400">
+            Déplacer vers
+          </p>
+          {targets.map((c) => (
+            <button
+              key={c.id}
+              type="button"
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                setOpen(false)
+                onMove(c.id)
+              }}
+              className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs text-neutral-700 hover:bg-neutral-100"
+            >
+              <span
+                className="h-2 w-2 shrink-0 rounded-full"
+                style={{ backgroundColor: COLUMN_COLOR_HEX[c.color] ?? '#64748b' }}
+              />
+              <span className="truncate">{c.name}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // Tronque la raison IA pour qu'elle tienne sur une ligne de carte — le texte
 // complet reste lisible au survol via l'attribut title.
 function truncate(text: string, max: number): string {
@@ -757,12 +846,18 @@ function CardItem({
   selected,
   onToggleSelect,
   avatarMembers,
+  columns,
+  currentColumnId,
+  onMove,
 }: {
   card: PipelineCard
   selectMode?: boolean
   selected?: boolean
   onToggleSelect?: () => void
   avatarMembers?: BoardMember[]
+  columns?: PipelineColumn[]
+  currentColumnId?: string | null
+  onMove?: (cardId: string, columnId: string) => void
 }) {
   const effectiveScore = card.aiScore ?? card.score
   const tier = priorityTier(effectiveScore)
@@ -793,9 +888,18 @@ function CardItem({
           )}
           <span className="min-w-0 truncate font-medium text-neutral-900">{card.name}</span>
         </div>
-        <span className={`shrink-0 rounded-full border px-1.5 py-0.5 text-[10px] font-medium ${PRIORITY_TIER_CLASS[tier]}`}>
-          {PRIORITY_TIER_LABEL[tier]}
-        </span>
+        <div className="flex shrink-0 items-center gap-1">
+          {!!columns?.length && onMove && (
+            <MoveMenu
+              columns={columns}
+              currentColumnId={currentColumnId ?? null}
+              onMove={(columnId) => onMove(card.id, columnId)}
+            />
+          )}
+          <span className={`shrink-0 rounded-full border px-1.5 py-0.5 text-[10px] font-medium ${PRIORITY_TIER_CLASS[tier]}`}>
+            {PRIORITY_TIER_LABEL[tier]}
+          </span>
+        </div>
       </div>
       {card.category && (
         <span className="flex items-center gap-1.5 text-xs text-neutral-500">

@@ -121,9 +121,12 @@ export default function MonthCalendar({
         </div>
       </div>
 
-      <div className="grid grid-cols-7 gap-2">
+      <div className="grid grid-cols-7 gap-1 sm:gap-2">
         {DOW_LABELS_FR.map((d) => (
-          <div key={d} className="pb-1 text-center text-[11px] font-semibold uppercase tracking-wide text-neutral-400">
+          <div
+            key={d}
+            className="pb-1 text-center text-[10px] font-semibold uppercase tracking-wide text-neutral-400 sm:text-[11px]"
+          >
             {d}
           </div>
         ))}
@@ -139,17 +142,17 @@ export default function MonthCalendar({
           return (
             <div
               key={dateStr}
-              className={`group/day flex min-h-24 flex-col gap-1 rounded-xl border bg-surface p-1.5 ${
+              className={`group/day flex min-h-16 flex-col gap-1 rounded-lg border bg-surface p-1 sm:min-h-24 sm:rounded-xl sm:p-1.5 ${
                 isToday ? 'border-accent ring-1 ring-accent' : 'border-neutral-200'
               }`}
             >
               <div className="flex items-center justify-between">
-                <span className="font-mono text-xs font-bold text-neutral-500">{day}</span>
+                <span className="font-mono text-[11px] font-bold text-neutral-500 sm:text-xs">{day}</span>
                 <button
                   type="button"
                   onClick={() => setAddingDate(isAdding ? null : dateStr)}
                   aria-label={`Ajouter un rendez-vous le ${day} ${MONTH_FULL_FR[month]}`}
-                  className="h-4 w-4 rounded text-xs font-bold leading-none text-neutral-300 opacity-0 transition hover:bg-accent hover:text-accent-ink group-hover/day:opacity-100"
+                  className="h-4 w-4 rounded text-xs font-bold leading-none text-neutral-300 transition hover:bg-accent hover:text-accent-ink sm:opacity-0 sm:group-hover/day:opacity-100"
                 >
                   +
                 </button>
@@ -379,7 +382,7 @@ function AppointmentChip({ appointment }: { appointment: AppointmentItem }) {
           })
         }}
         aria-label={`Annuler le rendez-vous avec ${appointment.leadName}`}
-        className="shrink-0 rounded px-1 text-[10px] leading-none text-neutral-400 opacity-0 hover:bg-danger hover:text-danger-ink group-hover/item:opacity-100"
+        className="shrink-0 rounded px-1 text-[10px] leading-none text-neutral-400 hover:bg-danger hover:text-danger-ink sm:opacity-0 sm:group-hover/item:opacity-100"
       >
         ✕
       </button>
