@@ -46,6 +46,7 @@ import {
 } from './ai-prompts'
 import { generateWithClaude } from './anthropic'
 import { notifyAlertWhatsApp, notifyTeamAlertWhatsApp } from './whatsapp-notify'
+import { notifyPushForAssignee, notifyPushTeam } from './push-notify'
 
 function appUrl(): string {
   return process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
@@ -152,6 +153,11 @@ async function processNoResponseRelances(supabase: SupabaseClient, agencyId: str
         `Relance J+${RELANCE_STEPS[step]} — ${lead.name}`,
         `${body}\n${leadUrl(lead.id)}`
       )
+      await notifyPushForAssignee(supabase, agencyId, lead.assigned_to, 'relance_sans_reponse', {
+        title: `Relance J+${RELANCE_STEPS[step]} — ${lead.name}`,
+        body,
+        url: leadUrl(lead.id),
+      })
     }
 
     const nextLastStep = step && step !== lastStep ? step : lastStep
@@ -201,6 +207,11 @@ async function processAnniversaryRelances(supabase: SupabaseClient, agencyId: st
       `Anniversaire — ${lead.name}`,
       `${body}\n${leadUrl(mandate.lead_id)}`
     )
+    await notifyPushForAssignee(supabase, agencyId, mandate.assigned_to, 'relance_anniversaire_vente', {
+      title: `Anniversaire — ${lead.name}`,
+      body,
+      url: leadUrl(mandate.lead_id),
+    })
   }
 }
 
@@ -222,6 +233,11 @@ async function processBirthdayRelances(supabase: SupabaseClient, agencyId: strin
     const { text } = await generateWithClaude(generateBirthdayBrief(lead.name))
     const body = text || `C'est l'anniversaire de ${lead.name} aujourd'hui.`
     await notifyAlertWhatsApp(supabase, agencyId, lead.assigned_to, `Anniversaire — ${lead.name}`, `${body}\n${leadUrl(lead.id)}`)
+    await notifyPushForAssignee(supabase, agencyId, lead.assigned_to, 'relance_anniversaire_client', {
+      title: `Anniversaire — ${lead.name}`,
+      body,
+      url: leadUrl(lead.id),
+    })
   }
 }
 
@@ -235,6 +251,11 @@ async function processYearEndWishes(supabase: SupabaseClient, agencyId: string, 
   const { text } = await generateWithClaude(generateYearEndWishesBrief())
   const body = text || "Toute l'équipe Hevrest vous souhaite de très belles fêtes de fin d'année !"
   await notifyTeamAlertWhatsApp(supabase, agencyId, 'Vœux de fin d\'année', `${body}\n\nÀ copier-coller vers ta liste de diffusion.`)
+  await notifyPushTeam(supabase, agencyId, 'voeux_fin_annee', {
+    title: "Vœux de fin d'année",
+    body,
+    url: '/dashboard',
+  })
 }
 
 // 5. Demande d'avis Google, 7 jours après une transaction conclue.
@@ -267,6 +288,11 @@ async function processGoogleReviewRequests(supabase: SupabaseClient, agencyId: s
       `Demande d'avis — ${lead.name}`,
       `${body}\n${leadUrl(mandate.lead_id)}`
     )
+    await notifyPushForAssignee(supabase, agencyId, mandate.assigned_to, 'relance_avis_google', {
+      title: `Demande d'avis — ${lead.name}`,
+      body,
+      url: leadUrl(mandate.lead_id),
+    })
   }
 }
 
@@ -301,6 +327,11 @@ async function processStaleEstimations(supabase: SupabaseClient, agencyId: strin
       `Relance estimation — ${lead.name}`,
       `${body}\n${leadUrl(mandate.lead_id)}`
     )
+    await notifyPushForAssignee(supabase, agencyId, mandate.assigned_to, 'relance_estimation', {
+      title: `Relance estimation — ${lead.name}`,
+      body,
+      url: leadUrl(mandate.lead_id),
+    })
   }
 }
 
@@ -355,6 +386,11 @@ async function processVendeurStalledRelances(supabase: SupabaseClient, agencyId:
         `Relance vendeur — ${lead.name}`,
         `${body}\n${leadUrl(lead.id)}`
       )
+      await notifyPushForAssignee(supabase, agencyId, lead.assigned_to, 'relance_vendeur_bloque', {
+        title: `Relance vendeur — ${lead.name}`,
+        body,
+        url: leadUrl(lead.id),
+      })
     }
 
     await supabase.from('vendeur_stall_relance_state').upsert({

@@ -248,7 +248,9 @@ export default async function CampaignsPage({ searchParams }: PageProps<'/dashbo
             <table className="w-full text-left text-sm">
               <thead className="border-b border-neutral-200 text-neutral-500">
                 <tr>
-                  <th className="px-4 py-3 font-medium">Campagne</th>
+                  <th className="sticky left-0 z-20 whitespace-nowrap border-r border-neutral-200 bg-surface px-4 py-3 font-medium">
+                    Campagne
+                  </th>
                   <th className="px-4 py-3 font-medium">Dépense</th>
                   <th className="px-4 py-3 font-medium">Impressions</th>
                   <th className="px-4 py-3 font-medium">Clics</th>
@@ -260,8 +262,8 @@ export default async function CampaignsPage({ searchParams }: PageProps<'/dashbo
               </thead>
               <tbody>
                 {rows.map((r) => (
-                  <tr key={r.id} className="border-b border-neutral-100 last:border-0 align-top">
-                    <td className="px-4 py-3">
+                  <tr key={r.id} className="group border-b border-neutral-100 last:border-0 align-top">
+                    <td className="sticky left-0 z-10 whitespace-nowrap border-r border-neutral-200 bg-surface px-4 py-3 group-hover:bg-neutral-50">
                       <p className="font-medium text-neutral-900">{r.name}</p>
                       {(r.ownerName || r.targetCategory) && (
                         <p className="mt-0.5 text-xs text-neutral-400">

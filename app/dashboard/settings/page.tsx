@@ -5,6 +5,7 @@ import TeamSection from './team-section'
 import BackupSection from './backup-section'
 import MetaSection from './meta-section'
 import WhatsAppSection from './whatsapp-section'
+import PushSection from './push-section'
 import AgendaSyncSection from './agenda-sync-section'
 import SettingsShell, { type SettingsSection } from './settings-shell'
 
@@ -19,7 +20,9 @@ export default async function SettingsPage({ searchParams }: PageProps<'/dashboa
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('agency_id, role, whatsapp_number, whatsapp_alerts_enabled, whatsapp_sender_phone_number_id, ics_token')
+    .select(
+      'agency_id, role, whatsapp_number, whatsapp_alerts_enabled, whatsapp_sender_phone_number_id, ics_token, push_prefs'
+    )
     .eq('id', user.id)
     .single()
 
@@ -113,6 +116,18 @@ export default async function SettingsPage({ searchParams }: PageProps<'/dashboa
           whatsappNumber={profile.whatsapp_number ?? ''}
           whatsappAlertsEnabled={profile.whatsapp_alerts_enabled ?? false}
           whatsappSenderPhoneNumberId={profile.whatsapp_sender_phone_number_id ?? ''}
+        />
+      ),
+    },
+    {
+      id: 'notifications',
+      label: 'Notifications',
+      title: 'Notifications push',
+      description: 'Reçois tes alertes directement depuis l’app installée, sans passer par WhatsApp ni email.',
+      content: (
+        <PushSection
+          vapidPublicKey={process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || ''}
+          prefs={(profile.push_prefs as Record<string, boolean> | null) ?? {}}
         />
       ),
     },

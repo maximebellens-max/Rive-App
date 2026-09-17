@@ -39,7 +39,9 @@ export default async function PerformancePage() {
           <table className="w-full text-left text-sm">
             <thead className="border-b border-neutral-200 text-neutral-500">
               <tr>
-                <th className="px-4 py-3 font-medium">Source</th>
+                <th className="sticky left-0 z-20 whitespace-nowrap border-r border-neutral-200 bg-surface px-4 py-3 font-medium">
+                  Source
+                </th>
                 <th className="px-4 py-3 font-medium">Leads</th>
                 <th className="px-4 py-3 font-medium">Mandats</th>
                 <th className="px-4 py-3 font-medium">Conversion</th>
@@ -48,8 +50,10 @@ export default async function PerformancePage() {
             </thead>
             <tbody>
               {stats.map((s) => (
-                <tr key={s.source} className="border-b border-neutral-100 last:border-0">
-                  <td className="px-4 py-3 font-medium text-neutral-900">{s.source}</td>
+                <tr key={s.source} className="group border-b border-neutral-100 last:border-0 hover:bg-neutral-50">
+                  <td className="sticky left-0 z-10 whitespace-nowrap border-r border-neutral-200 bg-surface px-4 py-3 font-medium text-neutral-900 group-hover:bg-neutral-50">
+                    {s.source}
+                  </td>
                   <td className="px-4 py-3 tabular-nums text-neutral-600">{s.leads}</td>
                   <td className="px-4 py-3 tabular-nums text-neutral-600">{s.mandates}</td>
                   <td className="px-4 py-3 tabular-nums text-neutral-600">{s.conversion}%</td>

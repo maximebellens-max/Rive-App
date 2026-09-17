@@ -10,6 +10,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { notifyMatchesForLeadId } from './match-notify'
 import { notifyNewLeadWhatsApp } from './whatsapp-notify'
+import { notifyPushTeam } from './push-notify'
 import { sendLeadAlertEmail } from './email'
 import { appBaseUrl } from './meta'
 
@@ -23,6 +24,11 @@ export async function notifyNewLead(
     name: lead.name,
     category: lead.category,
     source: lead.source,
+  })
+  await notifyPushTeam(supabase, agencyId, 'nouveau_prospect', {
+    title: 'Nouveau prospect',
+    body: `${lead.name} — ${lead.source || 'Rive'}`,
+    url: `${appBaseUrl()}/dashboard/prospects/${lead.id}`,
   })
 
   const [{ data: members }, { data: creator }] = await Promise.all([

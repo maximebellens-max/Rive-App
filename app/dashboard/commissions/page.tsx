@@ -60,7 +60,9 @@ export default async function CommissionsPage() {
       <table className="w-full text-left text-sm">
         <thead className="border-b border-neutral-200 text-neutral-500">
           <tr>
-            <th className="px-4 py-3 font-medium">Mandat</th>
+            <th className="sticky left-0 z-20 whitespace-nowrap border-r border-neutral-200 bg-surface px-4 py-3 font-medium">
+              Mandat
+            </th>
             <th className="px-4 py-3 font-medium">Montant</th>
             <th className="px-4 py-3 font-medium">Statut</th>
             <th className="px-4 py-3 font-medium">Date de paiement</th>
@@ -77,8 +79,8 @@ export default async function CommissionsPage() {
           {commissions?.map((c) => {
             const mandate = c.mandates as unknown as { id: string; address: string; property_type: string } | null
             return (
-              <tr key={c.id} className="border-b border-neutral-100 last:border-0 hover:bg-neutral-50">
-                <td className="px-4 py-3">
+              <tr key={c.id} className="group border-b border-neutral-100 last:border-0 hover:bg-neutral-50">
+                <td className="sticky left-0 z-10 whitespace-nowrap border-r border-neutral-200 bg-surface px-4 py-3 group-hover:bg-neutral-50">
                   <Link href={`/dashboard/commissions/${c.id}`} className="font-medium text-neutral-900 hover:underline">
                     {mandate?.address || mandate?.property_type || 'Mandat'}
                   </Link>

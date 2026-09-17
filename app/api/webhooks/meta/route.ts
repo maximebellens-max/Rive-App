@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { initialPositions } from '@/lib/rive/pipeline-positions'
 import { sendLeadAlertEmail } from '@/lib/rive/email'
 import { notifyTeamAlertWhatsApp } from '@/lib/rive/whatsapp-notify'
+import { notifyPushTeam } from '@/lib/rive/push-notify'
 import { CATEGORY_LABEL } from '@/lib/rive/pipelines'
 import {
   appBaseUrl,
@@ -239,4 +240,9 @@ async function processLeadgenChange(
     `Nouveau prospect — ${name}`,
     `Catégorie : ${categoryLabel}\nSource : ${leadData.campaignName || 'Meta Ads'}\n${details}`
   )
+  await notifyPushTeam(supabase, connection.agency_id, 'nouveau_prospect', {
+    title: 'Nouveau prospect',
+    body: `${name} — ${leadData.campaignName || 'Meta Ads'}`,
+    url: `${appBaseUrl()}/dashboard/prospects/${lead.id}`,
+  })
 }

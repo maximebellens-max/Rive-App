@@ -12,6 +12,7 @@ import { leadPriorityScore } from './pipelines'
 import { generateWithClaude } from './anthropic'
 import { claimDailyAlert } from './daily-alerts'
 import { notifyAlertWhatsApp } from './whatsapp-notify'
+import { notifyPushForAssignee } from './push-notify'
 
 type HistoryEntry = { entry_date: string; text: string }
 type MetaAnswer = { question: string; answer: string }
@@ -191,5 +192,10 @@ async function sendPriorityDigest(supabase: SupabaseClient, agencyId: string, to
 
     const body = top.map((l, i) => `${i + 1}. ${l.name} (${l.score}/100) — ${l.reasoning}`).join('\n')
     await notifyAlertWhatsApp(supabase, agencyId, assignedTo, 'Priorités du jour', body)
+    await notifyPushForAssignee(supabase, agencyId, assignedTo, 'priorites_jour', {
+      title: 'Priorités du jour',
+      body: top.map((l) => l.name).join(' · '),
+      url: '/dashboard',
+    })
   }
 }

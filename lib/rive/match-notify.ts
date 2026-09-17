@@ -9,6 +9,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { bienIsActive, leadMatchesBien, type MatchLead, type MatchMandate } from './matching'
 import { sendMatchAlertEmail } from './email'
 import { notifyAlertWhatsApp } from './whatsapp-notify'
+import { notifyPushForAssignee } from './push-notify'
 
 const LEAD_FIELDS = 'id, name, category, budget, critere_type, critere_lieu, surface_min, pieces_min, assigned_to'
 const MANDATE_FIELDS =
@@ -68,6 +69,11 @@ export async function notifyMatchesForLeadId(supabase: SupabaseClient, agencyId:
   // ouvrir le lien. C'est l'agent assigné à CE prospect acheteur qui est
   // concerné par le rapprochement.
   await notifyAlertWhatsApp(supabase, agencyId, (lead as LeadRow).assigned_to, 'Alerte rapprochement', `${title}\n${body}\n${url}`)
+  await notifyPushForAssignee(supabase, agencyId, (lead as LeadRow).assigned_to, 'rapprochement', {
+    title,
+    body,
+    url,
+  })
 }
 
 // Appelée après la création/modification d'un mandat : si le bien est
@@ -128,13 +134,14 @@ export async function notifyMatchesForMandateId(supabase: SupabaseClient, agency
       const groupTitle =
         groupCount === 1 ? `1 acheteur correspond à ${address}` : `${groupCount} acheteurs correspondent à ${address}`
       const groupBody = group.map((l) => l.name).join(' · ')
-      return notifyAlertWhatsApp(
-        supabase,
-        agencyId,
-        assignedTo,
-        'Alerte rapprochement',
-        `${groupTitle}\n${groupBody}\n${url}`
-      )
+      return Promise.all([
+        notifyAlertWhatsApp(supabase, agencyId, assignedTo, 'Alerte rapprochement', `${groupTitle}\n${groupBody}\n${url}`),
+        notifyPushForAssignee(supabase, agencyId, assignedTo, 'rapprochement', {
+          title: groupTitle,
+          body: groupBody,
+          url,
+        }),
+      ])
     })
   )
 }

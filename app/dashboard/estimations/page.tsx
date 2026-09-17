@@ -42,7 +42,9 @@ export default async function EstimationsPage() {
         <table className="w-full text-left text-sm">
           <thead className="border-b border-neutral-200 text-neutral-500">
             <tr>
-              <th className="px-4 py-3 font-medium">Bien</th>
+              <th className="sticky left-0 z-20 whitespace-nowrap border-r border-neutral-200 bg-surface px-4 py-3 font-medium">
+                Bien
+              </th>
               <th className="px-4 py-3 font-medium">Client</th>
               <th className="px-4 py-3 font-medium">Type</th>
               <th className="px-4 py-3 font-medium">Surface</th>
@@ -59,8 +61,8 @@ export default async function EstimationsPage() {
               </tr>
             )}
             {rows.map((m) => (
-              <tr key={m.id} className="border-b border-neutral-100 last:border-0 hover:bg-neutral-50">
-                <td className="px-4 py-3">
+              <tr key={m.id} className="group border-b border-neutral-100 last:border-0 hover:bg-neutral-50">
+                <td className="sticky left-0 z-10 whitespace-nowrap border-r border-neutral-200 bg-surface px-4 py-3 group-hover:bg-neutral-50">
                   <Link href={`/dashboard/mandates/${m.id}`} className="font-medium text-neutral-900 hover:underline">
                     {m.address || m.property_type || 'Bien sans adresse'}
                   </Link>

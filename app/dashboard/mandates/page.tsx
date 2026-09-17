@@ -72,7 +72,12 @@ export default async function MandatesPage() {
       <table className="w-full text-left text-sm">
           <thead className="border-b border-neutral-200 text-neutral-500">
             <tr>
-              <th className="px-4 py-3 font-medium">Bien / Client</th>
+              {/* Colonne figée (sticky) pendant le défilement horizontal — sans
+                  elle, sur petit écran, on perd de vue à qui appartient la ligne
+                  dès qu'on scrolle vers la droite. */}
+              <th className="sticky left-0 z-20 whitespace-nowrap border-r border-neutral-200 bg-surface px-4 py-3 font-medium">
+                Bien / Client
+              </th>
               <th className="px-4 py-3 font-medium">Agent</th>
               <th className="px-4 py-3 font-medium">Type</th>
               <th className="px-4 py-3 font-medium">Prix</th>
@@ -90,8 +95,8 @@ export default async function MandatesPage() {
               </tr>
             )}
             {investorRows.map((r) => (
-              <tr key={`investment-${r.id}`} className="border-b border-neutral-100 last:border-0 hover:bg-neutral-50">
-                <td className="px-4 py-3">
+              <tr key={`investment-${r.id}`} className="group border-b border-neutral-100 last:border-0 hover:bg-neutral-50">
+                <td className="sticky left-0 z-10 whitespace-nowrap border-r border-neutral-200 bg-surface px-4 py-3 group-hover:bg-neutral-50">
                   <Link href={`/dashboard/investments/${r.id}`} className="font-medium text-neutral-900 hover:underline">
                     {r.lead?.name || 'Prospect supprimé'}
                   </Link>
@@ -121,8 +126,8 @@ export default async function MandatesPage() {
               const urgency = dateUrgency(notice)
               const agent = m.assigned_to ? memberById.get(m.assigned_to) : undefined
               return (
-                <tr key={m.id} className="border-b border-neutral-100 last:border-0 hover:bg-neutral-50">
-                  <td className="px-4 py-3">
+                <tr key={m.id} className="group border-b border-neutral-100 last:border-0 hover:bg-neutral-50">
+                  <td className="sticky left-0 z-10 whitespace-nowrap border-r border-neutral-200 bg-surface px-4 py-3 group-hover:bg-neutral-50">
                     <Link href={`/dashboard/mandates/${m.id}`} className="font-medium text-neutral-900 hover:underline">
                       {m.address || m.property_type || 'Mandat sans adresse'}
                     </Link>

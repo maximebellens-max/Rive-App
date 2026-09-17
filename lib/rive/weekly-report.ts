@@ -6,6 +6,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { claimDailyAlert } from './daily-alerts'
 import { notifyTeamAlertWhatsApp } from './whatsapp-notify'
+import { notifyPushTeam } from './push-notify'
 import { generateWithClaude } from './anthropic'
 import { generateWeeklyReportBrief } from './ai-prompts'
 import { CATEGORY_LABEL } from './pipelines'
@@ -91,4 +92,9 @@ export async function runWeeklyReportForAgency(supabase: SupabaseClient, agencyI
     ].join('\n')
 
   await notifyTeamAlertWhatsApp(supabase, agencyId, 'Rapport hebdomadaire', body)
+  await notifyPushTeam(supabase, agencyId, 'rapport_hebdo', {
+    title: 'Rapport hebdomadaire',
+    body,
+    url: '/dashboard',
+  })
 }

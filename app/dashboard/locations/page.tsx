@@ -63,7 +63,9 @@ export default async function LocationsPage() {
       <table className="w-full text-left text-sm">
         <thead className="border-b border-neutral-200 text-neutral-500">
           <tr>
-            <th className="px-4 py-3 font-medium">Bien / Client</th>
+            <th className="sticky left-0 z-20 whitespace-nowrap border-r border-neutral-200 bg-surface px-4 py-3 font-medium">
+              Bien / Client
+            </th>
             <th className="px-4 py-3 font-medium">Type</th>
             <th className="px-4 py-3 font-medium">Étape</th>
             <th className="px-4 py-3 font-medium">Honoraires bailleur</th>
@@ -79,8 +81,8 @@ export default async function LocationsPage() {
             </tr>
           )}
           {rows.map((l) => (
-            <tr key={l.id} className="border-b border-neutral-100 last:border-0 hover:bg-neutral-50">
-              <td className="px-4 py-3">
+            <tr key={l.id} className="group border-b border-neutral-100 last:border-0 hover:bg-neutral-50">
+              <td className="sticky left-0 z-10 whitespace-nowrap border-r border-neutral-200 bg-surface px-4 py-3 group-hover:bg-neutral-50">
                 <Link href={`/dashboard/locations/${l.id}`} className="font-medium text-neutral-900 hover:underline">
                   {l.lead?.name || 'Prospect supprimé'}
                 </Link>

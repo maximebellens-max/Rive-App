@@ -8,6 +8,7 @@ import {
   notifyMandateRenewalWhatsApp,
   notifyTeamAlertWhatsApp,
 } from '@/lib/rive/whatsapp-notify'
+import { notifyPushForAssignee, notifyPushTeam } from '@/lib/rive/push-notify'
 import { generateBriefingBrief } from '@/lib/rive/ai-prompts'
 import { generateWithClaude } from '@/lib/rive/anthropic'
 import { claimDailyAlert } from '@/lib/rive/daily-alerts'
@@ -133,6 +134,11 @@ async function sendAppointmentAlerts(supabase: AdminClient, agencyId: string, to
         actionLabel: lead.action_label || '',
       })
     }
+    await notifyPushForAssignee(supabase, agencyId, lead.assigned_to, 'rdv_jour', {
+      title: `RDV aujourd'hui — ${lead.name}`,
+      body: brief || lead.action_label || 'Rendez-vous prévu aujourd’hui.',
+      url: leadUrl(lead.id),
+    })
   }
 }
 
@@ -155,6 +161,11 @@ async function sendRenewalAlerts(supabase: AdminClient, agencyId: string, today:
     await notifyMandateRenewalWhatsApp(supabase, agencyId, mandate.assigned_to, {
       address: mandate.address || '',
       noticeDate: formatDate(notice),
+    })
+    await notifyPushForAssignee(supabase, agencyId, mandate.assigned_to, 'echeance_mandat', {
+      title: 'Échéance de mandat',
+      body: `${mandate.address || 'Ce bien'} — préavis le ${formatDate(notice)}.`,
+      url: `${appUrl()}/dashboard/mandates/${mandate.id}`,
     })
   }
 }
@@ -194,6 +205,11 @@ async function sendFurnishingMilestoneAlerts(supabase: AdminClient, agencyId: st
       `Ameublement — ${leadName}`,
       `${milestone.label} le ${formatDate(milestone.date)}.\n${leadUrl(row.lead_id)}`
     )
+    await notifyPushTeam(supabase, agencyId, 'chantier_ameublement', {
+      title: `Ameublement — ${leadName}`,
+      body: `${milestone.label} le ${formatDate(milestone.date)}.`,
+      url: leadUrl(row.lead_id),
+    })
   }
 }
 
@@ -222,6 +238,11 @@ async function sendKitchenMilestoneAlerts(supabase: AdminClient, agencyId: strin
       `Cuisine — ${leadName}`,
       `${milestone.label} le ${formatDate(milestone.date)}.\n${leadUrl(row.lead_id)}`
     )
+    await notifyPushTeam(supabase, agencyId, 'chantier_cuisine', {
+      title: `Cuisine — ${leadName}`,
+      body: `${milestone.label} le ${formatDate(milestone.date)}.`,
+      url: leadUrl(row.lead_id),
+    })
   }
 }
 
@@ -249,5 +270,10 @@ async function sendWorksMilestoneAlerts(supabase: AdminClient, agencyId: string)
       `Travaux — ${leadName}`,
       `${milestone.label} le ${formatDate(milestone.date)}.\n${leadUrl(row.lead_id)}`
     )
+    await notifyPushTeam(supabase, agencyId, 'chantier_travaux', {
+      title: `Travaux — ${leadName}`,
+      body: `${milestone.label} le ${formatDate(milestone.date)}.`,
+      url: leadUrl(row.lead_id),
+    })
   }
 }
