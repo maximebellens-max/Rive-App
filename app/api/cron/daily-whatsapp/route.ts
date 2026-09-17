@@ -1,16 +1,26 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { mandateNoticeDate, dateUrgency, formatDate } from '@/lib/rive/mandates'
+import { nearestUpcomingMilestone } from '@/lib/rive/today'
 import {
   notifyAlertWhatsApp,
   notifyAppointmentWhatsApp,
   notifyMandateRenewalWhatsApp,
+  notifyTeamAlertWhatsApp,
 } from '@/lib/rive/whatsapp-notify'
 import { generateBriefingBrief } from '@/lib/rive/ai-prompts'
 import { generateWithClaude } from '@/lib/rive/anthropic'
 import { claimDailyAlert } from '@/lib/rive/daily-alerts'
 
 type AdminClient = ReturnType<typeof createAdminClient>
+
+function appUrl(): string {
+  return process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+}
+
+function leadUrl(leadId: string): string {
+  return `${appUrl()}/dashboard/prospects/${leadId}`
+}
 
 // Longueur max raisonnable pour un corps de message WhatsApp (le gabarit
 // rive_alerte accepte plus, mais on garde le briefing lisible sur un écran
@@ -46,6 +56,9 @@ export async function GET(request: NextRequest) {
   for (const agency of agencies ?? []) {
     await sendAppointmentAlerts(supabase, agency.id, today)
     await sendRenewalAlerts(supabase, agency.id, today)
+    await sendFurnishingMilestoneAlerts(supabase, agency.id)
+    await sendKitchenMilestoneAlerts(supabase, agency.id)
+    await sendWorksMilestoneAlerts(supabase, agency.id)
   }
 
   return NextResponse.json({ ok: true })
@@ -143,5 +156,98 @@ async function sendRenewalAlerts(supabase: AdminClient, agencyId: string, today:
       address: mandate.address || '',
       noticeDate: formatDate(notice),
     })
+  }
+}
+
+// Alertes pour les 3 tableaux de suivi (Ameublement, Cuisine, Travaux) :
+// même fenêtre "à venir" que les cartes correspondantes de la vue
+// Aujourd'hui (voir lib/rive/today.ts, nearestUpcomingMilestone) — une
+// alerte part quand une échéance entre dans les 7 prochains jours, une
+// seule fois par échéance (pas une relance quotidienne tant qu'on est
+// dedans) : le dédoublonnage se fait sur la date de l'échéance elle-même
+// plutôt que sur la date du jour, contrairement aux autres alertes de ce
+// fichier. Toujours envoyées à toute l'équipe (comme le nouveau prospect),
+// pas seulement à l'agent assigné — ces chantiers concernent souvent
+// plusieurs personnes de l'agence (pas de repli "agent assigné" ici).
+async function sendFurnishingMilestoneAlerts(supabase: AdminClient, agencyId: string) {
+  const { data: rows } = await supabase
+    .from('furnishing_projects')
+    .select('id, lead_id, date_livraison_ikea, date_livraison_ed, date_pose, leads(name)')
+    .eq('agency_id', agencyId)
+    .eq('statut', 'en_cours')
+
+  for (const row of rows ?? []) {
+    const milestone = nearestUpcomingMilestone([
+      { label: 'Livraison IKEA', date: row.date_livraison_ikea },
+      { label: 'Livraison E.D', date: row.date_livraison_ed },
+      { label: 'Pose', date: row.date_pose },
+    ])
+    if (!milestone) continue
+
+    const isNew = await claimDailyAlert(supabase, agencyId, 'furnishing_milestone', row.id, milestone.date)
+    if (!isNew) continue
+
+    const leadName = (row.leads as { name: string }[] | null)?.[0]?.name ?? 'Client'
+    await notifyTeamAlertWhatsApp(
+      supabase,
+      agencyId,
+      `Ameublement — ${leadName}`,
+      `${milestone.label} le ${formatDate(milestone.date)}.\n${leadUrl(row.lead_id)}`
+    )
+  }
+}
+
+async function sendKitchenMilestoneAlerts(supabase: AdminClient, agencyId: string) {
+  const { data: rows } = await supabase
+    .from('kitchen_projects')
+    .select('id, lead_id, date_livraison, date_pose_debut, date_pose_fin, leads(name)')
+    .eq('agency_id', agencyId)
+    .eq('statut', 'en_cours')
+
+  for (const row of rows ?? []) {
+    const milestone = nearestUpcomingMilestone([
+      { label: 'Livraison', date: row.date_livraison },
+      { label: 'Début pose', date: row.date_pose_debut },
+      { label: 'Fin pose', date: row.date_pose_fin },
+    ])
+    if (!milestone) continue
+
+    const isNew = await claimDailyAlert(supabase, agencyId, 'kitchen_milestone', row.id, milestone.date)
+    if (!isNew) continue
+
+    const leadName = (row.leads as { name: string }[] | null)?.[0]?.name ?? 'Client'
+    await notifyTeamAlertWhatsApp(
+      supabase,
+      agencyId,
+      `Cuisine — ${leadName}`,
+      `${milestone.label} le ${formatDate(milestone.date)}.\n${leadUrl(row.lead_id)}`
+    )
+  }
+}
+
+async function sendWorksMilestoneAlerts(supabase: AdminClient, agencyId: string) {
+  const { data: rows } = await supabase
+    .from('works_projects')
+    .select('id, lead_id, echeance_debut, echeance_fin, leads(name)')
+    .eq('agency_id', agencyId)
+    .neq('statut', 'termine')
+
+  for (const row of rows ?? []) {
+    const milestone = nearestUpcomingMilestone([
+      { label: 'Début travaux', date: row.echeance_debut },
+      { label: 'Fin travaux', date: row.echeance_fin },
+    ])
+    if (!milestone) continue
+
+    const isNew = await claimDailyAlert(supabase, agencyId, 'works_milestone', row.id, milestone.date)
+    if (!isNew) continue
+
+    const leadName = (row.leads as { name: string }[] | null)?.[0]?.name ?? 'Client'
+    await notifyTeamAlertWhatsApp(
+      supabase,
+      agencyId,
+      `Travaux — ${leadName}`,
+      `${milestone.label} le ${formatDate(milestone.date)}.\n${leadUrl(row.lead_id)}`
+    )
   }
 }
