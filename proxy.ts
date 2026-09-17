@@ -10,6 +10,11 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    // manifest.webmanifest, sw.js et offline.html (infrastructure de
+    // l'appli installable, voir app/manifest.ts et public/sw.js) doivent
+    // rester accessibles sans session : le navigateur les récupère parfois
+    // avant toute connexion (ou en tâche de fond), et les recevoir en HTML
+    // de redirection vers /login cassait silencieusement l'installation.
+    '/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|sw.js|offline.html|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }

@@ -7,6 +7,7 @@ import NotificationBell, { type NotificationItem } from './notification-bell'
 import ThemeToggle from './theme-toggle'
 import SidebarNav from './sidebar-nav'
 import AccountMenu from './account-menu'
+import InstallPrompt from './_components/install-prompt'
 
 export default async function DashboardLayout({
   children,
@@ -79,6 +80,9 @@ export default async function DashboardLayout({
           </div>
         </div>
       </header>
+      <div className="mx-auto w-full max-w-7xl px-4 pt-4">
+        <InstallPrompt />
+      </div>
       <div className="mx-auto flex w-full max-w-7xl flex-1 gap-8 px-4 py-8">
         <aside className="hidden w-52 shrink-0 flex-col gap-6 md:flex">
           <SidebarNav customBoards={customBoards ?? []} createBoard={createBoard} />
