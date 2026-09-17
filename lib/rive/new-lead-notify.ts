@@ -9,7 +9,7 @@
 // ou un mandat.
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { notifyMatchesForLeadId } from './match-notify'
-import { notifyTeamNewLeadWhatsApp } from './whatsapp-notify'
+import { notifyNewLeadWhatsApp } from './whatsapp-notify'
 import { sendLeadAlertEmail } from './email'
 import { appBaseUrl } from './meta'
 
@@ -19,7 +19,7 @@ export async function notifyNewLead(
   lead: { id: string; name: string; category: string | null; source: string; ownerId: string | null }
 ) {
   await notifyMatchesForLeadId(supabase, agencyId, lead.id)
-  await notifyTeamNewLeadWhatsApp(supabase, agencyId, {
+  await notifyNewLeadWhatsApp(supabase, agencyId, {
     name: lead.name,
     category: lead.category,
     source: lead.source,

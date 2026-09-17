@@ -45,7 +45,7 @@ import {
   generateVendeurStallBrief,
 } from './ai-prompts'
 import { generateWithClaude } from './anthropic'
-import { notifyTeamAlertWhatsApp } from './whatsapp-notify'
+import { notifyAlertWhatsApp, notifyTeamAlertWhatsApp } from './whatsapp-notify'
 
 function appUrl(): string {
   return process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
@@ -97,7 +97,7 @@ async function processNoResponseRelances(supabase: SupabaseClient, agencyId: str
 
   const { data: leads } = await supabase
     .from('leads')
-    .select('id, name, category, created_at, positions')
+    .select('id, name, category, created_at, positions, assigned_to')
     .eq('agency_id', agencyId)
     .not('category', 'is', null)
 
@@ -145,9 +145,10 @@ async function processNoResponseRelances(supabase: SupabaseClient, agencyId: str
       const { text } = await generateWithClaude(generateNoResponseRelanceBrief(lead.name, step, daysSince))
       const body =
         text || `Toujours sans nouvelles de ${lead.name}, ${daysSince} jours après son dernier point de contact.`
-      await notifyTeamAlertWhatsApp(
+      await notifyAlertWhatsApp(
         supabase,
         agencyId,
+        lead.assigned_to,
         `Relance J+${RELANCE_STEPS[step]} — ${lead.name}`,
         `${body}\n${leadUrl(lead.id)}`
       )
@@ -168,7 +169,7 @@ async function processNoResponseRelances(supabase: SupabaseClient, agencyId: str
 async function processAnniversaryRelances(supabase: SupabaseClient, agencyId: string, today: string) {
   const { data: mandates } = await supabase
     .from('mandates')
-    .select('id, address, sold_date, lead_id')
+    .select('id, address, sold_date, lead_id, assigned_to')
     .eq('agency_id', agencyId)
     .eq('is_draft', false)
     .not('sold_date', 'is', null)
@@ -193,7 +194,13 @@ async function processAnniversaryRelances(supabase: SupabaseClient, agencyId: st
       generateAnniversaryBrief(lead.name, mandate.address || '', years, lead.category)
     )
     const body = text || `Cela fait ${years} an${years > 1 ? 's' : ''} aujourd'hui.`
-    await notifyTeamAlertWhatsApp(supabase, agencyId, `Anniversaire — ${lead.name}`, `${body}\n${leadUrl(mandate.lead_id)}`)
+    await notifyAlertWhatsApp(
+      supabase,
+      agencyId,
+      mandate.assigned_to,
+      `Anniversaire — ${lead.name}`,
+      `${body}\n${leadUrl(mandate.lead_id)}`
+    )
   }
 }
 
@@ -201,7 +208,7 @@ async function processAnniversaryRelances(supabase: SupabaseClient, agencyId: st
 async function processBirthdayRelances(supabase: SupabaseClient, agencyId: string, today: string) {
   const { data: leads } = await supabase
     .from('leads')
-    .select('id, name, birth_date')
+    .select('id, name, birth_date, assigned_to')
     .eq('agency_id', agencyId)
     .in('category', ['vendeur', 'investisseur'])
     .not('birth_date', 'is', null)
@@ -214,7 +221,7 @@ async function processBirthdayRelances(supabase: SupabaseClient, agencyId: strin
 
     const { text } = await generateWithClaude(generateBirthdayBrief(lead.name))
     const body = text || `C'est l'anniversaire de ${lead.name} aujourd'hui.`
-    await notifyTeamAlertWhatsApp(supabase, agencyId, `Anniversaire — ${lead.name}`, `${body}\n${leadUrl(lead.id)}`)
+    await notifyAlertWhatsApp(supabase, agencyId, lead.assigned_to, `Anniversaire — ${lead.name}`, `${body}\n${leadUrl(lead.id)}`)
   }
 }
 
@@ -234,7 +241,7 @@ async function processYearEndWishes(supabase: SupabaseClient, agencyId: string, 
 async function processGoogleReviewRequests(supabase: SupabaseClient, agencyId: string, today: string) {
   const { data: mandates } = await supabase
     .from('mandates')
-    .select('id, address, sold_date, lead_id')
+    .select('id, address, sold_date, lead_id, assigned_to')
     .eq('agency_id', agencyId)
     .eq('is_draft', false)
     .not('sold_date', 'is', null)
@@ -253,7 +260,13 @@ async function processGoogleReviewRequests(supabase: SupabaseClient, agencyId: s
       generateGoogleReviewBrief(lead.name, mandate.address || '', GOOGLE_REVIEW_DELAY_DAYS)
     )
     const body = text || `Ça fait ${GOOGLE_REVIEW_DELAY_DAYS} jours que la transaction est conclue avec ${lead.name} — bon moment pour demander un avis.`
-    await notifyTeamAlertWhatsApp(supabase, agencyId, `Demande d'avis — ${lead.name}`, `${body}\n${leadUrl(mandate.lead_id)}`)
+    await notifyAlertWhatsApp(
+      supabase,
+      agencyId,
+      mandate.assigned_to,
+      `Demande d'avis — ${lead.name}`,
+      `${body}\n${leadUrl(mandate.lead_id)}`
+    )
   }
 }
 
@@ -262,7 +275,7 @@ async function processGoogleReviewRequests(supabase: SupabaseClient, agencyId: s
 async function processStaleEstimations(supabase: SupabaseClient, agencyId: string, today: string) {
   const { data: mandates } = await supabase
     .from('mandates')
-    .select('id, address, created_at, lead_id')
+    .select('id, address, created_at, lead_id, assigned_to')
     .eq('agency_id', agencyId)
     .eq('is_draft', true)
 
@@ -281,7 +294,13 @@ async function processStaleEstimations(supabase: SupabaseClient, agencyId: strin
       generateEstimationFollowupBrief(lead.name, mandate.address || '', ESTIMATION_FOLLOWUP_DELAY_DAYS)
     )
     const body = text || `Estimation envoyée à ${lead.name} il y a ${ESTIMATION_FOLLOWUP_DELAY_DAYS} jours, toujours sans mandat signé.`
-    await notifyTeamAlertWhatsApp(supabase, agencyId, `Relance estimation — ${lead.name}`, `${body}\n${leadUrl(mandate.lead_id)}`)
+    await notifyAlertWhatsApp(
+      supabase,
+      agencyId,
+      mandate.assigned_to,
+      `Relance estimation — ${lead.name}`,
+      `${body}\n${leadUrl(mandate.lead_id)}`
+    )
   }
 }
 
@@ -293,7 +312,7 @@ async function processVendeurStalledRelances(supabase: SupabaseClient, agencyId:
 
   const { data: leads } = await supabase
     .from('leads')
-    .select('id, name, positions')
+    .select('id, name, positions, assigned_to')
     .eq('agency_id', agencyId)
     .eq('category', 'vendeur')
 
@@ -329,7 +348,13 @@ async function processVendeurStalledRelances(supabase: SupabaseClient, agencyId:
       const { text } = await generateWithClaude(generateVendeurStallBrief(lead.name, step, daysSince))
       const body =
         text || `${lead.name} est toujours en "RDV 2 finalisé" sans mandat signé, ${daysSince} jours après.`
-      await notifyTeamAlertWhatsApp(supabase, agencyId, `Relance vendeur — ${lead.name}`, `${body}\n${leadUrl(lead.id)}`)
+      await notifyAlertWhatsApp(
+        supabase,
+        agencyId,
+        lead.assigned_to,
+        `Relance vendeur — ${lead.name}`,
+        `${body}\n${leadUrl(lead.id)}`
+      )
     }
 
     await supabase.from('vendeur_stall_relance_state').upsert({

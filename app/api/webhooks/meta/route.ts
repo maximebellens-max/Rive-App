@@ -229,7 +229,8 @@ async function processLeadgenChange(
   // "rive_alerte" (titre + corps, voir lib/rive/whatsapp-notify.ts) plutôt
   // que "rive_nouveau_lead" (structure figée, pas la place d'y ajouter les
   // réponses du formulaire sans faire réapprouver un nouveau gabarit par
-  // Meta).
+  // Meta). Toujours envoyé à toute l'équipe (comme notifyNewLeadWhatsApp),
+  // même si la campagne a déjà un propriétaire configuré.
   const categoryLabel = (category && CATEGORY_LABEL[category]) || 'Non classé'
   const details = summarizeLeadDetails(criterType, criterLieu, customAnswers)
   await notifyTeamAlertWhatsApp(

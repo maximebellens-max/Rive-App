@@ -11,7 +11,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { leadPriorityScore } from './pipelines'
 import { generateWithClaude } from './anthropic'
 import { claimDailyAlert } from './daily-alerts'
-import { notifyTeamAlertWhatsApp } from './whatsapp-notify'
+import { notifyAlertWhatsApp } from './whatsapp-notify'
 
 type HistoryEntry = { entry_date: string; text: string }
 type MetaAnswer = { question: string; answer: string }
@@ -72,7 +72,7 @@ function parsePriorityResponse(text: string): { score: number; reasoning: string
   }
 }
 
-type ScoredLead = { name: string; score: number; reasoning: string }
+type ScoredLead = { name: string; score: number; reasoning: string; assigned_to: string | null }
 
 // Traite tous les prospects encore actifs d'une agence : un mandat déjà
 // conclu (stage 'vendu') sort un lead du champ de la priorisation, ce n'est
@@ -82,7 +82,7 @@ export async function runAiPriorityForAgency(supabase: SupabaseClient, agencyId:
   const { data: leads } = await supabase
     .from('leads')
     .select(
-      'id, name, category, phone, budget, financement, critere_lieu, action_label, action_date, created_at, notes, meta_answers'
+      'id, name, category, phone, budget, financement, critere_lieu, action_label, action_date, created_at, notes, meta_answers, assigned_to'
     )
     .eq('agency_id', agencyId)
   if (!leads || !leads.length) return
@@ -157,22 +157,39 @@ export async function runAiPriorityForAgency(supabase: SupabaseClient, agencyId:
       .update({ ai_priority_score: finalScore, ai_priority_reasoning: reasoning })
       .eq('id', lead.id)
 
-    if (reasoning) digestCandidates.push({ name: lead.name, score: finalScore, reasoning })
+    if (reasoning) digestCandidates.push({ name: lead.name, score: finalScore, reasoning, assigned_to: lead.assigned_to })
   }
 
   await sendPriorityDigest(supabase, agencyId, today, digestCandidates)
 }
 
-// Un seul message groupé par jour et par agence (même schéma que les vœux de
-// fin d'année) : les 3 prospects avec le signal IA le plus fort, avec la
-// raison, pour démarrer la journée sans avoir à ouvrir le kanban.
+// Un message par agent et par jour (plutôt qu'un seul message groupé pour
+// toute l'agence) : les 3 prospects DE CET AGENT avec le signal IA le plus
+// fort, avec la raison, pour démarrer sa journée sans avoir à ouvrir le
+// kanban ni voir les prospects des collègues. Les prospects encore "en
+// vrac" (non assignés) restent groupés dans un digest envoyé à toute
+// l'équipe opted-in, comme avant, pour que quelqu'un les prenne en charge.
 async function sendPriorityDigest(supabase: SupabaseClient, agencyId: string, today: string, candidates: ScoredLead[]) {
   if (!candidates.length) return
-  const top = [...candidates].sort((a, b) => b.score - a.score).slice(0, 3)
 
-  const claimed = await claimDailyAlert(supabase, agencyId, 'ai_priority_digest', agencyId, today)
-  if (!claimed) return
+  const groups = new Map<string | null, ScoredLead[]>()
+  for (const candidate of candidates) {
+    const key = candidate.assigned_to
+    const group = groups.get(key)
+    if (group) group.push(candidate)
+    else groups.set(key, [candidate])
+  }
 
-  const body = top.map((l, i) => `${i + 1}. ${l.name} (${l.score}/100) — ${l.reasoning}`).join('\n')
-  await notifyTeamAlertWhatsApp(supabase, agencyId, 'Priorités du jour', body)
+  for (const [assignedTo, group] of groups) {
+    const top = [...group].sort((a, b) => b.score - a.score).slice(0, 3)
+
+    // Clé de dédup par agent (ou 'unassigned' pour le groupe en vrac) plutôt
+    // que par agence, pour que chacun reçoive son propre digest une fois par
+    // jour, indépendamment des autres.
+    const claimed = await claimDailyAlert(supabase, agencyId, 'ai_priority_digest', assignedTo ?? 'unassigned', today)
+    if (!claimed) continue
+
+    const body = top.map((l, i) => `${i + 1}. ${l.name} (${l.score}/100) — ${l.reasoning}`).join('\n')
+    await notifyAlertWhatsApp(supabase, agencyId, assignedTo, 'Priorités du jour', body)
+  }
 }

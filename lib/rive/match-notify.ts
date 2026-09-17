@@ -8,12 +8,14 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { bienIsActive, leadMatchesBien, type MatchLead, type MatchMandate } from './matching'
 import { sendMatchAlertEmail } from './email'
-import { notifyTeamAlertWhatsApp } from './whatsapp-notify'
+import { notifyAlertWhatsApp } from './whatsapp-notify'
 
-const LEAD_FIELDS = 'id, name, category, budget, critere_type, critere_lieu, surface_min, pieces_min'
-const MANDATE_FIELDS = 'id, type, stage, is_draft, signed_date, address, property_type, price, surface, pieces'
+const LEAD_FIELDS = 'id, name, category, budget, critere_type, critere_lieu, surface_min, pieces_min, assigned_to'
+const MANDATE_FIELDS =
+  'id, type, stage, is_draft, signed_date, address, property_type, price, surface, pieces, assigned_to'
 
-type LeadRow = MatchLead & { name: string }
+type LeadRow = MatchLead & { name: string; assigned_to: string | null }
+type MandateRow = MatchMandate & { assigned_to: string | null }
 
 async function agencyMemberEmails(supabase: SupabaseClient, agencyId: string): Promise<string[]> {
   const { data } = await supabase.from('profiles').select('email').eq('agency_id', agencyId)
@@ -63,8 +65,9 @@ export async function notifyMatchesForLeadId(supabase: SupabaseClient, agencyId:
   await sendMatchAlertEmail({ to: emails, title, body, url })
   // title porte le nom du contact (leadName), body la ville/adresse du ou
   // des biens : les deux sont nécessaires pour se repérer sans avoir à
-  // ouvrir le lien.
-  await notifyTeamAlertWhatsApp(supabase, agencyId, 'Alerte rapprochement', `${title}\n${body}\n${url}`)
+  // ouvrir le lien. C'est l'agent assigné à CE prospect acheteur qui est
+  // concerné par le rapprochement.
+  await notifyAlertWhatsApp(supabase, agencyId, (lead as LeadRow).assigned_to, 'Alerte rapprochement', `${title}\n${body}\n${url}`)
 }
 
 // Appelée après la création/modification d'un mandat : si le bien est
@@ -72,7 +75,7 @@ export async function notifyMatchesForLeadId(supabase: SupabaseClient, agencyId:
 // et notifie l'agence pour les paires jamais notifiées.
 export async function notifyMatchesForMandateId(supabase: SupabaseClient, agencyId: string, mandateId: string) {
   const { data: mandate } = await supabase.from('mandates').select(MANDATE_FIELDS).eq('id', mandateId).single()
-  if (!mandate || !bienIsActive(mandate as MatchMandate)) return
+  if (!mandate || !bienIsActive(mandate as MandateRow)) return
 
   const { data: leads } = await supabase
     .from('leads')
@@ -92,7 +95,7 @@ export async function notifyMatchesForMandateId(supabase: SupabaseClient, agency
   const newLeadIds = new Set(newRows.map((r: { lead_id: string }) => r.lead_id))
   const newLeads = matching.filter((l) => newLeadIds.has(l.id))
   const count = newLeads.length
-  const address = (mandate as MatchMandate).address || 'ce bien'
+  const address = (mandate as MandateRow).address || 'ce bien'
   const title = count === 1 ? `1 acheteur correspond à ${address}` : `${count} acheteurs correspondent à ${address}`
   const body = newLeads.map((l) => l.name).join(' · ')
 
@@ -109,6 +112,29 @@ export async function notifyMatchesForMandateId(supabase: SupabaseClient, agency
   await sendMatchAlertEmail({ to: emails, title, body, url })
   // title porte la ville/adresse du bien, body les noms des contacts
   // correspondants : les deux sont nécessaires pour se repérer sans avoir à
-  // ouvrir le lien.
-  await notifyTeamAlertWhatsApp(supabase, agencyId, 'Alerte rapprochement', `${title}\n${body}\n${url}`)
+  // ouvrir le lien. Contrairement à la cloche et à l'email (agence entière,
+  // vue d'ensemble), le WhatsApp part groupé PAR AGENT ASSIGNÉ : chacun ne
+  // voit que ses propres acheteurs correspondants, pas la liste complète.
+  const groups = new Map<string | null, LeadRow[]>()
+  for (const lead of newLeads) {
+    const key = lead.assigned_to
+    const group = groups.get(key)
+    if (group) group.push(lead)
+    else groups.set(key, [lead])
+  }
+  await Promise.all(
+    Array.from(groups.entries()).map(([assignedTo, group]) => {
+      const groupCount = group.length
+      const groupTitle =
+        groupCount === 1 ? `1 acheteur correspond à ${address}` : `${groupCount} acheteurs correspondent à ${address}`
+      const groupBody = group.map((l) => l.name).join(' · ')
+      return notifyAlertWhatsApp(
+        supabase,
+        agencyId,
+        assignedTo,
+        'Alerte rapprochement',
+        `${groupTitle}\n${groupBody}\n${url}`
+      )
+    })
+  )
 }

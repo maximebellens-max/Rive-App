@@ -2,9 +2,9 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { mandateNoticeDate, dateUrgency, formatDate } from '@/lib/rive/mandates'
 import {
-  notifyTeamAlertWhatsApp,
-  notifyTeamAppointmentWhatsApp,
-  notifyTeamMandateRenewalWhatsApp,
+  notifyAlertWhatsApp,
+  notifyAppointmentWhatsApp,
+  notifyMandateRenewalWhatsApp,
 } from '@/lib/rive/whatsapp-notify'
 import { generateBriefingBrief } from '@/lib/rive/ai-prompts'
 import { generateWithClaude } from '@/lib/rive/anthropic'
@@ -101,7 +101,9 @@ async function composeAppointmentBrief(
 async function sendAppointmentAlerts(supabase: AdminClient, agencyId: string, today: string) {
   const { data: leads } = await supabase
     .from('leads')
-    .select('id, name, category, critere_lieu, critere_type, budget, financement, notes, action_label, action_date')
+    .select(
+      'id, name, category, critere_lieu, critere_type, budget, financement, notes, action_label, action_date, assigned_to'
+    )
     .eq('agency_id', agencyId)
     .eq('action_date', today)
 
@@ -111,9 +113,9 @@ async function sendAppointmentAlerts(supabase: AdminClient, agencyId: string, to
 
     const brief = await composeAppointmentBrief(supabase, lead)
     if (brief) {
-      await notifyTeamAlertWhatsApp(supabase, agencyId, `RDV aujourd'hui — ${lead.name}`, brief)
+      await notifyAlertWhatsApp(supabase, agencyId, lead.assigned_to, `RDV aujourd'hui — ${lead.name}`, brief)
     } else {
-      await notifyTeamAppointmentWhatsApp(supabase, agencyId, {
+      await notifyAppointmentWhatsApp(supabase, agencyId, lead.assigned_to, {
         leadName: lead.name,
         actionLabel: lead.action_label || '',
       })
@@ -124,7 +126,7 @@ async function sendAppointmentAlerts(supabase: AdminClient, agencyId: string, to
 async function sendRenewalAlerts(supabase: AdminClient, agencyId: string, today: string) {
   const { data: mandates } = await supabase
     .from('mandates')
-    .select('id, address, signed_date, duration_months, renewal_notice_days')
+    .select('id, address, signed_date, duration_months, renewal_notice_days, assigned_to')
     .eq('agency_id', agencyId)
     .eq('is_draft', false)
     .neq('stage', 'vendu')
@@ -137,7 +139,7 @@ async function sendRenewalAlerts(supabase: AdminClient, agencyId: string, today:
     const isNew = await claimDailyAlert(supabase, agencyId, 'mandate_renewal', mandate.id, today)
     if (!isNew) continue
 
-    await notifyTeamMandateRenewalWhatsApp(supabase, agencyId, {
+    await notifyMandateRenewalWhatsApp(supabase, agencyId, mandate.assigned_to, {
       address: mandate.address || '',
       noticeDate: formatDate(notice),
     })
