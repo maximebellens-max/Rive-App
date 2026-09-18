@@ -169,6 +169,11 @@ export async function updateLead(
     .update({
       first_name: str(formData, 'first_name'),
       last_name: lastName,
+      // Agent responsable — voir le select "Agent responsable" du formulaire.
+      // '' (option "Non assigné") est envoyé comme null, ce qui rend le
+      // prospect visible par toute l'équipe (voir kanban-board.tsx) plutôt
+      // que de le laisser assigné à l'ancien agent malgré lui.
+      assigned_to: str(formData, 'assigned_to') || null,
       phone: str(formData, 'phone'),
       email: str(formData, 'email'),
       category: str(formData, 'category') || null,
@@ -225,6 +230,9 @@ export async function updateLead(
 
   revalidatePath(`/dashboard/prospects/${leadId}`)
   revalidatePath('/dashboard/pipelines', 'layout')
+  // Un changement d'agent responsable change ce qui apparaît dans l'onglet
+  // Aujourd'hui de chacun (voir app/dashboard/page.tsx).
+  revalidatePath('/dashboard')
   return undefined
 }
 
