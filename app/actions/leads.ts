@@ -229,7 +229,19 @@ export async function updateLead(
   await notifyMatchesForLeadId(supabase, agencyId, leadId)
 
   revalidatePath(`/dashboard/prospects/${leadId}`)
-  revalidatePath('/dashboard/pipelines', 'layout')
+  // '/dashboard/pipelines', 'layout' ne correspond à aucun fichier
+  // layout.tsx réel (il n'y en a pas à cet endroit, seulement
+  // app/dashboard/pipelines/[boardType]/page.tsx) : cet appel ne
+  // revalidait donc RIEN en pratique. C'est ce qui faisait qu'un prospect
+  // réassigné à un autre agent depuis sa fiche restait visible dans le
+  // tableau qu'on avait déjà ouvert : la modification était bien
+  // enregistrée en base, mais le tableau conservait sa version en cache
+  // tant qu'on ne le rechargeait pas complètement à la main. Cible
+  // maintenant explicitement le fichier de page réel, avec le bon type
+  // 'page' (comme le fait déjà revalidateBoard() dans
+  // app/actions/pipelines.ts), ce qui revalide bien tous les tableaux
+  // (catégorie et personnalisés) déjà visités.
+  revalidatePath('/dashboard/pipelines/[boardType]', 'page')
   // Un changement d'agent responsable change ce qui apparaît dans l'onglet
   // Aujourd'hui de chacun (voir app/dashboard/page.tsx).
   revalidatePath('/dashboard')
@@ -243,7 +255,7 @@ export async function deleteLead(leadId: string) {
   const { data: lead } = await supabase.from('leads').select('category').eq('id', leadId).maybeSingle()
 
   await supabase.from('leads').delete().eq('id', leadId)
-  revalidatePath('/dashboard/pipelines', 'layout')
+  revalidatePath('/dashboard/pipelines/[boardType]', 'page')
   redirect(lead?.category ? `/dashboard/pipelines/${lead.category}` : '/dashboard')
 }
 
@@ -258,7 +270,7 @@ export async function bulkDeleteLeads(leadIds: string[]) {
 
   await supabase.from('leads').delete().eq('agency_id', agencyId).in('id', leadIds)
 
-  revalidatePath('/dashboard/pipelines', 'layout')
+  revalidatePath('/dashboard/pipelines/[boardType]', 'page')
 }
 
 export async function bulkAssignLeads(leadIds: string[], assignedTo: string) {
@@ -267,7 +279,7 @@ export async function bulkAssignLeads(leadIds: string[], assignedTo: string) {
 
   await supabase.from('leads').update({ assigned_to: assignedTo }).eq('agency_id', agencyId).in('id', leadIds)
 
-  revalidatePath('/dashboard/pipelines', 'layout')
+  revalidatePath('/dashboard/pipelines/[boardType]', 'page')
 }
 
 export async function addLeadHistoryEntry(leadId: string, formData: FormData) {

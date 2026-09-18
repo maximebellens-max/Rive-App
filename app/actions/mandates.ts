@@ -207,7 +207,7 @@ export async function createMandate(
     await moveLeadToClientColumn(supabase, agencyId, leadId)
   }
 
-  if (newLeadCreated) revalidatePath('/dashboard/pipelines', 'layout')
+  if (newLeadCreated) revalidatePath('/dashboard/pipelines/[boardType]', 'page')
   revalidatePath(isDraft ? '/dashboard/estimations' : '/dashboard/mandates')
   redirect(`/dashboard/mandates/${data.id}`)
 }

@@ -133,7 +133,7 @@ export async function updateOwnAvatar(dataUrl: string): Promise<AvatarFormState>
 
   revalidatePath('/dashboard/settings')
   revalidatePath('/dashboard/prospects')
-  revalidatePath('/dashboard/pipelines', 'layout')
+  revalidatePath('/dashboard/pipelines/[boardType]', 'page')
   revalidatePath('/dashboard/mandates')
   return undefined
 }
