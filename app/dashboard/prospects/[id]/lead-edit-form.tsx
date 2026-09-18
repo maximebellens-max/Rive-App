@@ -33,6 +33,7 @@ type Lead = {
   spouse_first_name: string
   spouse_last_name: string
   collaborator_ids: string[]
+  assigned_to: string | null
 }
 
 type Member = { id: string; full_name: string }
@@ -102,6 +103,17 @@ export default function LeadEditForm({ lead, members = [] }: { lead: Lead; membe
               <option value="acheteur">Acheteur</option>
               <option value="vendeur">Vendeur</option>
               <option value="investisseur">Investisseur</option>
+            </select>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className={labelClass}>Agent responsable</label>
+            <select name="assigned_to" defaultValue={lead.assigned_to ?? ''} className={inputClass}>
+              <option value="">Non assigné (visible par toute l&apos;équipe)</option>
+              {members.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.full_name || 'Sans nom'}
+                </option>
+              ))}
             </select>
           </div>
           <div className="flex flex-col gap-1.5">
@@ -285,9 +297,9 @@ export default function LeadEditForm({ lead, members = [] }: { lead: Lead; membe
           <div>
             <h2 className="text-sm font-semibold text-neutral-900">Collaborateurs</h2>
             <p className="mt-1 text-xs text-neutral-500">
-              Agents supplémentaires impliqués sur ce dossier, en plus de l&apos;agent responsable — leur avatar
-              s&apos;affiche aussi sur les cartes. N&apos;affecte ni l&apos;onglet Aujourd&apos;hui de chacun ni les
-              commissions.
+              Agents supplémentaires impliqués sur ce dossier, en plus de l&apos;agent responsable choisi ci-dessus
+              — leur avatar s&apos;affiche aussi sur les cartes. N&apos;affecte ni l&apos;onglet Aujourd&apos;hui de
+              chacun ni les commissions.
             </p>
           </div>
           <div className="flex flex-wrap gap-x-4 gap-y-1.5">

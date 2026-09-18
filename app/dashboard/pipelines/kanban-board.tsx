@@ -129,11 +129,20 @@ export default function KanbanBoard({
   // que sur un tableau personnalisé (les 3 tableaux de catégorie fixes sont
   // masqués via CATEGORY_BOARD_TYPES ci-dessous, un tel tableau ne contenant
   // par construction qu'une seule catégorie).
+  //
+  // Un prospect NON ASSIGNÉ reste toujours visible, quel que soit le filtre
+  // agent choisi (y compris "Moi seulement", la sélection par défaut) —
+  // sinon il devient invisible pour tout le monde tant que personne ne l'a
+  // pris en charge, un vrai cul-de-sac : plus aucun agent ne peut le
+  // retrouver ni le traiter. Même logique que le widget "Nouveaux
+  // prospects" de l'onglet Aujourd'hui et que les alertes WhatsApp (voir
+  // lib/rive/whatsapp-notify.ts) : "personne assigné" = "toute l'équipe le
+  // voit", jamais "personne ne le voit".
   const filteredCards = useMemo(() => {
     const q = search.trim().toLowerCase()
     return cards.filter((c) => {
       if (categoryFilter !== 'all' && c.category !== categoryFilter) return false
-      if (agentFilter.size > 0 && !agentFilter.has(c.assignedTo ?? '')) return false
+      if (agentFilter.size > 0 && c.assignedTo && !agentFilter.has(c.assignedTo)) return false
       if (q && !c.name.toLowerCase().includes(q)) return false
       return true
     })
