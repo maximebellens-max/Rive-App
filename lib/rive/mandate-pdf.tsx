@@ -1,6 +1,7 @@
 import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer'
 import { feeForPrice, formatDate as fmtDate } from './mandates'
 import { amountInWords } from './number-to-words'
+import { buildVenteSections, type Paragraph } from './mandate-document-model'
 
 const styles = StyleSheet.create({
   page: { padding: 48, fontSize: 10, lineHeight: 1.45, color: '#1a1a1a', fontFamily: 'Helvetica' },
@@ -35,6 +36,13 @@ function amountFull(n: number | null | undefined): string {
   if (n === null || n === undefined) return '—'
   const words = amountInWords(Math.trunc(n))
   return `${words} EUROS (${euros(n)})`
+}
+
+// Concatène les jetons d'un paragraphe du modèle partagé en texte simple —
+// le PDF n'a pas besoin de la surbrillance affichée dans l'aperçu en direct
+// (mandate-live-preview.tsx), seulement du même texte final.
+function renderParagraph(p: Paragraph): string {
+  return p.map((tok) => tok.text).join('')
 }
 
 function Bullet({ children }: { children: React.ReactNode }) {
@@ -170,6 +178,7 @@ export function MandateDocument({
   const isVente = mandate.type === 'vente'
   const isExclusif = mandate.exclusivity === 'exclusif'
   const fee = feeForPrice(mandate.price)
+  const venteSections = buildVenteSections(mandate)
   const title = isVente
     ? `MANDAT ${isExclusif ? 'EXCLUSIF' : 'SIMPLE'} DE VENTE N° ${mandate.mandate_number ?? '—'}`
     : `MANDAT DE RECHERCHE N° ${mandate.mandate_number ?? '—'}`
@@ -199,55 +208,31 @@ export function MandateDocument({
         <Text style={styles.h3}>Le Mandataire</Text>
         <AgencyBlock agency={agency} />
 
-        <Text style={styles.h2}>Objet du contrat</Text>
-        {isVente ? (
-          <Text style={styles.p}>
-            Le Mandant confère au Mandataire un mandat {isExclusif ? 'exclusif' : 'simple, sans exclusivité,'} de
-            vendre le Bien désigné ci-dessous, aux conditions, prix et charges qui suivent, convenus entre les
-            parties. Ce mandat porte le n° {mandate.mandate_number ?? '—'} au registre des mandats.
-          </Text>
-        ) : (
-          <Text style={styles.p}>
-            Le présent mandat a pour objet principal la recherche d&apos;un bien immobilier, ainsi que le conseil et
-            l&apos;accompagnement du Mandant dans l&apos;ensemble des démarches liées à ce projet (visites, analyse
-            des biens, négociation, financement, rédaction des documents juridiques liés à l&apos;acquisition). Ce
-            mandat porte le n° {mandate.mandate_number ?? '—'} au registre des mandats.
-          </Text>
-        )}
-
-        <Text style={styles.h2}>{isVente ? 'Désignation du bien' : 'Recherche du Mandant'}</Text>
-        <Text style={styles.p}>
-          {mandate.property_type || 'Bien'} situé {mandate.address || '—'}
-          {mandate.surface ? `, d'une superficie d'environ ${mandate.surface} m²` : ''}
-          {mandate.pieces ? `, ${mandate.pieces} pièce(s)` : ''}.
-        </Text>
-        {mandate.notes ? <Text style={styles.p}>{mandate.notes}</Text> : null}
-
-        <Text style={styles.h2}>{isVente ? 'Prix de vente' : 'Budget'}</Text>
-        <Text style={styles.p}>
-          {isVente
-            ? `Le prix de vente du Bien est fixé à la somme de ${amountFull(mandate.price)}.`
-            : `Le budget maximum consacré à cette acquisition, honoraires du Mandataire inclus, est de ${amountFull(mandate.price)}.`}
-        </Text>
-
-        <Text style={styles.h2}>Honoraires du Mandataire</Text>
-        <Text style={styles.p}>
-          En cas de réalisation de l&apos;opération, le Mandataire aura droit à une rémunération d&apos;un montant
-          de {amountFull(fee)} TTC. Ces honoraires sont à la charge du {isVente ? 'Vendeur' : 'Mandant'}, exigibles
-          le jour où l&apos;opération sera effectivement conclue et réitérée par acte authentique.
-        </Text>
-
-        <Text style={styles.h2}>Durée du mandat</Text>
-        <Text style={styles.p}>
-          Le présent mandat est donné pour une durée de {mandate.duration_months ?? '—'} mois à compter de sa
-          signature. À la fin de cette période, il prendra automatiquement fin. Il pourra être dénoncé à tout
-          moment par chacune des parties avec un préavis de {mandate.renewal_notice_days} jours, par lettre
-          recommandée avec demande d&apos;avis de réception, passé un délai de trois mois à compter de la
-          signature du mandat.
-          {isVente && isExclusif
-            ? " La clause d'exclusivité peut être dénoncée dans les mêmes conditions après ce délai de trois mois ; à défaut de dénonciation, elle vaudra pour toute la durée du mandat."
-            : ''}
-        </Text>
+        {/* Objet / Désignation du bien / Prix / Honoraires / Durée : générés
+            depuis le même modèle que l'aperçu en direct de l'éditeur (voir
+            mandate-document-model.ts et mandate-live-preview.tsx) — jamais
+            de texte différent entre ce que l'agent a vu se remplir à l'écran
+            et ce qui sort dans ce PDF. Un seul ajout propre au PDF : la
+            phrase "Ce mandat porte le n°… au registre des mandats" dans
+            "Objet du contrat", puisque le numéro n'existe qu'une fois le PDF
+            généré (voir pdf/route.ts, assign_mandate_number). La clause
+            "Conditions particulières au mandat exclusif" (id
+            clause_exclusivite) est volontairement exclue de cette boucle :
+            elle reste rendue plus bas, nichée sous "Obligations du Mandant"
+            comme dans la mise en page d'origine du PDF. */}
+        {venteSections
+          .filter((s) => s.id !== 'clause_exclusivite')
+          .map((s) => (
+            <View key={s.id}>
+              <Text style={styles.h2}>{s.title}</Text>
+              {s.paragraphs.map((p, i) => (
+                <Text key={i} style={styles.p}>
+                  {renderParagraph(p)}
+                  {s.id === 'objet' ? ` Ce mandat porte le n° ${mandate.mandate_number ?? '—'} au registre des mandats.` : ''}
+                </Text>
+              ))}
+            </View>
+          ))}
 
         {isVente && (
           <>

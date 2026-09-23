@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
+import { getAuthedProfile } from '@/lib/supabase/session'
 import {
   mandateEndDate,
   mandateNoticeDate,
@@ -9,9 +9,8 @@ import {
   formatDate,
 } from '@/lib/rive/mandates'
 import { leadMatchesBien, bienIsActive, type MatchLead, type MatchMandate } from '@/lib/rive/matching'
-import MandateEditForm from './mandate-edit-form'
+import MandateVenteWorkspace from './mandate-vente-workspace'
 import EstimationSection from './estimation-section'
-import PartiesSection from './parties-section'
 import DeleteMandateButton from './delete-mandate-button'
 import GenerateMandateButton from './generate-mandate-button'
 import ActivateMandateButton from './activate-mandate-button'
@@ -25,11 +24,12 @@ import MandateTabs, { type MandateTab } from './mandate-tabs'
 
 export default async function MandateDetailPage({ params }: PageProps<'/dashboard/mandates/[id]'>) {
   const { id } = await params
-  const supabase = await createClient()
+  const { supabase, profile } = await getAuthedProfile()
 
-  // mandate/comparables/parties ne dépendent que de l'id de l'URL : partent
-  // tous les 3 en parallèle plutôt qu'à la suite les uns des autres.
-  const [{ data: mandate }, { data: comparables }, { data: parties }] = await Promise.all([
+  // mandate/comparables/parties/agence ne dépendent que de l'id de l'URL (ou
+  // de l'agence déjà connue via le profil) : partent tous en parallèle
+  // plutôt qu'à la suite les uns des autres.
+  const [{ data: mandate }, { data: comparables }, { data: parties }, { data: agency }] = await Promise.all([
     supabase.from('mandates').select('*').eq('id', id).single(),
     supabase
       .from('dvf_comparables')
@@ -37,6 +37,9 @@ export default async function MandateDetailPage({ params }: PageProps<'/dashboar
       .eq('mandate_id', id)
       .order('sale_date', { ascending: false }),
     supabase.from('mandate_parties').select('*').eq('mandate_id', id).order('position', { ascending: true }),
+    profile?.agency_id
+      ? supabase.from('agencies').select('*').eq('id', profile.agency_id).single()
+      : Promise.resolve({ data: null }),
   ])
   if (!mandate) notFound()
 
@@ -205,8 +208,6 @@ export default async function MandateDetailPage({ params }: PageProps<'/dashboar
         </div>
       )}
 
-      <PartiesSection mandateId={mandate.id} parties={parties ?? []} />
-
       {(() => {
         // La fiche s'allonge vite (bien, estimation, suivi commercial,
         // fiche bien, documents…) — répartie en onglets plutôt qu'empilée
@@ -221,9 +222,20 @@ export default async function MandateDetailPage({ params }: PageProps<'/dashboar
             label: 'Bien & estimation',
             content: (
               <>
-                <div className="rounded-2xl border border-neutral-200 bg-surface p-6 shadow-sm">
-                  <MandateEditForm mandate={mandate} />
-                </div>
+                <MandateVenteWorkspace
+                  mandate={mandate}
+                  parties={parties ?? []}
+                  agency={
+                    agency ?? {
+                      name: '',
+                      legal_form: '',
+                      address: '',
+                      legal_rep_civility: '',
+                      legal_rep_first_name: '',
+                      legal_rep_last_name: '',
+                    }
+                  }
+                />
                 {mandate.type === 'vente' && (
                   <EstimationSection
                     mandateId={mandate.id}
