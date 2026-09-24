@@ -19,7 +19,7 @@ type DisplayMessage = { role: 'user' | 'assistant' | 'error'; text: string }
 
 const WELCOME: DisplayMessage = {
   role: 'assistant',
-  text: "Salut ! Dis-moi ce que tu veux faire : chercher un prospect, ajouter une note, le faire avancer dans son pipeline, ou mettre à jour un champ de sa fiche. Tu peux écrire ou utiliser le micro.",
+  text: "Salut ! Dis-moi ce que tu veux faire : chercher un prospect, ajouter une note, le faire avancer dans son pipeline, mettre à jour un champ de sa fiche, créer un nouveau prospect, ou me demander une statistique (contacts cette semaine, taux de conversion, mandats signés ce mois-ci, relances en retard, honoraires prévisionnels). Tu peux écrire ou utiliser le micro.",
 }
 
 // Web Speech API : pas de type officiel dans le DOM lib TypeScript standard.

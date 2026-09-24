@@ -140,6 +140,74 @@ export async function createLeadQuick(
   return { lead: newLead as { id: string; name: string } }
 }
 
+// Création depuis l'assistant IA : un nom complet en un seul champ (pas de
+// formulaire prénom/nom séparé côté chat), plus les mêmes critères
+// optionnels que update_prospect_field peut ensuite modifier un par un.
+// Renvoie l'id du nouveau prospect pour que l'assistant puisse confirmer
+// (et, si besoin, enchaîner d'autres actions sur ce même prospect).
+export async function createProspectForAssistant(input: {
+  name: string
+  category?: string | null
+  phone?: string
+  email?: string
+  critere_type?: string
+  critere_lieu?: string
+  budget?: number | null
+  pieces_min?: number | null
+  surface_min?: number | null
+  financement?: string
+}): Promise<{ error?: string; id?: string; name?: string }> {
+  const fullName = input.name.trim()
+  if (!fullName) return { error: 'Le nom du prospect est obligatoire.' }
+  if (input.category && !['acheteur', 'vendeur', 'investisseur'].includes(input.category)) {
+    return { error: 'Catégorie invalide.' }
+  }
+
+  const [firstName, ...rest] = fullName.split(/\s+/)
+  const lastName = rest.join(' ')
+
+  const { supabase, agencyId, userId } = await getAgencyId()
+  if (!agencyId) return { error: 'Session expirée, reconnecte-toi.' }
+
+  const category = input.category || null
+  const positions = await initialPositions(supabase, agencyId, category)
+
+  const { data: newLead, error } = await supabase
+    .from('leads')
+    .insert({
+      agency_id: agencyId,
+      assigned_to: userId,
+      first_name: firstName,
+      last_name: lastName,
+      civility: guessCivility(firstName) ?? 'Monsieur',
+      phone: input.phone?.trim() || '',
+      email: input.email?.trim() || '',
+      category,
+      critere_type: input.critere_type?.trim() || '',
+      critere_lieu: input.critere_lieu?.trim() || '',
+      budget: input.budget ?? null,
+      pieces_min: input.pieces_min ?? null,
+      surface_min: input.surface_min ?? null,
+      financement: input.financement?.trim() || '',
+      positions,
+    })
+    .select('id, name')
+    .single()
+
+  if (error || !newLead) return { error: "Impossible de créer le prospect." }
+
+  await notifyNewLead(supabase, agencyId, {
+    id: newLead.id,
+    name: newLead.name,
+    category,
+    source: 'Saisie manuelle',
+    ownerId: userId,
+  })
+
+  if (category) revalidatePath(`/dashboard/pipelines/${category}`)
+  return { id: newLead.id, name: newLead.name }
+}
+
 export async function updateLead(
   leadId: string,
   _prevState: LeadFormState,
