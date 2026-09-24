@@ -158,6 +158,8 @@ export async function selectMetaPage(formData: FormData) {
 
 export type MetaMappingState = { error?: string } | undefined
 
+export type MetaMappingState = { error?: string } | undefined
+
 export async function updateMetaCampaignMapping(
   campaignRowId: string,
   _prevState: MetaMappingState,
@@ -169,17 +171,27 @@ export async function updateMetaCampaignMapping(
   const ownerId = String(formData.get('owner_id') || '') || null
   const targetCategory = String(formData.get('target_category') || '') || null
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('meta_campaigns')
     .update({ owner_id: ownerId, target_category: targetCategory, updated_at: new Date().toISOString() })
     .eq('id', campaignRowId)
     .eq('agency_id', agencyId)
+    .select('id')
 
   // Avant, une erreur ici (ex. contrainte "check" pas encore à jour côté
   // base de données) était silencieusement ignorée : la sélection semblait
   // "s'annuler" toute seule au ré-affichage, sans aucune indication de la
   // vraie cause. On la remonte maintenant telle quelle.
   if (error) return { error: `Enregistrement impossible : ${error.message}` }
+
+  // Un UPDATE dont le WHERE ne correspond à aucune ligne (mauvais id, ou une
+  // policy RLS qui bloque silencieusement) ne renvoie PAS d'erreur côté
+  // Postgres/PostgREST — juste 0 ligne modifiée. Sans le .select() ci-dessus
+  // pour le détecter, ce cas se comportait EXACTEMENT comme une erreur
+  // avalée : rien n'était enregistré, et rien ne le signalait.
+  if (!data || data.length === 0) {
+    return { error: "Enregistrement impossible : aucune ligne mise à jour (droits d'accès ou campagne introuvable)." }
+  }
 
   revalidatePath('/dashboard/settings')
   return undefined
