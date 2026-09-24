@@ -10,7 +10,7 @@
 // détail des outils appelés entre les deux, pour rester lisible sur
 // téléphone). Conversation en mémoire seulement : elle repart de zéro si la
 // page est rechargée, pas encore persistée en base.
-import { useEffect, useRef, useState, useTransition } from 'react'
+import { useRef, useState, useTransition, useEffect } from 'react'
 import { sendAssistantMessage } from '@/app/actions/assistant'
 import type { ChatMessage } from '@/lib/rive/assistant-agent'
 import { MicIcon, SendIcon } from '../_components/icons'
@@ -26,10 +26,11 @@ const WELCOME: DisplayMessage = {
 type SpeechRecognitionLike = {
   lang: string
   interimResults: boolean
+  continuous: boolean
   maxAlternatives: number
   start: () => void
   stop: () => void
-  onresult: ((event: { results: { [i: number]: { [j: number]: { transcript: string } } } }) => void) | null
+  onresult: ((event: { results: { length: number; [i: number]: { [j: number]: { transcript: string } } } }) => void) | null
   onend: (() => void) | null
   onerror: (() => void) | null
 }
@@ -50,10 +51,27 @@ export default function AssistantChat() {
     return !!(w.SpeechRecognition || w.webkitSpeechRecognition)
   })
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null)
+  // Ce qu'il y avait déjà dans le champ avant de commencer à dicter — permet
+  // d'enchaîner plusieurs dictées à la suite sans effacer ce qui précède.
+  const baseInputRef = useRef('')
   const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    if (!micSupported) return
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [log, pending])
+
+  // Une NOUVELLE instance de reconnaissance à chaque dictée plutôt qu'une
+  // seule réutilisée d'un clic sur l'autre : sur mobile (Safari iOS en
+  // particulier), redémarrer une reconnaissance déjà arrêtée se comporte
+  // mal et peut ne renvoyer aucun résultat — symptôme exact du bug remonté
+  // ("je dois refaire plusieurs fois mon message vocal"). interimResults à
+  // true + mise à jour du champ au fil de la phrase (pas seulement à la
+  // toute fin) : le texte devient visible tout de suite pendant qu'on
+  // parle, au lieu d'attendre un résultat "final" qui peut ne jamais
+  // arriver si la reconnaissance s'arrête un peu tôt (silence, coupure
+  // réseau...). continuous à true pour ne pas couper au premier silence
+  // entre deux mots.
+  function startListening() {
     const w = window as unknown as {
       SpeechRecognition?: new () => SpeechRecognitionLike
       webkitSpeechRecognition?: new () => SpeechRecognitionLike
@@ -63,30 +81,39 @@ export default function AssistantChat() {
 
     const recognition = new SpeechRecognitionCtor()
     recognition.lang = 'fr-FR'
-    recognition.interimResults = false
+    recognition.interimResults = true
+    recognition.continuous = true
     recognition.maxAlternatives = 1
+    baseInputRef.current = input
+
     recognition.onresult = (event) => {
-      const text = event.results?.[0]?.[0]?.transcript
-      if (text) setInput((prev) => (prev ? `${prev} ${text}` : text))
+      let transcript = ''
+      for (let i = 0; i < event.results.length; i++) {
+        transcript += event.results[i]?.[0]?.transcript ?? ''
+      }
+      const base = baseInputRef.current
+      setInput(base ? `${base} ${transcript}` : transcript)
     }
     recognition.onend = () => setListening(false)
     recognition.onerror = () => setListening(false)
-    recognitionRef.current = recognition
-  }, [micSupported])
 
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [log, pending])
+    recognitionRef.current = recognition
+    try {
+      recognition.start()
+      setListening(true)
+    } catch {
+      setListening(false)
+    }
+  }
+
+  function stopListening() {
+    recognitionRef.current?.stop()
+    setListening(false)
+  }
 
   function toggleMic() {
-    if (!recognitionRef.current) return
-    if (listening) {
-      recognitionRef.current.stop()
-      setListening(false)
-    } else {
-      setListening(true)
-      recognitionRef.current.start()
-    }
+    if (listening) stopListening()
+    else startListening()
   }
 
   function send(rawText: string) {
