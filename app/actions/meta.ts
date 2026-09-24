@@ -158,8 +158,6 @@ export async function selectMetaPage(formData: FormData) {
 
 export type MetaMappingState = { error?: string } | undefined
 
-export type MetaMappingState = { error?: string } | undefined
-
 export async function updateMetaCampaignMapping(
   campaignRowId: string,
   _prevState: MetaMappingState,
