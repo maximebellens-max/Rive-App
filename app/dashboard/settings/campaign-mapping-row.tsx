@@ -75,7 +75,9 @@ export default function CampaignMappingRow({
           <option value="">— Tableau —</option>
           <option value="acheteur">Acheteurs</option>
           <option value="vendeur">Vendeurs</option>
-          <option value="investisseur">Investisseurs</option>
+          <option value="investisseur_france">Investisseurs France</option>
+          <option value="investisseur_dubai">Investisseurs Dubaï</option>
+          <option value="investisseur_georgie">Investisseurs Géorgie</option>
         </select>
       </div>
     </form>

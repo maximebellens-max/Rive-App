@@ -50,7 +50,9 @@ const NAV_GROUPS: NavGroup[] = [
     links: [
       { href: '/dashboard/pipelines/vendeur', label: 'Vendeurs', icon: UsersIcon },
       { href: '/dashboard/pipelines/acheteur', label: 'Acheteurs', icon: HomeIcon },
-      { href: '/dashboard/pipelines/investisseur', label: 'Investisseurs', icon: BriefcaseIcon },
+      { href: '/dashboard/pipelines/investisseur_france', label: 'Investisseurs France', icon: BriefcaseIcon },
+      { href: '/dashboard/pipelines/investisseur_dubai', label: 'Investisseurs Dubaï', icon: BriefcaseIcon },
+      { href: '/dashboard/pipelines/investisseur_georgie', label: 'Investisseurs Géorgie', icon: BriefcaseIcon },
     ],
   },
   {

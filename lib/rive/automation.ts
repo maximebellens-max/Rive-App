@@ -24,7 +24,7 @@ export async function ensureMandateDraftForLead(supabase: SupabaseClient, lead: 
   const { data: existing } = await supabase.from('mandates').select('id').eq('lead_id', lead.id).limit(1)
   if (existing && existing.length > 0) return
 
-  const type = lead.category === 'investisseur' ? 'recherche' : 'vente'
+  const type = lead.category === 'investisseur_france' ? 'recherche' : 'vente'
 
   await supabase.from('mandates').insert({
     agency_id: lead.agency_id,
@@ -47,7 +47,7 @@ export async function ensureMandateDraftForLead(supabase: SupabaseClient, lead: 
 // un prospect sans catégorie.
 export async function moveLeadToClientColumn(supabase: SupabaseClient, agencyId: string, leadId: string) {
   const { data: lead } = await supabase.from('leads').select('category').eq('id', leadId).single()
-  if (!lead || (lead.category !== 'vendeur' && lead.category !== 'investisseur')) return
+  if (!lead || (lead.category !== 'vendeur' && lead.category !== 'investisseur_france')) return
 
   const lastCol = await lastColumnId(supabase, agencyId, lead.category)
   if (!lastCol) return
@@ -86,7 +86,7 @@ export async function activateMandateForLead(supabase: SupabaseClient, lead: Lea
     return
   }
 
-  const type = lead.category === 'investisseur' ? 'recherche' : 'vente'
+  const type = lead.category === 'investisseur_france' ? 'recherche' : 'vente'
   await supabase.from('mandates').insert({
     agency_id: lead.agency_id,
     lead_id: lead.id,

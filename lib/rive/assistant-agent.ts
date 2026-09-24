@@ -21,6 +21,7 @@ import { moveLeadCard } from '@/app/actions/pipelines'
 import { addLeadHistoryEntry, createProspectForAssistant, updateLeadField } from '@/app/actions/leads'
 import { createAppointment } from '@/app/actions/appointments'
 import { feeForPrice } from '@/lib/rive/mandates'
+import { BOARD_TYPES } from '@/lib/rive/pipelines'
 
 const MODEL = 'claude-haiku-4-5-20251001'
 const MAX_STEPS = 6
@@ -38,8 +39,6 @@ export type AgentContext = {
   agencyName?: string
   userName?: string
 }
-
-const BOARD_TYPES = ['vendeur', 'acheteur', 'investisseur']
 
 const TOOLS = [
   {
@@ -163,7 +162,7 @@ const TOOLS = [
     description:
       "Calcule une statistique sur l'activité de l'agence. Choisis le metric le plus proche de la question posée : " +
       "prospects_contacted_this_week (nombre de prospects contactés / notes ajoutées sur les 7 derniers jours), " +
-      "conversion_rate (pour chaque catégorie Vendeur/Acheteur/Investisseur, part des prospects arrivés à la dernière étape du pipeline), " +
+      "conversion_rate (pour chaque catégorie Vendeur/Acheteur/Investisseur France/Dubaï/Géorgie, part des prospects arrivés à la dernière étape du pipeline), " +
       "mandates_signed_this_month (mandats signés depuis le début du mois en cours), " +
       "late_relances (prospects dont la prochaine action prévue est déjà passée), " +
       "forecasted_commissions (honoraires prévisionnels cumulés sur les mandats actifs, non encore vendus).",
@@ -191,7 +190,7 @@ function buildSystemPrompt(ctx: AgentContext, today: string): string {
     `Tu es l'assistant intégré à Rive, le CRM immobilier de l'agence ${ctx.agencyName || "l'agence"} (bassin genevois côté français, Annecy/Genève).`,
     `Tu discutes avec ${ctx.userName || "un agent de l'agence"}. Nous sommes ${today}. Il peut t'écrire ou te dicter sa demande au micro (transcription parfois imparfaite : un nom ou un mot mal transcrit reste probable).`,
     ``,
-    `Tu sais : chercher un prospect, ajouter une note à sa fiche, le faire avancer (ou reculer) dans son pipeline (Vendeur/Acheteur/Investisseur), mettre à jour un champ simple de sa fiche, créer un nouveau prospect, créer un rendez-vous dans l'agenda (lié à un prospect ou autonome), et calculer des statistiques sur l'activité de l'agence (contacts récents, taux de conversion, mandats signés ce mois-ci, relances en retard, honoraires prévisionnels).`,
+    `Tu sais : chercher un prospect, ajouter une note à sa fiche, le faire avancer (ou reculer) dans son pipeline (Vendeur/Acheteur/Investisseur France/Investisseur Dubaï/Investisseur Géorgie), mettre à jour un champ simple de sa fiche, créer un nouveau prospect, créer un rendez-vous dans l'agenda (lié à un prospect ou autonome), et calculer des statistiques sur l'activité de l'agence (contacts récents, taux de conversion, mandats signés ce mois-ci, relances en retard, honoraires prévisionnels).`,
     ``,
     `Règles impératives :`,
     `- N'agis JAMAIS sur un prospect sans avoir d'abord retrouvé son id exact via search_prospects. Si plusieurs prospects correspondent, ou si aucun ne correspond clairement, arrête-toi et demande une précision en texte plutôt que de choisir au hasard.`,

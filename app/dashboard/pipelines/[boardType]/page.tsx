@@ -120,7 +120,7 @@ export default async function PipelineBoardPage({ params }: PageProps<'/dashboar
               {cards.length} prospect{cards.length > 1 ? 's' : ''}
             </p>
           </div>
-          {bt === 'investisseur' && (
+          {(bt === 'investisseur_france' || bt === 'investisseur_dubai' || bt === 'investisseur_georgie') && (
             <Link
               href="/dashboard/investments"
               className="shrink-0 rounded-lg border border-neutral-300 px-3 py-1.5 text-sm font-medium text-neutral-600 hover:bg-neutral-100"

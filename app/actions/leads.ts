@@ -7,6 +7,7 @@ import { initialPositions, firstColumnId } from '@/lib/rive/pipeline-positions'
 import { notifyMatchesForLeadId } from '@/lib/rive/match-notify'
 import { notifyNewLead } from '@/lib/rive/new-lead-notify'
 import { guessCivility } from '@/lib/rive/civility'
+import { BOARD_TYPES } from '@/lib/rive/pipelines'
 
 export type LeadFormState = { error?: string } | undefined
 
@@ -54,7 +55,7 @@ export async function createLead(
   if (!firstName) {
     return { error: 'Le prénom du prospect est obligatoire.' }
   }
-  if (category && !['acheteur', 'vendeur', 'investisseur'].includes(category)) {
+  if (category && !BOARD_TYPES.includes(category)) {
     return { error: 'Catégorie invalide.' }
   }
 
@@ -159,7 +160,7 @@ export async function createProspectForAssistant(input: {
 }): Promise<{ error?: string; id?: string; name?: string }> {
   const fullName = input.name.trim()
   if (!fullName) return { error: 'Le nom du prospect est obligatoire.' }
-  if (input.category && !['acheteur', 'vendeur', 'investisseur'].includes(input.category)) {
+  if (input.category && !BOARD_TYPES.includes(input.category)) {
     return { error: 'Catégorie invalide.' }
   }
 
@@ -254,6 +255,9 @@ export async function updateLead(
       surface_min: num(formData, 'surface_min'),
       financement: str(formData, 'financement'),
       rendement_vise: num(formData, 'rendement_vise'),
+      // Dubaï/Géorgie : pas de mandat, donc pas de barème automatique — la
+      // commission se saisit à la main (voir migration 053).
+      investor_commission: num(formData, 'investor_commission'),
       action_label: str(formData, 'action_label'),
       action_date: str(formData, 'action_date') || null,
       notes: str(formData, 'notes'),

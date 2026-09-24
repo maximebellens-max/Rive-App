@@ -49,7 +49,9 @@ export default function NewLeadForm() {
       >
         <option value="acheteur">Acheteur</option>
         <option value="vendeur">Vendeur</option>
-        <option value="investisseur">Investisseur</option>
+        <option value="investisseur_france">Investisseur France</option>
+        <option value="investisseur_dubai">Investisseur Dubaï</option>
+        <option value="investisseur_georgie">Investisseur Géorgie</option>
       </select>
       <input
         name="phone"

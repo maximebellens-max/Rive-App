@@ -21,6 +21,7 @@ type Lead = {
   surface_min: number | null
   financement: string
   rendement_vise: number | null
+  investor_commission: number | null
   action_label: string
   action_date: string | null
   notes: string
@@ -61,6 +62,8 @@ export default function LeadEditForm({ lead, members = [] }: { lead: Lead; membe
 
   const [category, setCategory] = useState(lead.category ?? '')
   const isVendeur = category === 'vendeur'
+  const isInvestor = category === 'investisseur_france' || category === 'investisseur_dubai' || category === 'investisseur_georgie'
+  const isInvestorAbroad = category === 'investisseur_dubai' || category === 'investisseur_georgie'
 
   // Civilité auto-suggérée depuis le prénom (voir lib/rive/civility.ts), mais
   // reste modifiable à la main — dès que l'agent la change lui-même, on ne
@@ -102,7 +105,9 @@ export default function LeadEditForm({ lead, members = [] }: { lead: Lead; membe
               <option value="">—</option>
               <option value="acheteur">Acheteur</option>
               <option value="vendeur">Vendeur</option>
-              <option value="investisseur">Investisseur</option>
+              <option value="investisseur_france">Investisseur France</option>
+              <option value="investisseur_dubai">Investisseur Dubaï</option>
+              <option value="investisseur_georgie">Investisseur Géorgie</option>
             </select>
           </div>
           <div className="flex flex-col gap-1.5">
@@ -190,10 +195,25 @@ export default function LeadEditForm({ lead, members = [] }: { lead: Lead; membe
               <label className={labelClass}>Surface min. (m²)</label>
               <input name="surface_min" type="number" step="0.1" defaultValue={lead.surface_min ?? ''} className={inputClass} />
             </div>
-            {category === 'investisseur' && (
+            {isInvestor && (
               <div className="flex flex-col gap-1.5">
                 <label className={labelClass}>Rendement visé (%)</label>
                 <input name="rendement_vise" type="number" step="0.1" defaultValue={lead.rendement_vise ?? ''} className={inputClass} />
+              </div>
+            )}
+            {isInvestorAbroad && (
+              <div className="flex flex-col gap-1.5">
+                <label className={labelClass}>Commission (€)</label>
+                <input
+                  name="investor_commission"
+                  type="number"
+                  step="0.01"
+                  defaultValue={lead.investor_commission ?? ''}
+                  className={inputClass}
+                />
+                <p className="text-xs text-neutral-400">
+                  Saisie manuelle — pas de mandat pour Dubaï/Géorgie, donc pas de calcul automatique.
+                </p>
               </div>
             )}
           </div>

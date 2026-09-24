@@ -3,6 +3,8 @@
 // n'est pas configurée, l'envoi est simplement ignoré (log serveur) plutôt
 // que de faire échouer tout le traitement du webhook : recevoir le lead dans
 // le CRM ne doit jamais dépendre de l'email.
+import { BOARD_LABELS } from './pipelines'
+
 async function resendApiKey(): Promise<string | null> {
   return process.env.RESEND_API_KEY || null
 }
@@ -63,8 +65,7 @@ export async function sendLeadAlertEmail({
   }
 
   const from = process.env.RESEND_FROM_EMAIL || 'Rive <onboarding@resend.dev>'
-  const categoryLabel =
-    category === 'acheteur' ? 'Acheteurs' : category === 'vendeur' ? 'Vendeurs' : category === 'investisseur' ? 'Investisseurs' : null
+  const categoryLabel = (category && BOARD_LABELS[category]) || null
 
   const subject = `Nouveau prospect — ${leadName}`
   const html = `

@@ -233,7 +233,7 @@ async function processBirthdayRelances(supabase: SupabaseClient, agencyId: strin
     .from('leads')
     .select('id, name, birth_date, assigned_to')
     .eq('agency_id', agencyId)
-    .in('category', ['vendeur', 'investisseur'])
+    .in('category', ['vendeur', 'investisseur_france', 'investisseur_dubai', 'investisseur_georgie'])
     .not('birth_date', 'is', null)
 
   for (const lead of leads ?? []) {

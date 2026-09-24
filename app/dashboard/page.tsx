@@ -1,5 +1,6 @@
 import { getAuthedProfile } from '@/lib/supabase/session'
 import { formatDate, formatEUR, feeForPrice } from '@/lib/rive/mandates'
+import { BOARD_TYPES } from '@/lib/rive/pipelines'
 import { actionBucket, nearestUpcomingMilestone } from '@/lib/rive/today'
 import { computeMatchPairs, type MatchLead, type MatchMandate } from '@/lib/rive/matching'
 import TodayWidgets, { type Widget } from './today-widgets'
@@ -42,7 +43,7 @@ export default async function TodayPage() {
     supabase
       .from('pipeline_columns')
       .select('id, board_type')
-      .in('board_type', ['vendeur', 'acheteur', 'investisseur'])
+      .in('board_type', BOARD_TYPES)
       .order('position', { ascending: true }),
     // Tous les rendez-vous (pas seulement ceux du mois affiché) — la
     // navigation entre mois se fait côté client sans aller-retour serveur,

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
-import { nextColumnColor, CATEGORY_BOARD_TYPES, BOARD_LABELS, type BoardType } from '@/lib/rive/pipelines'
+import { nextColumnColor, CATEGORY_BOARD_TYPES, MANDATE_BOARD_TYPES, BOARD_LABELS, type BoardType } from '@/lib/rive/pipelines'
 import { ensureMandateDraftForLead, activateMandateForLead } from '@/lib/rive/automation'
 import { notifyNewLead } from '@/lib/rive/new-lead-notify'
 import { guessCivility } from '@/lib/rive/civility'
@@ -58,8 +58,10 @@ export async function moveLeadCard(leadId: string, boardType: BoardType, columnI
 
   // Chaîne d'automatisation : entrer dans l'avant-dernière colonne (étape
   // estimation) crée un brouillon de mandat ; entrer dans la dernière colonne
-  // (mandat signé) l'active. Uniquement sur les pipelines Vendeur/Investisseur.
-  if (boardType === 'vendeur' || boardType === 'investisseur') {
+  // (mandat signé) l'active. Uniquement sur les pipelines Vendeur/Investisseur
+  // France — pas de notion de mandat pour Investisseur Dubaï/Géorgie (vente
+  // sur plan, commission saisie à la main — voir migration 053).
+  if (MANDATE_BOARD_TYPES.has(boardType)) {
     const { data: columns } = await supabase
       .from('pipeline_columns')
       .select('id')

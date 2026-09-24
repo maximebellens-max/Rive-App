@@ -234,7 +234,9 @@ export default function KanbanBoard({
               <option value="all">Toutes catégories</option>
               <option value="vendeur">Vendeur</option>
               <option value="acheteur">Acheteur</option>
-              <option value="investisseur">Investisseur</option>
+              <option value="investisseur_france">Investisseur France</option>
+              <option value="investisseur_dubai">Investisseur Dubaï</option>
+              <option value="investisseur_georgie">Investisseur Géorgie</option>
             </select>
           )}
           {members.length > 0 && (

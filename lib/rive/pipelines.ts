@@ -15,29 +15,46 @@ export const COLUMN_COLOR_HEX: Record<string, string> = {
   sand: '#b79d75',
 }
 
-export const BOARD_TYPES = ['vendeur', 'acheteur', 'investisseur'] as const
+// Le tableau Investisseur unique a été éclaté en 3 marchés (voir migration
+// 053) : investisseur_france garde le cheminement d'origine (recherche →
+// mandat, même automatisation que Vendeur) ; investisseur_dubai et
+// investisseur_georgie suivent un cheminement de vente sur plan différent
+// (Nouveau lead > R1 > R2 > EOI > Réservation > Vendu) et n'ont pas de
+// notion de mandat — leur commission se saisit à la main sur la fiche du
+// prospect (leads.investor_commission).
+export const BOARD_TYPES = ['vendeur', 'acheteur', 'investisseur_france', 'investisseur_dubai', 'investisseur_georgie']
 
-// Un identifiant de tableau : soit l'un des 3 tableaux fixes ci-dessus, soit
+// Sous-ensemble de BOARD_TYPES concerné par l'automatisation mandat (entrer
+// dans l'avant-dernière colonne crée un brouillon, la dernière l'active) —
+// voir app/actions/pipelines.ts et lib/rive/automation.ts. Dubaï et Géorgie
+// n'en font volontairement pas partie.
+export const MANDATE_BOARD_TYPES = new Set(['vendeur', 'investisseur_france'])
+
+// Un identifiant de tableau : soit l'un des tableaux fixes ci-dessus, soit
 // l'id d'un tableau personnalisé (table `boards`, ligne kind='custom').
 export type BoardType = string
 
 export const BOARD_LABELS: Record<string, string> = {
   vendeur: 'Vendeurs',
   acheteur: 'Acheteurs',
-  investisseur: 'Investisseurs',
+  investisseur_france: 'Investisseurs France',
+  investisseur_dubai: 'Investisseurs Dubaï',
+  investisseur_georgie: 'Investisseurs Géorgie',
 }
 
 // Tableaux dont le type détermine directement leads.category (les tableaux
 // personnalisés n'affectent jamais la catégorie d'un prospect).
-export const CATEGORY_BOARD_TYPES = new Set(['vendeur', 'acheteur', 'investisseur'])
+export const CATEGORY_BOARD_TYPES = new Set(BOARD_TYPES)
 
 export const CATEGORY_LABEL: Record<string, string> = {
   acheteur: 'Acheteur',
   vendeur: 'Vendeur',
-  investisseur: 'Investisseur',
+  investisseur_france: 'Investisseur France',
+  investisseur_dubai: 'Investisseur Dubaï',
+  investisseur_georgie: 'Investisseur Géorgie',
 }
 
-// Couleurs dédiées aux 3 catégories de prospects, pour les distinguer d'un
+// Couleurs dédiées aux catégories de prospects, pour les distinguer d'un
 // coup d'œil partout où elles se mélangent (tableau Prospects, Aujourd'hui) —
 // volontairement différentes des couleurs de colonnes (COLUMN_COLOR_HEX) et
 // du code couleur chaud/tiède/froid (PRIORITY_TIER_CLASS) pour ne pas les
@@ -45,7 +62,9 @@ export const CATEGORY_LABEL: Record<string, string> = {
 export const CATEGORY_COLOR_HEX: Record<string, string> = {
   vendeur: '#4f46e5',
   acheteur: '#059669',
-  investisseur: '#7c3aed',
+  investisseur_france: '#7c3aed',
+  investisseur_dubai: '#c99a3b',
+  investisseur_georgie: '#0f9b8e',
 }
 
 export function nextColumnColor(usedCount: number): ColumnColor {

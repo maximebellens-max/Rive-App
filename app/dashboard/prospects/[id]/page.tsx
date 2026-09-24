@@ -7,25 +7,12 @@ import { RECONTACT_THRESHOLD_DAYS, daysAgo } from '@/lib/rive/today'
 import { generateBriefingBrief, generateRelanceBrief, generateVisitReportBrief } from '@/lib/rive/ai-prompts'
 import { saveAIBriefing, saveAIRelanceDraft, saveAIVisitReport } from '@/app/actions/ai'
 import { markLeadContacted } from '@/app/actions/pipelines'
+import { CATEGORY_LABEL, BOARD_LABELS as CATEGORY_LABEL_PLURAL } from '@/lib/rive/pipelines'
 import AIBriefPanel from '../../_components/ai-brief-panel'
 import LeadEditForm from './lead-edit-form'
 import HistorySection from './history-section'
 import DeleteLeadButton from './delete-lead-button'
 import MessageSection from './message-section'
-
-const CATEGORY_LABEL: Record<string, string> = {
-  acheteur: 'Acheteur',
-  vendeur: 'Vendeur',
-  investisseur: 'Investisseur',
-}
-
-// Pluriel, pour le lien de retour vers le tableau de la catégorie (nom du
-// nav — voir app/dashboard/layout.tsx).
-const CATEGORY_LABEL_PLURAL: Record<string, string> = {
-  acheteur: 'Acheteurs',
-  vendeur: 'Vendeurs',
-  investisseur: 'Investisseurs',
-}
 
 // Affichée en toutes lettres sur la fiche (plutôt qu'en relatif type "il y a
 // 2 j") : sert de repère fixe pour caler un rappel ou un suivi, contrairement

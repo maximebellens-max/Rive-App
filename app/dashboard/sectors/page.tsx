@@ -14,7 +14,9 @@ export default async function SectorsPage() {
     supabase
       .from('leads')
       .select('critere_lieu')
-      .in('category', ['acheteur', 'investisseur'])
+      // Analyse par commune française — pas pertinent pour les investisseurs
+      // Dubaï/Géorgie (marchés étrangers), volontairement exclus ici.
+      .in('category', ['acheteur', 'investisseur_france'])
       .not('critere_lieu', 'eq', ''),
   ])
 

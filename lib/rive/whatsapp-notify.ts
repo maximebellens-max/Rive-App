@@ -19,6 +19,7 @@
 // notifyTeamAlertWhatsApp.
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { sendWhatsAppTemplate } from './whatsapp'
+import { CATEGORY_LABEL } from './pipelines'
 
 type TeamRecipient = { to: string; senderPhoneNumberId?: string }
 
@@ -87,12 +88,6 @@ async function broadcastToTeam(supabase: SupabaseClient, agencyId: string, templ
   await sendToRecipients(await optedInTeamRecipients(supabase, agencyId), templateName, params)
 }
 
-const CATEGORY_LABELS: Record<string, string> = {
-  acheteur: 'Acheteur',
-  vendeur: 'Vendeur',
-  investisseur: 'Investisseur',
-}
-
 // Appelée après la création d'un lead, qu'il vienne d'un formulaire Meta ou
 // d'une saisie manuelle dans Rive. Modèle Meta : "rive_nouveau_lead".
 // Toujours envoyée à toute l'équipe opted-in, même si le lead a déjà un
@@ -104,7 +99,7 @@ export async function notifyNewLeadWhatsApp(
   agencyId: string,
   lead: { name: string; category: string | null; source: string }
 ) {
-  const categoryLabel = (lead.category && CATEGORY_LABELS[lead.category]) || 'Non classé'
+  const categoryLabel = (lead.category && CATEGORY_LABEL[lead.category]) || 'Non classé'
   await broadcastToTeam(supabase, agencyId, 'rive_nouveau_lead', [lead.name, categoryLabel, lead.source || 'Rive'])
 }
 
