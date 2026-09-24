@@ -1,4 +1,4 @@
-import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer'
+import { Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer'
 import { feeForPrice, formatDate as fmtDate } from './mandates'
 import { amountInWords } from './number-to-words'
 import { buildVenteSections, type Paragraph } from './mandate-document-model'
@@ -15,6 +15,7 @@ const styles = StyleSheet.create({
   bulletDot: { width: 10 },
   bulletText: { flex: 1 },
   headerBox: { marginBottom: 18, paddingBottom: 10, borderBottom: '1pt solid #ccc' },
+  logo: { height: 34, maxWidth: 160, marginBottom: 8, objectFit: 'contain' },
   signRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 30 },
   signBlock: { width: '45%' },
   signLine: { marginTop: 30, borderTop: '0.5pt solid #999', paddingTop: 4 },
@@ -56,6 +57,7 @@ function Bullet({ children }: { children: React.ReactNode }) {
 
 type Agency = {
   name: string
+  logo_url?: string
   legal_form: string
   share_capital: number | null
   siren: string
@@ -187,6 +189,10 @@ export function MandateDocument({
     <Document title={title}>
       <Page size="A4" style={styles.page} wrap>
         <View style={styles.headerBox}>
+          {/* Data URL déjà redimensionnée côté client (voir
+              agency-logo-upload.tsx) — react-pdf accepte directement une
+              chaîne base64 en src, comme une URL normale. */}
+          {agency.logo_url ? <Image src={agency.logo_url} style={styles.logo} /> : null}
           <Text style={styles.h1}>{title}</Text>
           <Text style={styles.small}>
             Conformément à la loi n° 70-9 du 2 janvier 1970 et au décret n° 72-678 du 20 juillet 1972

@@ -2,9 +2,11 @@
 
 import { useActionState } from 'react'
 import { updateAgencySettings, type AgencySettingsState } from '@/app/actions/agency'
+import AgencyLogoUpload from './agency-logo-upload'
 
 type Agency = {
   name: string
+  logo_url: string
   legal_form: string
   share_capital: number | null
   siren: string
@@ -41,6 +43,10 @@ export default function AgencySettingsForm({ agency }: { agency: Agency }) {
         <p className="text-xs text-neutral-500">
           Ces informations apparaissent telles quelles sur chaque mandat généré (mentions obligatoires).
         </p>
+        <div className="flex flex-col gap-1.5">
+          <label className={labelClass}>Logo de l&apos;agence</label>
+          <AgencyLogoUpload logoUrl={agency.logo_url} />
+        </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="flex flex-col gap-1.5">
             <label className={labelClass}>Nom commercial</label>

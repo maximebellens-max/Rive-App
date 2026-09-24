@@ -233,6 +233,7 @@ export default async function MandateDetailPage({ params }: PageProps<'/dashboar
                       legal_rep_civility: '',
                       legal_rep_first_name: '',
                       legal_rep_last_name: '',
+                      logo_url: '',
                     }
                   }
                 />

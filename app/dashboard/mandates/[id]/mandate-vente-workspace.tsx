@@ -11,8 +11,13 @@
 // d'un input/select/textarea remontent naturellement jusqu'à lui) vient
 // recopier chaque frappe dans un état local qui pilote uniquement l'aperçu.
 // Beaucoup moins de risque de régression qu'une réécriture complète, pour le
-// même résultat visible.
-import { useEffect, useMemo, useState } from 'react'
+// même résultat visible. La saisie fonctionne aussi dans l'autre sens :
+// cliquer sur une valeur en surbrillance dans l'aperçu (voir
+// mandate-live-preview.tsx) écrit directement dans le vrai champ du
+// formulaire à gauche (handlePreviewEdit ci-dessous), qui remonte alors par
+// le même chemin — une seule source de vérité (le formulaire), jamais deux
+// états à synchroniser.
+import { useEffect, useMemo, useRef, useState } from 'react'
 import MandateEditForm from './mandate-edit-form'
 import PartiesSection from './parties-section'
 import MandateLivePreview from './mandate-live-preview'
@@ -40,6 +45,7 @@ type Agency = {
   legal_rep_civility: string
   legal_rep_first_name: string
   legal_rep_last_name: string
+  logo_url?: string
 }
 
 // Sous-ensemble des champs du mandat que l'aperçu en direct suit — un
@@ -87,6 +93,7 @@ export default function MandateVenteWorkspace({
   agency: Agency
 }) {
   const [live, setLive] = useState<LiveState>(() => toLiveState(mandate))
+  const formRef = useRef<HTMLDivElement>(null)
 
   // Recalé si la fiche vient d'être réenregistrée côté serveur (nouvelle
   // version des props après un submit) — sans ça, l'état local de l'aperçu
@@ -108,6 +115,38 @@ export default function MandateVenteWorkspace({
     }))
   }
 
+  // Édition directe depuis l'aperçu (clic sur une valeur en surbrillance,
+  // voir mandate-live-preview.tsx) : plutôt que de dupliquer l'état "live"
+  // en source de vérité séparée, on retrouve le VRAI champ du formulaire à
+  // gauche (même name) et on l'écrit comme le ferait une vraie frappe —
+  // en passant par le setter natif de la propriété "value" (nécessaire pour
+  // que React, qui piste la dernière valeur pour les champs contrôlés comme
+  // l'adresse, détecte bien le changement), puis en déclenchant un
+  // événement "input" natif qui remonte, par bulles, jusqu'au onChange posé
+  // sur le conteneur ci-dessous — exactement le même chemin que
+  // handleChange déclenché par une frappe au clavier. Une seule voie de
+  // mise à jour, jamais deux états qui pourraient diverger.
+  function handlePreviewEdit(field: string, value: string) {
+    const root = formRef.current
+    if (!root) return
+    const el = root.querySelector(`[name="${field}"]`) as
+      | HTMLInputElement
+      | HTMLSelectElement
+      | HTMLTextAreaElement
+      | null
+    if (!el) return
+    if (el instanceof HTMLSelectElement) {
+      el.value = value
+    } else {
+      const proto = el instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype
+      const setter = Object.getOwnPropertyDescriptor(proto, 'value')?.set
+      if (setter) setter.call(el, value)
+      else el.value = value
+    }
+    el.dispatchEvent(new Event('input', { bubbles: true }))
+    el.dispatchEvent(new Event('change', { bubbles: true }))
+  }
+
   const sections = useMemo(() => buildVenteSections(live), [live])
   const completion = sectionCompletion(sections)
   const isVente = live.type === 'vente'
@@ -123,7 +162,7 @@ export default function MandateVenteWorkspace({
             remontaient au même gestionnaire — seul le bloc Bien/Prix/Durée
             doit alimenter l'aperçu en direct. */}
         <PartiesSection mandateId={mandate.id} parties={parties} />
-        <div className="rounded-2xl border border-neutral-200 bg-surface p-6 shadow-sm" onChange={handleChange}>
+        <div ref={formRef} onChange={handleChange}>
           <MandateEditForm mandate={mandate as never} />
         </div>
       </div>
@@ -142,6 +181,9 @@ export default function MandateVenteWorkspace({
           </span>
         </div>
         <MandateLivePreview
+          logoUrl={agency.logo_url}
+          agencyName={agency.name}
+          onEdit={handlePreviewEdit}
           title={isVente ? `Mandat ${live.exclusivity === 'exclusif' ? 'exclusif' : 'simple'} de vente` : 'Mandat de recherche'}
           subtitle="Conforme à la loi n° 70-9 du 2 janvier 1970 et au décret n° 72-678 du 20 juillet 1972"
           mandantBlock={

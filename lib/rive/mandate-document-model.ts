@@ -9,10 +9,42 @@
 // de jetons (texte fixe, ou donnée insérée) — un jeton "field" est ce qui
 // s'affiche en surbrillance dans l'aperçu, pour montrer d'un coup d'œil ce
 // qui vient d'être saisi.
-import { feeForPrice } from './mandates'
+import { feeForPrice, PROPERTY_TYPES } from './mandates'
 import { amountInWords } from './number-to-words'
 
-export type Token = { kind: 'text'; text: string } | { kind: 'field'; field: string; text: string; empty: boolean }
+// Décrit le contrôle de saisie à afficher quand on édite un jeton "field"
+// directement depuis l'aperçu (mandate-live-preview.tsx) — clic sur la
+// valeur en surbrillance → petit champ inline du bon type, plutôt qu'un
+// simple <input type="text"> générique pour tout.
+export type FieldMeta =
+  | { kind: 'text' }
+  | { kind: 'number'; step?: number }
+  | { kind: 'select'; options: { value: string; label: string }[] }
+  | { kind: 'textarea' }
+
+const EXCLUSIVITY_OPTIONS = [
+  { value: 'exclusif', label: 'Exclusif' },
+  { value: 'simple', label: 'Simple' },
+]
+
+// Un seul endroit pour dire "ce champ s'édite comme ceci" — évite de
+// répéter le type de contrôle à chaque appel de f()/fMoney() dans
+// buildVenteSections ci-dessous.
+const FIELD_META: Record<string, FieldMeta> = {
+  property_type: { kind: 'select', options: PROPERTY_TYPES.map((v) => ({ value: v, label: v })) },
+  address: { kind: 'text' },
+  surface: { kind: 'number', step: 0.1 },
+  pieces: { kind: 'number' },
+  price: { kind: 'number' },
+  exclusivity: { kind: 'select', options: EXCLUSIVITY_OPTIONS },
+  duration_months: { kind: 'number' },
+  renewal_notice_days: { kind: 'number' },
+  notes: { kind: 'textarea' },
+}
+
+export type Token =
+  | { kind: 'text'; text: string }
+  | { kind: 'field'; field: string; text: string; empty: boolean; raw: string; meta: FieldMeta }
 export type Paragraph = Token[]
 export type DocSection = { id: string; title: string; paragraphs: Paragraph[] }
 
@@ -20,9 +52,25 @@ function t(text: string): Token {
   return { kind: 'text', text }
 }
 
+// Constructeur bas niveau commun à f()/fMoney() : text est ce qui s'affiche
+// (déjà mis en forme), raw est la valeur brute utilisée pour préremplir le
+// petit champ d'édition inline quand on clique sur le jeton dans l'aperçu —
+// les deux peuvent diverger (ex. le prix s'affiche en toutes lettres mais
+// s'édite comme un simple nombre).
+function fRaw(field: string, raw: string | number | null | undefined, text: string, empty: boolean): Token {
+  return {
+    kind: 'field',
+    field,
+    text,
+    empty,
+    raw: raw === null || raw === undefined ? '' : String(raw),
+    meta: FIELD_META[field] ?? { kind: 'text' },
+  }
+}
+
 function f(field: string, value: string | number | null | undefined, placeholder = '—'): Token {
   const empty = value === null || value === undefined || value === ''
-  return { kind: 'field', field, text: empty ? placeholder : String(value), empty }
+  return fRaw(field, value, empty ? placeholder : String(value), empty)
 }
 
 // Variante pour un montant déjà mis en forme par amountFull/euros (qui
@@ -35,7 +83,7 @@ function f(field: string, value: string | number | null | undefined, placeholder
 // le texte déjà mis en forme.
 function fMoney(field: string, raw: number | null | undefined, display: string): Token {
   const empty = raw === null || raw === undefined
-  return { kind: 'field', field, text: display, empty }
+  return fRaw(field, raw, display, empty)
 }
 
 // Espace normale (pas d'espace fine insécable, absente de la police PDF de
@@ -89,7 +137,15 @@ export function buildVenteSections(mandate: MandateVenteInput): DocSection[] {
       isVente
         ? [
             t('Le Mandant confère au Mandataire un mandat '),
-            f('exclusivity', isExclusif ? 'exclusif' : mandate.exclusivity === 'simple' ? 'simple, sans exclusivité,' : '', 'à préciser'),
+            // raw porte la valeur brute de l'enum ('exclusif'/'simple', pour
+            // préremplir le <select> d'édition inline) — text est la phrase
+            // affichée, qui en dérive mais n'est pas la même chaîne.
+            fRaw(
+              'exclusivity',
+              mandate.exclusivity,
+              isExclusif ? 'exclusif' : mandate.exclusivity === 'simple' ? 'simple, sans exclusivité,' : 'à préciser',
+              !mandate.exclusivity
+            ),
             t(' de vendre le Bien désigné ci-dessous, aux conditions, prix et charges qui suivent, convenus entre les parties.'),
           ]
         : [
@@ -108,8 +164,13 @@ export function buildVenteSections(mandate: MandateVenteInput): DocSection[] {
         f('property_type', mandate.property_type, 'Bien'),
         t(' situé '),
         f('address', mandate.address),
-        ...(mandate.surface ? [t(", d'une superficie d'environ "), f('surface', `${mandate.surface} m²`)] : []),
-        ...(mandate.pieces ? [t(', '), f('pieces', `${mandate.pieces} pièce(s)`)] : []),
+        // L'unité (m², pièce(s)) reste du texte fixe HORS du jeton éditable :
+        // le jeton ne doit porter que la valeur numérique brute, pour que le
+        // petit champ d'édition inline affiché au clic (mandate-live-preview)
+        // soit un simple <input type="number"> plutôt qu'une chaîne à
+        // reparser ("120 m²" → 120).
+        ...(mandate.surface ? [t(", d'une superficie d'environ "), f('surface', mandate.surface), t(' m²')] : []),
+        ...(mandate.pieces ? [t(', '), f('pieces', mandate.pieces), t(' pièce(s)')] : []),
         t('.'),
       ],
       ...(mandate.notes ? [[f('notes', mandate.notes)] as Paragraph] : []),

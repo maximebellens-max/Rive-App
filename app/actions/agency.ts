@@ -68,6 +68,45 @@ export async function updateAgencySettings(
   return { success: true }
 }
 
+export type AgencyLogoState = { error?: string } | undefined
+
+// Même principe que updateOwnAvatar (app/actions/team.ts) : l'image arrive
+// déjà redimensionnée et compressée côté client (voir agency-logo-upload.tsx),
+// on ne fait ici qu'une vérification défensive avant d'écrire en base. Seul
+// le titulaire de l'agence peut changer le logo — c'est une donnée partagée
+// par toute l'équipe (affichée sur tous les mandats générés), contrairement
+// à la photo de profil qui est individuelle.
+export async function updateAgencyLogo(dataUrl: string): Promise<AgencyLogoState> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { error: 'Session expirée, reconnecte-toi.' }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('agency_id, role')
+    .eq('id', user.id)
+    .single()
+  if (!profile?.agency_id) return { error: 'Agence introuvable.' }
+  if (profile.role !== 'owner') {
+    return { error: 'Seul le titulaire de l’agence peut modifier le logo.' }
+  }
+
+  // '' est une valeur valide (retrait du logo) — seule une valeur non vide
+  // doit ressembler à une image.
+  if (dataUrl !== '' && !dataUrl.startsWith('data:image/')) return { error: 'Image invalide.' }
+  if (dataUrl.length > 800_000) return { error: 'Image trop volumineuse.' }
+
+  const { error } = await supabase.from('agencies').update({ logo_url: dataUrl }).eq('id', profile.agency_id)
+  if (error) return { error: 'Impossible d’enregistrer le logo.' }
+
+  revalidatePath('/dashboard/settings')
+  revalidatePath('/dashboard/mandates/[id]', 'page')
+  revalidatePath('/dashboard/mandates')
+  return undefined
+}
+
 // Régénère le jeton du flux ICS PERSONNEL de l'agent connecté (voir
 // app/api/ics/agent/[token]/route.ts) — invalide immédiatement son
 // abonnement existant côté calendrier externe, sans toucher au lien des
