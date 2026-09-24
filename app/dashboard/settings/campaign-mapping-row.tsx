@@ -1,7 +1,7 @@
 'use client'
 
-import { useActionState } from 'react'
-import { updateMetaCampaignMapping, type MetaMappingState } from '@/app/actions/meta'
+import { useState, useTransition } from 'react'
+import { updateMetaCampaignMapping } from '@/app/actions/meta'
 
 const selectClass =
   'rounded-lg border border-neutral-300 px-2 py-1.5 text-xs outline-none focus:border-accent focus:ring-1 focus:ring-accent'
@@ -40,14 +40,33 @@ export default function CampaignMappingRow({
   campaign: Campaign
   members: { id: string; full_name: string }[]
 }) {
-  const updateWithId = updateMetaCampaignMapping.bind(null, campaign.id)
-  const [state, action, pending] = useActionState<MetaMappingState, FormData>(updateWithId, undefined)
+  // Menus déroulants pleinement contrôlés par React (value + onChange), et
+  // appel direct de la Server Action au lieu de la déclencher via un <form>.
+  // Avant, ces <select> étaient "non contrôlés" (defaultValue) dans un
+  // <form action={...}> : React réinitialise automatiquement ce type de
+  // champ après le succès d'une Server Action déclenchée par un formulaire
+  // (requestFormReset, React 19) — le champ revenait donc systématiquement
+  // à sa valeur du tout premier chargement de la page, quel que soit le
+  // résultat de l'enregistrement (qui, lui, fonctionnait très bien). C'était
+  // la vraie cause de "ma sélection s'enlève toute seule". En pilotant la
+  // valeur nous-mêmes, ce réflexe de React ne s'applique plus.
+  const [ownerId, setOwnerId] = useState(campaign.owner_id ?? '')
+  const [targetCategory, setTargetCategory] = useState(campaign.target_category ?? '')
+  const [error, setError] = useState<string | null>(null)
+  const [pending, startTransition] = useTransition()
+
+  function save(nextOwnerId: string, nextTargetCategory: string) {
+    const formData = new FormData()
+    formData.set('owner_id', nextOwnerId)
+    formData.set('target_category', nextTargetCategory)
+    startTransition(async () => {
+      const result = await updateMetaCampaignMapping(campaign.id, undefined, formData)
+      setError(result?.error ?? null)
+    })
+  }
 
   return (
-    <form
-      action={action}
-      className="flex flex-col gap-2 rounded-lg border border-neutral-200 px-3 py-2 text-sm"
-    >
+    <div className="flex flex-col gap-2 rounded-lg border border-neutral-200 px-3 py-2 text-sm">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-1 flex-wrap items-center gap-x-3 gap-y-1">
           <span className="font-medium text-neutral-800">{campaign.campaign_name || '—'}</span>
@@ -57,10 +76,12 @@ export default function CampaignMappingRow({
         </div>
         <div className="flex flex-wrap gap-2">
           <select
-            name="owner_id"
-            defaultValue={campaign.owner_id ?? ''}
+            value={ownerId}
             disabled={pending}
-            onChange={(e) => e.currentTarget.form?.requestSubmit()}
+            onChange={(e) => {
+              setOwnerId(e.target.value)
+              save(e.target.value, targetCategory)
+            }}
             className={selectClass}
           >
             <option value="">— Propriétaire —</option>
@@ -71,10 +92,12 @@ export default function CampaignMappingRow({
             ))}
           </select>
           <select
-            name="target_category"
-            defaultValue={campaign.target_category ?? ''}
+            value={targetCategory}
             disabled={pending}
-            onChange={(e) => e.currentTarget.form?.requestSubmit()}
+            onChange={(e) => {
+              setTargetCategory(e.target.value)
+              save(ownerId, e.target.value)
+            }}
             className={selectClass}
           >
             <option value="">— Tableau —</option>
@@ -86,7 +109,7 @@ export default function CampaignMappingRow({
           </select>
         </div>
       </div>
-      {state?.error && <p className="rounded-lg bg-danger-soft px-2 py-1.5 text-xs text-danger">{state.error}</p>}
-    </form>
+      {error && <p className="rounded-lg bg-danger-soft px-2 py-1.5 text-xs text-danger">{error}</p>}
+    </div>
   )
 }
