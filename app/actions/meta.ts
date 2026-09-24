@@ -156,20 +156,33 @@ export async function selectMetaPage(formData: FormData) {
   revalidatePath('/dashboard/settings')
 }
 
-export async function updateMetaCampaignMapping(campaignRowId: string, formData: FormData) {
+export type MetaMappingState = { error?: string } | undefined
+
+export async function updateMetaCampaignMapping(
+  campaignRowId: string,
+  _prevState: MetaMappingState,
+  formData: FormData
+): Promise<MetaMappingState> {
   const { supabase, agencyId } = await getAgencyId()
-  if (!agencyId) return
+  if (!agencyId) return { error: 'Session expirée, reconnecte-toi.' }
 
   const ownerId = String(formData.get('owner_id') || '') || null
   const targetCategory = String(formData.get('target_category') || '') || null
 
-  await supabase
+  const { error } = await supabase
     .from('meta_campaigns')
     .update({ owner_id: ownerId, target_category: targetCategory, updated_at: new Date().toISOString() })
     .eq('id', campaignRowId)
     .eq('agency_id', agencyId)
 
+  // Avant, une erreur ici (ex. contrainte "check" pas encore à jour côté
+  // base de données) était silencieusement ignorée : la sélection semblait
+  // "s'annuler" toute seule au ré-affichage, sans aucune indication de la
+  // vraie cause. On la remonte maintenant telle quelle.
+  if (error) return { error: `Enregistrement impossible : ${error.message}` }
+
   revalidatePath('/dashboard/settings')
+  return undefined
 }
 
 export type DiagnosticState = { error?: string; success?: string } | undefined
