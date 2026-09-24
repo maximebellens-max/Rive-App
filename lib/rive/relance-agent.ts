@@ -4,6 +4,11 @@
 // client. L'envoi de messages automatiques directement aux clients demande
 // un mécanisme de consentement RGPD séparé, pas encore construit ; ici,
 // c'est toujours l'agent qui relit le brouillon et l'envoie lui-même.
+// Toutes les relances détectées un jour donné (6 des 7 déclencheurs
+// ci-dessous — pas les vœux de fin d'année, voir plus bas) sont regroupées
+// en UN SEUL message WhatsApp "Relances" par agent, plutôt qu'un message
+// par relance individuelle — voir sendRelanceDigest tout en bas de ce
+// fichier.
 //
 // 7 déclencheurs :
 // 1. Nouveau prospect sans retour : relances à J+3, J+7, J+14 depuis le
@@ -68,6 +73,17 @@ function yearsBetween(fromDateStr: string, toDateStr: string): number {
 
 type RelanceStep = 'j3' | 'j7' | 'j14'
 
+// Un item par relance détectée, collecté au fil des 7 déclencheurs plutôt
+// que notifié immédiatement — voir sendRelanceDigest tout en bas : Maxime
+// recevait avant un message WhatsApp séparé par relance (jusqu'à plusieurs
+// dizaines certains jours), un par lead/mandat concerné. Toutes les
+// relances de la journée sont maintenant groupées en UN SEUL message par
+// agent, sur le même principe que le digest "Priorités du jour"
+// (ai-priority.ts, sendPriorityDigest) : title = un intitulé court par
+// relance ("Relance J+7 — Jean Dupont"), body = le brouillon rédigé par
+// Claude + le lien vers la fiche.
+type RelanceItem = { assignedTo: string | null; title: string; body: string }
+
 function currentRelanceStep(daysSince: number): RelanceStep | null {
   if (daysSince >= RELANCE_STEPS.j14) return 'j14'
   if (daysSince >= RELANCE_STEPS.j7) return 'j7'
@@ -85,7 +101,7 @@ function currentVendeurStallStep(daysSince: number): VendeurStallStep | null {
 }
 
 // 1. Nouveau prospect sans retour (J+3 / J+7 / J+14).
-async function processNoResponseRelances(supabase: SupabaseClient, agencyId: string) {
+async function processNoResponseRelances(supabase: SupabaseClient, agencyId: string, items: RelanceItem[]) {
   // Plus de tableau "Prospects" séparé : un lead neuf à contacter est repéré
   // directement sur la 1ère colonne du tableau de sa propre catégorie
   // (Vendeur, Acheteur ou Investisseur).
@@ -146,13 +162,11 @@ async function processNoResponseRelances(supabase: SupabaseClient, agencyId: str
       const { text } = await generateWithClaude(generateNoResponseRelanceBrief(lead.name, step, daysSince))
       const body =
         text || `Toujours sans nouvelles de ${lead.name}, ${daysSince} jours après son dernier point de contact.`
-      await notifyAlertWhatsApp(
-        supabase,
-        agencyId,
-        lead.assigned_to,
-        `Relance J+${RELANCE_STEPS[step]} — ${lead.name}`,
-        `${body}\n${leadUrl(lead.id)}`
-      )
+      items.push({
+        assignedTo: lead.assigned_to,
+        title: `Relance J+${RELANCE_STEPS[step]} — ${lead.name}`,
+        body: `${body}\n${leadUrl(lead.id)}`,
+      })
       await notifyPushForAssignee(supabase, agencyId, lead.assigned_to, 'relance_sans_reponse', {
         title: `Relance J+${RELANCE_STEPS[step]} — ${lead.name}`,
         body,
@@ -172,7 +186,7 @@ async function processNoResponseRelances(supabase: SupabaseClient, agencyId: str
 }
 
 // 2. Anniversaire de la vente/de l'achat.
-async function processAnniversaryRelances(supabase: SupabaseClient, agencyId: string, today: string) {
+async function processAnniversaryRelances(supabase: SupabaseClient, agencyId: string, today: string, items: RelanceItem[]) {
   const { data: mandates } = await supabase
     .from('mandates')
     .select('id, address, sold_date, lead_id, assigned_to')
@@ -200,13 +214,11 @@ async function processAnniversaryRelances(supabase: SupabaseClient, agencyId: st
       generateAnniversaryBrief(lead.name, mandate.address || '', years, lead.category)
     )
     const body = text || `Cela fait ${years} an${years > 1 ? 's' : ''} aujourd'hui.`
-    await notifyAlertWhatsApp(
-      supabase,
-      agencyId,
-      mandate.assigned_to,
-      `Anniversaire — ${lead.name}`,
-      `${body}\n${leadUrl(mandate.lead_id)}`
-    )
+    items.push({
+      assignedTo: mandate.assigned_to,
+      title: `Anniversaire — ${lead.name}`,
+      body: `${body}\n${leadUrl(mandate.lead_id)}`,
+    })
     await notifyPushForAssignee(supabase, agencyId, mandate.assigned_to, 'relance_anniversaire_vente', {
       title: `Anniversaire — ${lead.name}`,
       body,
@@ -216,7 +228,7 @@ async function processAnniversaryRelances(supabase: SupabaseClient, agencyId: st
 }
 
 // 3. Anniversaire du client (vendeurs et investisseurs).
-async function processBirthdayRelances(supabase: SupabaseClient, agencyId: string, today: string) {
+async function processBirthdayRelances(supabase: SupabaseClient, agencyId: string, today: string, items: RelanceItem[]) {
   const { data: leads } = await supabase
     .from('leads')
     .select('id, name, birth_date, assigned_to')
@@ -232,7 +244,7 @@ async function processBirthdayRelances(supabase: SupabaseClient, agencyId: strin
 
     const { text } = await generateWithClaude(generateBirthdayBrief(lead.name))
     const body = text || `C'est l'anniversaire de ${lead.name} aujourd'hui.`
-    await notifyAlertWhatsApp(supabase, agencyId, lead.assigned_to, `Anniversaire — ${lead.name}`, `${body}\n${leadUrl(lead.id)}`)
+    items.push({ assignedTo: lead.assigned_to, title: `Anniversaire — ${lead.name}`, body: `${body}\n${leadUrl(lead.id)}` })
     await notifyPushForAssignee(supabase, agencyId, lead.assigned_to, 'relance_anniversaire_client', {
       title: `Anniversaire — ${lead.name}`,
       body,
@@ -259,7 +271,7 @@ async function processYearEndWishes(supabase: SupabaseClient, agencyId: string, 
 }
 
 // 5. Demande d'avis Google, 7 jours après une transaction conclue.
-async function processGoogleReviewRequests(supabase: SupabaseClient, agencyId: string, today: string) {
+async function processGoogleReviewRequests(supabase: SupabaseClient, agencyId: string, today: string, items: RelanceItem[]) {
   const { data: mandates } = await supabase
     .from('mandates')
     .select('id, address, sold_date, lead_id, assigned_to')
@@ -281,13 +293,11 @@ async function processGoogleReviewRequests(supabase: SupabaseClient, agencyId: s
       generateGoogleReviewBrief(lead.name, mandate.address || '', GOOGLE_REVIEW_DELAY_DAYS)
     )
     const body = text || `Ça fait ${GOOGLE_REVIEW_DELAY_DAYS} jours que la transaction est conclue avec ${lead.name} — bon moment pour demander un avis.`
-    await notifyAlertWhatsApp(
-      supabase,
-      agencyId,
-      mandate.assigned_to,
-      `Demande d'avis — ${lead.name}`,
-      `${body}\n${leadUrl(mandate.lead_id)}`
-    )
+    items.push({
+      assignedTo: mandate.assigned_to,
+      title: `Demande d'avis — ${lead.name}`,
+      body: `${body}\n${leadUrl(mandate.lead_id)}`,
+    })
     await notifyPushForAssignee(supabase, agencyId, mandate.assigned_to, 'relance_avis_google', {
       title: `Demande d'avis — ${lead.name}`,
       body,
@@ -298,7 +308,7 @@ async function processGoogleReviewRequests(supabase: SupabaseClient, agencyId: s
 
 // 6. Relance estimation sans suite, 7 jours après une estimation
 // (mandat brouillon) jamais transformée en mandat signé.
-async function processStaleEstimations(supabase: SupabaseClient, agencyId: string, today: string) {
+async function processStaleEstimations(supabase: SupabaseClient, agencyId: string, today: string, items: RelanceItem[]) {
   const { data: mandates } = await supabase
     .from('mandates')
     .select('id, address, created_at, lead_id, assigned_to')
@@ -320,13 +330,11 @@ async function processStaleEstimations(supabase: SupabaseClient, agencyId: strin
       generateEstimationFollowupBrief(lead.name, mandate.address || '', ESTIMATION_FOLLOWUP_DELAY_DAYS)
     )
     const body = text || `Estimation envoyée à ${lead.name} il y a ${ESTIMATION_FOLLOWUP_DELAY_DAYS} jours, toujours sans mandat signé.`
-    await notifyAlertWhatsApp(
-      supabase,
-      agencyId,
-      mandate.assigned_to,
-      `Relance estimation — ${lead.name}`,
-      `${body}\n${leadUrl(mandate.lead_id)}`
-    )
+    items.push({
+      assignedTo: mandate.assigned_to,
+      title: `Relance estimation — ${lead.name}`,
+      body: `${body}\n${leadUrl(mandate.lead_id)}`,
+    })
     await notifyPushForAssignee(supabase, agencyId, mandate.assigned_to, 'relance_estimation', {
       title: `Relance estimation — ${lead.name}`,
       body,
@@ -337,7 +345,7 @@ async function processStaleEstimations(supabase: SupabaseClient, agencyId: strin
 
 // 7. Vendeur bloqué en "RDV 2 finalisé" (J+7 / J+15 / J+30), sans mandat
 // signé depuis son entrée dans cette colonne du tableau Vendeurs.
-async function processVendeurStalledRelances(supabase: SupabaseClient, agencyId: string, today: string) {
+async function processVendeurStalledRelances(supabase: SupabaseClient, agencyId: string, today: string, items: RelanceItem[]) {
   const rdv2Col = await columnIdByName(supabase, agencyId, 'vendeur', 'RDV 2 finalisé')
   if (!rdv2Col) return
 
@@ -379,13 +387,11 @@ async function processVendeurStalledRelances(supabase: SupabaseClient, agencyId:
       const { text } = await generateWithClaude(generateVendeurStallBrief(lead.name, step, daysSince))
       const body =
         text || `${lead.name} est toujours en "RDV 2 finalisé" sans mandat signé, ${daysSince} jours après.`
-      await notifyAlertWhatsApp(
-        supabase,
-        agencyId,
-        lead.assigned_to,
-        `Relance vendeur — ${lead.name}`,
-        `${body}\n${leadUrl(lead.id)}`
-      )
+      items.push({
+        assignedTo: lead.assigned_to,
+        title: `Relance vendeur — ${lead.name}`,
+        body: `${body}\n${leadUrl(lead.id)}`,
+      })
       await notifyPushForAssignee(supabase, agencyId, lead.assigned_to, 'relance_vendeur_bloque', {
         title: `Relance vendeur — ${lead.name}`,
         body,
@@ -403,12 +409,42 @@ async function processVendeurStalledRelances(supabase: SupabaseClient, agencyId:
   }
 }
 
+// Un seul message WhatsApp par agent pour toute la journée — plutôt qu'un
+// message par relance individuelle comme avant (jusqu'à plusieurs dizaines
+// certains jours, un par lead/mandat concerné) — sur le même principe que
+// le digest "Priorités du jour" (voir sendPriorityDigest dans
+// ai-priority.ts) : toutes les relances DE CET AGENT, numérotées dans un
+// seul message titré "Relances". Les relances sans agent assigné restent
+// groupées dans un message à toute l'équipe opted-in, comme avant (voir
+// recipientsForAssignee dans whatsapp-notify.ts).
+async function sendRelanceDigest(supabase: SupabaseClient, agencyId: string, items: RelanceItem[]) {
+  if (!items.length) return
+
+  const groups = new Map<string | null, RelanceItem[]>()
+  for (const item of items) {
+    const key = item.assignedTo
+    const group = groups.get(key)
+    if (group) group.push(item)
+    else groups.set(key, [item])
+  }
+
+  for (const [assignedTo, group] of groups) {
+    const body = group.map((it, i) => `${i + 1}. ${it.title} — ${it.body}`).join('\n')
+    await notifyAlertWhatsApp(supabase, agencyId, assignedTo, 'Relances', body)
+  }
+}
+
 export async function runRelanceAgent(supabase: SupabaseClient, agencyId: string, today: string) {
-  await processNoResponseRelances(supabase, agencyId)
-  await processAnniversaryRelances(supabase, agencyId, today)
-  await processBirthdayRelances(supabase, agencyId, today)
+  const items: RelanceItem[] = []
+  await processNoResponseRelances(supabase, agencyId, items)
+  await processAnniversaryRelances(supabase, agencyId, today, items)
+  await processBirthdayRelances(supabase, agencyId, today, items)
+  // Vœux de fin d'année : format à part (texte à copier-coller vers les
+  // clients, pas un rappel d'action pour l'agent) — reste son propre
+  // message, comme avant, une fois par an.
   await processYearEndWishes(supabase, agencyId, today)
-  await processGoogleReviewRequests(supabase, agencyId, today)
-  await processStaleEstimations(supabase, agencyId, today)
-  await processVendeurStalledRelances(supabase, agencyId, today)
+  await processGoogleReviewRequests(supabase, agencyId, today, items)
+  await processStaleEstimations(supabase, agencyId, today, items)
+  await processVendeurStalledRelances(supabase, agencyId, today, items)
+  await sendRelanceDigest(supabase, agencyId, items)
 }
