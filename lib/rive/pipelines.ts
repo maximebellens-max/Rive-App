@@ -30,6 +30,17 @@ export const BOARD_TYPES = ['vendeur', 'acheteur', 'investisseur_france', 'inves
 // n'en font volontairement pas partie.
 export const MANDATE_BOARD_TYPES = new Set(['vendeur', 'investisseur_france'])
 
+// Les 3 marchés investisseur : un seul lien dans le menu (voir sidebar-nav),
+// affiché avec des onglets France/Dubaï/Géorgie en haut du tableau pour
+// naviguer entre eux sans les traiter comme 3 pipelines indépendants.
+export const INVESTOR_BOARD_TYPES = ['investisseur_france', 'investisseur_dubai', 'investisseur_georgie']
+
+export const INVESTOR_REGION_LABEL: Record<string, string> = {
+  investisseur_france: 'France',
+  investisseur_dubai: 'Dubaï',
+  investisseur_georgie: 'Géorgie',
+}
+
 // Un identifiant de tableau : soit l'un des tableaux fixes ci-dessus, soit
 // l'id d'un tableau personnalisé (table `boards`, ligne kind='custom').
 export type BoardType = string

@@ -3,7 +3,14 @@ import Link from 'next/link'
 import { getAuthedProfile } from '@/lib/supabase/session'
 import KanbanBoard from '../kanban-board'
 import BoardHeader from '../board-header'
-import { leadPriorityScore, BOARD_LABELS, CATEGORY_BOARD_TYPES } from '@/lib/rive/pipelines'
+import {
+  leadPriorityScore,
+  BOARD_LABELS,
+  CATEGORY_BOARD_TYPES,
+  INVESTOR_BOARD_TYPES,
+  INVESTOR_REGION_LABEL,
+} from '@/lib/rive/pipelines'
+import { cn } from '@/lib/rive/cn'
 
 type BoardRow = { id: string; name: string; kind: string }
 
@@ -108,25 +115,46 @@ export default async function PipelineBoardPage({ params }: PageProps<'/dashboar
     aiReasoning: l.ai_priority_reasoning,
   }))
 
+  const isInvestorBoard = INVESTOR_BOARD_TYPES.includes(bt)
+
   return (
     <div className="flex flex-col gap-6">
       {isCustom ? (
         <BoardHeader boardId={bt} name={boardName} count={cards.length} />
       ) : (
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-xl font-semibold tracking-tight">{boardName}</h1>
-            <p className="mt-1 text-sm text-neutral-500">
-              {cards.length} prospect{cards.length > 1 ? 's' : ''}
-            </p>
+        <div className="flex flex-col gap-3">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h1 className="text-xl font-semibold tracking-tight">{isInvestorBoard ? 'Investisseurs' : boardName}</h1>
+              <p className="mt-1 text-sm text-neutral-500">
+                {cards.length} prospect{cards.length > 1 ? 's' : ''}
+              </p>
+            </div>
+            {isInvestorBoard && (
+              <Link
+                href="/dashboard/investments"
+                className="shrink-0 rounded-lg border border-neutral-300 px-3 py-1.5 text-sm font-medium text-neutral-600 hover:bg-neutral-100"
+              >
+                🏠 Projets en cours →
+              </Link>
+            )}
           </div>
-          {(bt === 'investisseur_france' || bt === 'investisseur_dubai' || bt === 'investisseur_georgie') && (
-            <Link
-              href="/dashboard/investments"
-              className="shrink-0 rounded-lg border border-neutral-300 px-3 py-1.5 text-sm font-medium text-neutral-600 hover:bg-neutral-100"
-            >
-              🏠 Projets en cours →
-            </Link>
+          {isInvestorBoard && (
+            <div className="flex w-fit rounded-lg border border-neutral-300 p-0.5 text-xs">
+              {INVESTOR_BOARD_TYPES.map((type) => (
+                <Link
+                  key={type}
+                  href={`/dashboard/pipelines/${type}`}
+                  aria-current={bt === type ? 'page' : undefined}
+                  className={cn(
+                    'rounded px-3 py-1.5 font-medium transition',
+                    bt === type ? 'bg-accent text-accent-ink' : 'text-neutral-600 hover:text-neutral-900'
+                  )}
+                >
+                  {INVESTOR_REGION_LABEL[type]}
+                </Link>
+              ))}
+            </div>
           )}
         </div>
       )}

@@ -50,9 +50,7 @@ const NAV_GROUPS: NavGroup[] = [
     links: [
       { href: '/dashboard/pipelines/vendeur', label: 'Vendeurs', icon: UsersIcon },
       { href: '/dashboard/pipelines/acheteur', label: 'Acheteurs', icon: HomeIcon },
-      { href: '/dashboard/pipelines/investisseur_france', label: 'Investisseurs France', icon: BriefcaseIcon },
-      { href: '/dashboard/pipelines/investisseur_dubai', label: 'Investisseurs Dubaï', icon: BriefcaseIcon },
-      { href: '/dashboard/pipelines/investisseur_georgie', label: 'Investisseurs Géorgie', icon: BriefcaseIcon },
+      { href: '/dashboard/pipelines/investisseur_france', label: 'Investisseurs', icon: BriefcaseIcon },
     ],
   },
   {
@@ -84,6 +82,12 @@ const NAV_GROUPS: NavGroup[] = [
 
 function isActive(pathname: string, href: string): boolean {
   if (href === '/dashboard') return pathname === '/dashboard'
+  // Les 3 tableaux Investisseur (France/Dubaï/Géorgie) partagent un seul
+  // lien de menu — actif sur les 3, pas seulement sur celui utilisé comme
+  // destination du lien (investisseur_france).
+  if (href.startsWith('/dashboard/pipelines/investisseur_')) {
+    return pathname.startsWith('/dashboard/pipelines/investisseur_')
+  }
   return pathname === href || pathname.startsWith(`${href}/`)
 }
 
