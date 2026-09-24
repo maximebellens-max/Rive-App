@@ -19,6 +19,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { moveLeadCard } from '@/app/actions/pipelines'
 import { addLeadHistoryEntry, createProspectForAssistant, updateLeadField } from '@/app/actions/leads'
+import { createAppointment } from '@/app/actions/appointments'
 import { feeForPrice } from '@/lib/rive/mandates'
 
 const MODEL = 'claude-haiku-4-5-20251001'
@@ -139,6 +140,25 @@ const TOOLS = [
     },
   },
   {
+    name: 'create_appointment',
+    description:
+      "Crée un rendez-vous dans l'agenda. Optionnellement lié à un prospect (retrouve son id via search_prospects si un nom est mentionné — un RDV peut aussi être autonome, sans prospect, ex. un RDV interne). Comprends les dates relatives (\"demain\", \"lundi prochain\"...) à partir de la date du jour donnée plus haut, et convertis-les toujours en AAAA-MM-JJ avant d'appeler cet outil.",
+    input_schema: {
+      type: 'object',
+      properties: {
+        appointment_date: { type: 'string', description: 'Date au format AAAA-MM-JJ' },
+        appointment_time: { type: 'string', description: 'Heure au format HH:MM (24h) — omettre si non précisée' },
+        lead_id: {
+          type: 'string',
+          description: "id du prospect concerné, retrouvé via search_prospects — omettre si le RDV n'est lié à aucun prospect",
+        },
+        label: { type: 'string', description: 'Objet du RDV (ex. "Visite", "Signature compromis"...) — omettre pour le libellé par défaut "Rendez-vous"' },
+        lieu: { type: 'string', description: 'Lieu du RDV — omettre si non précisé' },
+      },
+      required: ['appointment_date'],
+    },
+  },
+  {
     name: 'get_agency_stats',
     description:
       "Calcule une statistique sur l'activité de l'agence. Choisis le metric le plus proche de la question posée : " +
@@ -169,14 +189,15 @@ const TOOLS = [
 function buildSystemPrompt(ctx: AgentContext, today: string): string {
   return [
     `Tu es l'assistant intégré à Rive, le CRM immobilier de l'agence ${ctx.agencyName || "l'agence"} (bassin genevois côté français, Annecy/Genève).`,
-    `Tu discutes avec ${ctx.userName || "un agent de l'agence"}, aujourd'hui ${today}. Il peut t'écrire ou te dicter sa demande au micro (transcription parfois imparfaite : un nom ou un mot mal transcrit reste probable).`,
+    `Tu discutes avec ${ctx.userName || "un agent de l'agence"}. Nous sommes ${today}. Il peut t'écrire ou te dicter sa demande au micro (transcription parfois imparfaite : un nom ou un mot mal transcrit reste probable).`,
     ``,
-    `Tu sais : chercher un prospect, ajouter une note à sa fiche, le faire avancer (ou reculer) dans son pipeline (Vendeur/Acheteur/Investisseur), mettre à jour un champ simple de sa fiche, créer un nouveau prospect, et calculer des statistiques sur l'activité de l'agence (contacts récents, taux de conversion, mandats signés ce mois-ci, relances en retard, honoraires prévisionnels).`,
+    `Tu sais : chercher un prospect, ajouter une note à sa fiche, le faire avancer (ou reculer) dans son pipeline (Vendeur/Acheteur/Investisseur), mettre à jour un champ simple de sa fiche, créer un nouveau prospect, créer un rendez-vous dans l'agenda (lié à un prospect ou autonome), et calculer des statistiques sur l'activité de l'agence (contacts récents, taux de conversion, mandats signés ce mois-ci, relances en retard, honoraires prévisionnels).`,
     ``,
     `Règles impératives :`,
     `- N'agis JAMAIS sur un prospect sans avoir d'abord retrouvé son id exact via search_prospects. Si plusieurs prospects correspondent, ou si aucun ne correspond clairement, arrête-toi et demande une précision en texte plutôt que de choisir au hasard.`,
     `- Avant move_pipeline_stage, appelle TOUJOURS list_pipeline_columns pour retrouver l'id exact de la colonne visée à partir de son vrai nom (ne jamais deviner son orthographe).`,
     `- Avant create_prospect, appelle TOUJOURS search_prospects sur le nom donné pour vérifier qu'il n'existe pas déjà (éviter les doublons) — si un prospect proche existe déjà, demande confirmation avant de créer un second.`,
+    `- Pour create_appointment, calcule toujours la date exacte (AAAA-MM-JJ) toi-même à partir de la date du jour donnée ci-dessus avant d'appeler l'outil — ne laisse jamais l'outil deviner une date relative.`,
     `- Une fois une action effectuée, réponds en une ou deux phrases courtes et concrètes confirmant ce qui a été fait — pensé pour être lu sur un téléphone, jamais de longue explication.`,
     `- Si la demande sort de ce que tu sais faire (supprimer un prospect, créer un mandat, envoyer un message à un client, changer l'agent assigné...), dis-le clairement plutôt que d'improviser une action.`,
     `- Réponds toujours en français.`,
@@ -298,6 +319,25 @@ async function runTool(
         return { text: JSON.stringify({ id: result.id, name: result.name }) }
       }
 
+      case 'create_appointment': {
+        const date = String(input.appointment_date || '').trim()
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+          return { text: 'appointment_date doit être au format AAAA-MM-JJ.', isError: true }
+        }
+        const leadId = input.lead_id !== undefined ? String(input.lead_id).trim() : ''
+
+        const formData = new FormData()
+        formData.set('appointment_date', date)
+        if (input.appointment_time) formData.set('appointment_time', String(input.appointment_time))
+        if (leadId) formData.set('lead_id', leadId)
+        if (input.label) formData.set('label', String(input.label))
+        if (input.lieu) formData.set('lieu', String(input.lieu))
+
+        const result = await createAppointment(undefined, formData)
+        if (result?.error) return { text: result.error, isError: true }
+        return { text: 'Rendez-vous créé.' }
+      }
+
       case 'get_agency_stats': {
         const metric = String(input.metric || '')
         const now = new Date()
@@ -412,7 +452,14 @@ export async function runAssistantTurn(
     return { messages: history, reply: '', error: "La clé API Claude n'est pas configurée sur ce déploiement." }
   }
 
-  const today = new Date().toISOString().slice(0, 10)
+  // Jour + date en toutes lettres (pas seulement l'ISO) : le modèle doit
+  // calculer lui-même des dates relatives ("demain", "lundi prochain"...)
+  // pour create_appointment, un jour de la semaine explicite fiabilise
+  // ce calcul par rapport à une simple date ISO.
+  const now = new Date()
+  const todayIso = now.toISOString().slice(0, 10)
+  const todayWeekday = now.toLocaleDateString('fr-FR', { weekday: 'long', timeZone: 'Europe/Paris' })
+  const today = `${todayWeekday} ${todayIso} (AAAA-MM-JJ)`
   let working = [...history]
 
   for (let step = 0; step < MAX_STEPS; step++) {
