@@ -32,7 +32,26 @@ type SpeechRecognitionLike = {
   stop: () => void
   onresult: ((event: { results: { length: number; [i: number]: { [j: number]: { transcript: string } } } }) => void) | null
   onend: (() => void) | null
-  onerror: (() => void) | null
+  onerror: ((event: { error?: string }) => void) | null
+}
+
+// Traduit les codes d'erreur de la Web Speech API en message compréhensible
+// — sans ça, un micro bloqué ou une permission refusée échoue en silence
+// (l'utilisateur voit juste le bouton s'arrêter, sans savoir pourquoi).
+function micErrorMessage(code: string | undefined): string {
+  switch (code) {
+    case 'not-allowed':
+    case 'service-not-allowed':
+      return "Le navigateur a bloqué l'accès au micro. Vérifie l'autorisation micro pour ce site dans les paramètres de ton navigateur, puis réessaie."
+    case 'audio-capture':
+      return 'Aucun micro détecté sur cet appareil.'
+    case 'no-speech':
+      return "Rien n'a été entendu — réessaie en parlant juste après avoir cliqué sur le micro."
+    case 'network':
+      return 'La dictée a besoin de la connexion réseau — vérifie ta connexion et réessaie.'
+    default:
+      return 'La dictée a été interrompue, réessaie.'
+  }
 }
 
 export default function AssistantChat() {
@@ -41,6 +60,7 @@ export default function AssistantChat() {
   const [input, setInput] = useState('')
   const [pending, startTransition] = useTransition()
   const [listening, setListening] = useState(false)
+  const [micError, setMicError] = useState<string | null>(null)
   // Détecté une fois à l'initialisation (pas de setState dans l'effet
   // ci-dessous — la disponibilité de l'API ne change pas en cours de vie du
   // composant) : évite le cascading-render que déclencherait un setState
@@ -85,6 +105,7 @@ export default function AssistantChat() {
     recognition.continuous = true
     recognition.maxAlternatives = 1
     baseInputRef.current = input
+    setMicError(null)
 
     recognition.onresult = (event) => {
       let transcript = ''
@@ -95,7 +116,10 @@ export default function AssistantChat() {
       setInput(base ? `${base} ${transcript}` : transcript)
     }
     recognition.onend = () => setListening(false)
-    recognition.onerror = () => setListening(false)
+    recognition.onerror = (event) => {
+      setListening(false)
+      setMicError(micErrorMessage(event?.error))
+    }
 
     recognitionRef.current = recognition
     try {
@@ -103,6 +127,7 @@ export default function AssistantChat() {
       setListening(true)
     } catch {
       setListening(false)
+      setMicError(micErrorMessage(undefined))
     }
   }
 
@@ -158,6 +183,8 @@ export default function AssistantChat() {
           <div ref={bottomRef} />
         </div>
       </div>
+
+      {micError && <p className="px-1 text-xs text-danger">{micError}</p>}
 
       <form
         onSubmit={(e) => {

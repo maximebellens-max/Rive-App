@@ -49,7 +49,11 @@ const nextConfig: NextConfig = {
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "X-Frame-Options", value: "DENY" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-          { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+          // microphone=(self) : la dictée de l'assistant IA a besoin du micro
+          // depuis notre propre origine (getUserMedia via l'API de
+          // reconnaissance vocale du navigateur) — camera et geolocation
+          // restent totalement désactivées, non utilisées par l'app.
+          { key: "Permissions-Policy", value: "camera=(), microphone=(self), geolocation=()" },
         ],
       },
     ];
