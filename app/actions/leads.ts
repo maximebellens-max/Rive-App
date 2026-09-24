@@ -248,6 +248,68 @@ export async function updateLead(
   return undefined
 }
 
+// Champs qu'un seul appel peut modifier sans repasser par le formulaire
+// complet — utilisé par l'assistant IA (lib/rive/assistant-agent.ts), qui ne
+// doit JAMAIS passer par updateLead ci-dessus pour une modification
+// partielle : updateLead réécrit TOUS les champs de la fiche à partir d'un
+// FormData complet, donc un appel avec un seul champ renseigné écraserait
+// silencieusement tous les autres (téléphone, notes, critères...) avec des
+// valeurs vides. Liste volontairement restreinte aux champs simples et sans
+// effet de bord (ni "category", qui doit passer par la réconciliation de
+// position ci-dessus, ni "assigned_to", trop sensible pour une modification
+// vocale/chat non confirmée).
+const ASSISTANT_EDITABLE_FIELDS = new Set([
+  'phone',
+  'email',
+  'budget',
+  'financement',
+  'critere_type',
+  'critere_lieu',
+  'pieces_min',
+  'surface_min',
+  'action_label',
+  'action_date',
+  'notes',
+])
+const ASSISTANT_NUMBER_FIELDS = new Set(['budget', 'pieces_min', 'surface_min'])
+
+export async function updateLeadField(
+  leadId: string,
+  field: string,
+  value: string
+): Promise<{ error?: string; ok?: boolean }> {
+  const { supabase, agencyId } = await getAgencyId()
+  if (!agencyId) return { error: 'Session expirée, reconnecte-toi.' }
+  if (!ASSISTANT_EDITABLE_FIELDS.has(field)) return { error: `Le champ "${field}" ne peut pas être modifié de cette façon.` }
+
+  let parsedValue: string | number | null = value.trim()
+  if (ASSISTANT_NUMBER_FIELDS.has(field)) {
+    if (parsedValue === '') {
+      parsedValue = null
+    } else {
+      const n = Number(parsedValue)
+      if (isNaN(n)) return { error: `"${value}" n'est pas un nombre valide pour le champ "${field}".` }
+      parsedValue = n
+    }
+  } else if (field === 'action_date') {
+    parsedValue = parsedValue || null
+  }
+
+  // .eq('agency_id', ...) en plus de l'id : garde-fou explicite pour qu'un
+  // id de prospect mal résolu ne puisse jamais toucher la fiche d'une autre
+  // agence, même par erreur de raisonnement du modèle.
+  const { error } = await supabase
+    .from('leads')
+    .update({ [field]: parsedValue, updated_at: new Date().toISOString() })
+    .eq('id', leadId)
+    .eq('agency_id', agencyId)
+  if (error) return { error: 'Impossible de mettre à jour ce champ.' }
+
+  revalidatePath(`/dashboard/prospects/${leadId}`)
+  revalidatePath('/dashboard/pipelines/[boardType]', 'page')
+  return { ok: true }
+}
+
 export async function deleteLead(leadId: string) {
   const { supabase, agencyId } = await getAgencyId()
   if (!agencyId) return

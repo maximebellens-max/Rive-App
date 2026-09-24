@@ -27,6 +27,7 @@ import {
   LayoutTemplateIcon,
   FolderKanbanIcon,
   PlusIcon,
+  MessageCircleIcon,
   type IconProps,
 } from './_components/icons'
 
@@ -38,6 +39,7 @@ const NAV_GROUPS: NavGroup[] = [
     label: 'Vue d’ensemble',
     links: [
       { href: '/dashboard', label: 'Aujourd’hui', icon: LayoutDashboardIcon },
+      { href: '/dashboard/assistant', label: 'Assistant IA', icon: MessageCircleIcon },
       { href: '/dashboard/sectors', label: 'Secteurs', icon: MapPinIcon },
       { href: '/dashboard/performance', label: 'Performance', icon: TrendingUpIcon },
       { href: '/dashboard/campaigns', label: 'Campagnes', icon: MegaphoneIcon },
