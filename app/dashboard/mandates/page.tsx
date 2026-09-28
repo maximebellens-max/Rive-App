@@ -10,6 +10,7 @@ import {
 } from '@/lib/rive/mandates'
 import MandatesView from './mandates-view'
 import Avatar from '../_components/avatar'
+import EmptyState from '../_components/empty-state'
 import type { StageCard } from '../_components/stage-kanban'
 
 const URGENCY_CLASS: Record<string, string> = {
@@ -89,8 +90,12 @@ export default async function MandatesPage() {
           <tbody>
             {!mandates?.length && !investorRows.length && (
               <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-neutral-400">
-                  Aucun mandat pour l&apos;instant.
+                <td colSpan={7}>
+                  <EmptyState
+                    icon="📄"
+                    title="Aucun mandat pour l'instant"
+                    subtitle="Les mandats de vente et de recherche signés apparaîtront ici."
+                  />
                 </td>
               </tr>
             )}

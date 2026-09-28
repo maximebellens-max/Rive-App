@@ -13,6 +13,7 @@ import LeadEditForm from './lead-edit-form'
 import HistorySection from './history-section'
 import DeleteLeadButton from './delete-lead-button'
 import MessageSection from './message-section'
+import Tabs from '../../_components/tabs'
 
 // Affichée en toutes lettres sur la fiche (plutôt qu'en relatif type "il y a
 // 2 j") : sert de repère fixe pour caler un rappel ou un suivi, contrairement
@@ -150,56 +151,81 @@ export default async function ProspectDetailPage({ params }: PageProps<'/dashboa
         </div>
       )}
 
-      {Array.isArray(lead.meta_answers) && lead.meta_answers.length > 0 && (
-        <div className="rounded-2xl border border-neutral-200 bg-surface p-5 shadow-sm">
-          <h2 className="text-sm font-semibold text-neutral-900">📝 Réponses au formulaire Meta</h2>
-          <p className="mt-1 text-xs text-neutral-500">
-            Récupérées automatiquement depuis le formulaire publicitaire rempli par le prospect.
-          </p>
-          <dl className="mt-3 flex flex-col gap-2.5">
-            {(lead.meta_answers as { question: string; answer: string }[]).map((qa, i) => (
-              <div key={i} className="flex flex-col gap-0.5 border-t border-neutral-100 pt-2.5 first:border-t-0 first:pt-0">
-                <dt className="text-xs font-medium text-neutral-500">{qa.question}</dt>
-                <dd className="text-sm text-neutral-900">{qa.answer}</dd>
-              </div>
-            ))}
-          </dl>
-        </div>
-      )}
+      <Tabs
+        tabs={[
+          {
+            key: 'fiche',
+            label: 'Fiche',
+            content: (
+              <>
+                {Array.isArray(lead.meta_answers) && lead.meta_answers.length > 0 && (
+                  <div className="rounded-2xl border border-neutral-200 bg-surface p-5 shadow-sm">
+                    <h2 className="text-sm font-semibold text-neutral-900">📝 Réponses au formulaire Meta</h2>
+                    <p className="mt-1 text-xs text-neutral-500">
+                      Récupérées automatiquement depuis le formulaire publicitaire rempli par le prospect.
+                    </p>
+                    <dl className="mt-3 flex flex-col gap-2.5">
+                      {(lead.meta_answers as { question: string; answer: string }[]).map((qa, i) => (
+                        <div key={i} className="flex flex-col gap-0.5 border-t border-neutral-100 pt-2.5 first:border-t-0 first:pt-0">
+                          <dt className="text-xs font-medium text-neutral-500">{qa.question}</dt>
+                          <dd className="text-sm text-neutral-900">{qa.answer}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                  </div>
+                )}
 
-      <div className="rounded-2xl border border-neutral-200 bg-surface p-6 shadow-sm">
-        <LeadEditForm lead={lead} members={members ?? []} />
-      </div>
+                <div className="rounded-2xl border border-neutral-200 bg-surface p-6 shadow-sm">
+                  <LeadEditForm lead={lead} members={members ?? []} />
+                </div>
+              </>
+            ),
+          },
+          {
+            key: 'messages',
+            label: 'Messages',
+            content: <MessageSection lead={lead} templates={templates ?? []} agentName={profile?.full_name || ''} />,
+          },
+          {
+            key: 'ia',
+            label: 'Assistant IA',
+            content: (
+              <>
+                <AIBriefPanel
+                  title="Assistant IA — briefing avant RDV"
+                  prompt={generateBriefingBrief(lead, entries ?? [])}
+                  initialValue={lead.ai_briefing}
+                  onSave={saveAIBriefing.bind(null, lead.id)}
+                />
 
-      <MessageSection lead={lead} templates={templates ?? []} agentName={profile?.full_name || ''} />
+                {entries && entries.length > 0 && (
+                  <AIBriefPanel
+                    title="Assistant IA — compte-rendu structuré"
+                    prompt={generateVisitReportBrief(lead.name, entries[0].text, entries[0].entry_date)}
+                    initialValue={lead.ai_visit_report}
+                    onSave={saveAIVisitReport.bind(null, lead.id)}
+                    generateLabel="Structurer la dernière note"
+                  />
+                )}
 
-      <AIBriefPanel
-        title="Assistant IA — briefing avant RDV"
-        prompt={generateBriefingBrief(lead, entries ?? [])}
-        initialValue={lead.ai_briefing}
-        onSave={saveAIBriefing.bind(null, lead.id)}
+                {recontactDays !== null && mandate && (
+                  <AIBriefPanel
+                    title="Assistant IA — message de relance"
+                    prompt={generateRelanceBrief(lead.name, mandate.address, recontactDays)}
+                    initialValue={lead.ai_relance_draft}
+                    onSave={saveAIRelanceDraft.bind(null, lead.id)}
+                  />
+                )}
+              </>
+            ),
+          },
+          {
+            key: 'historique',
+            label: 'Historique',
+            content: <HistorySection leadId={lead.id} entries={entries ?? []} />,
+          },
+        ]}
       />
-
-      {entries && entries.length > 0 && (
-        <AIBriefPanel
-          title="Assistant IA — compte-rendu structuré"
-          prompt={generateVisitReportBrief(lead.name, entries[0].text, entries[0].entry_date)}
-          initialValue={lead.ai_visit_report}
-          onSave={saveAIVisitReport.bind(null, lead.id)}
-          generateLabel="Structurer la dernière note"
-        />
-      )}
-
-      {recontactDays !== null && mandate && (
-        <AIBriefPanel
-          title="Assistant IA — message de relance"
-          prompt={generateRelanceBrief(lead.name, mandate.address, recontactDays)}
-          initialValue={lead.ai_relance_draft}
-          onSave={saveAIRelanceDraft.bind(null, lead.id)}
-        />
-      )}
-
-      <HistorySection leadId={lead.id} entries={entries ?? []} />
     </div>
   )
 }

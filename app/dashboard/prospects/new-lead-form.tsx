@@ -34,18 +34,18 @@ export default function NewLeadForm() {
         name="first_name"
         placeholder="Prénom"
         required
-        className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-accent focus:ring-1 focus:ring-accent"
+        className="rounded-lg border border-neutral-300 px-3 py-2 text-base outline-none focus:border-accent focus:ring-1 focus:ring-accent"
       />
       <input
         name="last_name"
         placeholder="Nom (facultatif)"
-        className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-accent focus:ring-1 focus:ring-accent"
+        className="rounded-lg border border-neutral-300 px-3 py-2 text-base outline-none focus:border-accent focus:ring-1 focus:ring-accent"
       />
       <select
         name="category"
         value={category}
         onChange={(e) => setCategory(e.target.value)}
-        className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-accent focus:ring-1 focus:ring-accent"
+        className="rounded-lg border border-neutral-300 px-3 py-2 text-base outline-none focus:border-accent focus:ring-1 focus:ring-accent"
       >
         <option value="acheteur">Acheteur</option>
         <option value="vendeur">Vendeur</option>
@@ -55,19 +55,20 @@ export default function NewLeadForm() {
       </select>
       <input
         name="phone"
+        type="tel"
         placeholder="Téléphone"
-        className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-accent focus:ring-1 focus:ring-accent"
+        className="rounded-lg border border-neutral-300 px-3 py-2 text-base outline-none focus:border-accent focus:ring-1 focus:ring-accent"
       />
       <input
         name="email"
         type="email"
         placeholder="Email"
-        className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-accent focus:ring-1 focus:ring-accent"
+        className="rounded-lg border border-neutral-300 px-3 py-2 text-base outline-none focus:border-accent focus:ring-1 focus:ring-accent"
       />
       <input
         name="critere_lieu"
         placeholder={category === 'vendeur' ? 'Secteur (ville) du bien' : 'Secteur recherché'}
-        className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-accent focus:ring-1 focus:ring-accent sm:col-span-2"
+        className="rounded-lg border border-neutral-300 px-3 py-2 text-base outline-none focus:border-accent focus:ring-1 focus:ring-accent sm:col-span-2"
       />
 
       {state?.error && (

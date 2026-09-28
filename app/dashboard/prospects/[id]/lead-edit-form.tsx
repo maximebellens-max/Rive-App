@@ -1,10 +1,11 @@
 'use client'
 
-import { useActionState, useState } from 'react'
+import { useActionState, useState, useEffect, useRef } from 'react'
 import { updateLead, type LeadFormState } from '@/app/actions/leads'
 import { guessCivility } from '@/lib/rive/civility'
 import { useSavedFlash } from '../../_components/use-saved-flash'
 import SegmentedControl from '../../_components/segmented-control'
+import { useToast } from '../../_components/toast'
 
 type Lead = {
   id: string
@@ -42,7 +43,7 @@ type Lead = {
 type Member = { id: string; full_name: string }
 
 const inputClass =
-  'rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-accent focus:ring-1 focus:ring-accent'
+  'rounded-lg border border-neutral-300 px-3 py-2 text-base outline-none focus:border-accent focus:ring-1 focus:ring-accent'
 const labelClass = 'text-sm font-medium text-neutral-700'
 
 // Options courantes + valeur déjà en base si elle ne correspond à aucune
@@ -55,6 +56,17 @@ export default function LeadEditForm({ lead, members = [] }: { lead: Lead; membe
   const updateWithId = updateLead.bind(null, lead.id)
   const [state, action, pending] = useActionState<LeadFormState, FormData>(updateWithId, undefined)
   const justSaved = useSavedFlash(pending)
+  const toast = useToast()
+  // Confirmation toujours visible, même si le bouton "✓ Enregistré" (voir
+  // useSavedFlash ci-dessus) est hors champ de vision — utile sur un long
+  // formulaire comme celui-ci, modifié depuis un champ tout en haut.
+  const wasPending = useRef(false)
+  useEffect(() => {
+    if (wasPending.current && !pending && !state?.error) {
+      toast.push('Modifications enregistrées')
+    }
+    wasPending.current = pending
+  }, [pending, state, toast])
   const [maritalStatus, setMaritalStatus] = useState(lead.marital_status)
   const maritalStatusOptions =
     lead.marital_status && !MARITAL_STATUS_OPTIONS.includes(lead.marital_status)
@@ -130,7 +142,7 @@ export default function LeadEditForm({ lead, members = [] }: { lead: Lead; membe
           </div>
           <div className="flex flex-col gap-1.5">
             <label className={labelClass}>Téléphone</label>
-            <input name="phone" defaultValue={lead.phone} className={inputClass} />
+            <input name="phone" type="tel" defaultValue={lead.phone} className={inputClass} />
           </div>
           <div className="flex flex-col gap-1.5">
             <label className={labelClass}>Email</label>
