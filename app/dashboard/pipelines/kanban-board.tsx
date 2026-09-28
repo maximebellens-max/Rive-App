@@ -14,6 +14,8 @@ import {
 import { bulkDeleteLeads, bulkAssignLeads } from '@/app/actions/leads'
 import Avatar from '../_components/avatar'
 import SegmentedControl from '../_components/segmented-control'
+import Button from '../_components/button'
+import EmptyState from '../_components/empty-state'
 import {
   COLUMN_COLORS,
   COLUMN_COLOR_HEX,
@@ -255,7 +257,7 @@ export default function KanbanBoard({
             onChange={(e) => setSearch(e.target.value)}
             placeholder="🔎 Rechercher un nom…"
             aria-label="Rechercher un prospect"
-            className="w-40 rounded-lg border border-neutral-300 bg-surface px-2 py-1.5 text-xs text-neutral-600 outline-none placeholder:text-neutral-400 focus:w-56 focus:border-accent"
+            className="w-32 rounded-lg border border-neutral-300 bg-surface px-2 py-1.5 text-base text-neutral-600 outline-none placeholder:text-neutral-400 focus:w-56 focus:border-accent sm:w-40 sm:text-xs"
           />
         </div>
         <SegmentedControl
@@ -304,7 +306,13 @@ export default function KanbanBoard({
           ))}
         </div>
       ) : (
-        <div className={viewMode === 'kanban' ? 'flex gap-4 overflow-x-auto pb-2' : 'flex flex-col gap-4'}>
+        <div
+          className={
+            viewMode === 'kanban'
+              ? 'flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2 scroll-smooth'
+              : 'flex flex-col gap-4'
+          }
+        >
           {grouped.map(({ column, cards: colCards }) => (
             <ColumnBlock
               key={column.id}
@@ -438,7 +446,6 @@ function BulkActionBar({
 }) {
   const [, startTransition] = useTransition()
   const [pending, setPending] = useState(false)
-  const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [assignTo, setAssignTo] = useState('')
   const count = selectedIds.length
 
@@ -447,7 +454,6 @@ function BulkActionBar({
     startTransition(async () => {
       await bulkDeleteLeads(selectedIds)
       setPending(false)
-      setConfirmingDelete(false)
       onDone()
     })
   }
@@ -494,31 +500,15 @@ function BulkActionBar({
         </div>
       )}
 
-      {!confirmingDelete ? (
-        <button
-          type="button"
-          disabled={!count || pending}
-          onClick={() => setConfirmingDelete(true)}
-          className="rounded-lg border border-danger px-2.5 py-1 text-xs font-medium text-danger hover:bg-danger-soft disabled:opacity-50"
-        >
-          Supprimer
-        </button>
-      ) : (
-        <div className="flex items-center gap-1.5">
-          <span className="text-neutral-500">Supprimer {count} prospect{count > 1 ? 's' : ''} ?</span>
-          <button
-            type="button"
-            disabled={pending}
-            onClick={runDelete}
-            className="rounded bg-danger px-2 py-1 font-medium text-danger-ink disabled:opacity-50"
-          >
-            Confirmer
-          </button>
-          <button type="button" onClick={() => setConfirmingDelete(false)} className="text-neutral-500 hover:underline">
-            Annuler
-          </button>
-        </div>
-      )}
+      <Button
+        variant="danger"
+        size="sm"
+        disabled={!count || pending}
+        confirmLabel={`Confirmer la suppression (${count})`}
+        onClick={runDelete}
+      >
+        Supprimer
+      </Button>
     </div>
   )
 }
@@ -567,7 +557,7 @@ function ColumnBlock({
         const leadId = e.dataTransfer.getData('text/plain')
         if (leadId) onDrop(leadId)
       }}
-      className={`flex shrink-0 flex-col gap-2 rounded-2xl border bg-neutral-50 p-3 transition-colors duration-150 ${
+      className={`flex shrink-0 snap-start flex-col gap-2 rounded-2xl border bg-neutral-50 p-3 transition-colors duration-150 ${
         wide ? 'w-full' : 'w-72'
       } ${dragOver ? 'border-accent ring-1 ring-accent' : 'border-neutral-200'}`}
     >
@@ -619,7 +609,7 @@ function ColumnBlock({
                 />
               )
             })}
-            {!cards.length && <p className="px-1 py-2 text-xs text-neutral-400">Aucun prospect ici.</p>}
+            {!cards.length && <EmptyState icon="👋" title="Aucun prospect ici" compact />}
           </div>
 
           <QuickAddForm boardType={boardType} columnId={column.id} />
@@ -632,7 +622,6 @@ function ColumnBlock({
 function ColumnHeader({ column, boardType, count }: { column: PipelineColumn; boardType: BoardType; count: number }) {
   const [, startTransition] = useTransition()
   const [pickerOpen, setPickerOpen] = useState(false)
-  const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
 
   return (
@@ -681,18 +670,13 @@ function ColumnHeader({ column, boardType, count }: { column: PipelineColumn; bo
         <span className="shrink-0 text-xs text-neutral-300" title="Étape par défaut — non supprimable">
           🔒
         </span>
-      ) : !confirmingDelete ? (
-        <button
-          type="button"
-          onClick={() => setConfirmingDelete(true)}
-          className="shrink-0 text-xs text-neutral-300 hover:text-danger"
-          aria-label="Supprimer la colonne"
-        >
-          ✕
-        </button>
       ) : (
-        <button
-          type="button"
+        <Button
+          variant="danger"
+          size="sm"
+          aria-label="Supprimer la colonne"
+          confirmLabel="Confirmer ?"
+          className="shrink-0"
           onClick={() => {
             startTransition(async () => {
               const res = await deletePipelineColumn(column.id, boardType)
@@ -700,13 +684,11 @@ function ColumnHeader({ column, boardType, count }: { column: PipelineColumn; bo
                 setDeleteError(res.error)
                 setTimeout(() => setDeleteError(null), 3000)
               }
-              setConfirmingDelete(false)
             })
           }}
-          className="shrink-0 rounded bg-danger px-1.5 py-0.5 text-xs text-danger-ink"
         >
-          Confirmer ?
-        </button>
+          ✕
+        </Button>
       )}
       {deleteError && <span className="absolute right-0 top-6 text-xs text-danger">{deleteError}</span>}
     </div>
@@ -812,7 +794,7 @@ function MoveMenu({
         }}
         aria-label="Déplacer vers une autre étape"
         aria-expanded={open}
-        className="rounded px-1 py-0.5 text-xs leading-none text-neutral-300 hover:bg-neutral-100 hover:text-neutral-600"
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-sm leading-none text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700"
       >
         ⇄
       </button>
