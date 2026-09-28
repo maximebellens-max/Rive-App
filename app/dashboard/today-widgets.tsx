@@ -66,7 +66,7 @@ export default function TodayWidgets({
               <div key={item.id} className="flex items-center gap-2">
                 <Link
                   href={item.href}
-                  className="flex min-w-0 flex-1 items-center justify-between rounded-lg border border-neutral-200 px-3 py-2 text-sm hover:border-neutral-300 hover:bg-neutral-50"
+                  className="flex min-w-0 flex-1 flex-col gap-0.5 rounded-lg border border-neutral-200 px-3 py-2 text-sm hover:border-neutral-300 hover:bg-neutral-50 sm:flex-row sm:items-center sm:justify-between sm:gap-2"
                 >
                   <span className="flex min-w-0 items-center gap-1.5">
                     {item.category && CATEGORY_LABEL[item.category] && (
@@ -79,7 +79,11 @@ export default function TodayWidgets({
                     )}
                     <span className="truncate font-medium text-neutral-900">{item.primary}</span>
                   </span>
-                  {item.secondary && <span className="shrink-0 text-neutral-500">{item.secondary}</span>}
+                  {item.secondary && (
+                    <span className="truncate pl-0.5 text-xs text-neutral-500 sm:shrink-0 sm:pl-0 sm:text-sm">
+                      {item.secondary}
+                    </span>
+                  )}
                 </Link>
                 {/* Sort simplement le prospect de cette liste, sans avoir à
                     rouvrir sa fiche ni déplacer sa carte dans son tableau —

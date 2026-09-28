@@ -9,6 +9,10 @@ const STAGE_COLUMNS = [
   { value: 'en_cours', label: 'En cours', color: 'slate' },
   { value: 'compromis_signe', label: 'Compromis signé', color: 'gold' },
   { value: 'vendu', label: 'Vendu', color: 'success' },
+  // Projets investisseur "en mandat" (table invest_projects, pas mandates) —
+  // colonne à part car ils n'ont pas ce même cheminement en_cours/compromis/
+  // vendu (voir app/dashboard/mandates/page.tsx). Cartes non déplaçables.
+  { value: 'investisseur', label: 'Investisseurs', color: 'plum' },
 ]
 
 export default function MandatesView({ table, cards }: { table: React.ReactNode; cards: StageCard[] }) {

@@ -17,6 +17,12 @@ export type StageCard = {
   href: string
   assignedName?: string
   assignedAvatarUrl?: string
+  /** false pour une carte qui n'appartient pas à la table `mandates` (ex. un
+   * projet investisseur) : `onMove` appelle `moveMandateStage(id, ...)`, qui
+   * ne trouverait pas cet id et échouerait silencieusement — on désactive
+   * simplement le glisser-déposer plutôt que de le laisser échouer sans le
+   * dire. Par défaut true (comportement inchangé pour les cartes existantes). */
+  draggable?: boolean
 }
 
 export default function StageKanban({
@@ -61,9 +67,13 @@ export default function StageKanban({
                 <Link
                   key={card.id}
                   href={card.href}
-                  draggable
-                  onDragStart={(e) => e.dataTransfer.setData('text/plain', card.id)}
-                  className="flex cursor-grab flex-col gap-1 rounded-xl border border-neutral-200 bg-surface p-3 text-sm shadow-sm active:cursor-grabbing"
+                  draggable={card.draggable !== false}
+                  onDragStart={
+                    card.draggable !== false ? (e) => e.dataTransfer.setData('text/plain', card.id) : undefined
+                  }
+                  className={`flex flex-col gap-1 rounded-xl border border-neutral-200 bg-surface p-3 text-sm shadow-sm ${
+                    card.draggable === false ? '' : 'cursor-grab active:cursor-grabbing'
+                  }`}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <span className="min-w-0 truncate font-medium text-neutral-900">{card.title}</span>

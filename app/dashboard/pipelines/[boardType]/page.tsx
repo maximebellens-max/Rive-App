@@ -14,6 +14,12 @@ import { cn } from '@/lib/rive/cn'
 
 type BoardRow = { id: string; name: string; kind: string }
 
+const CATEGORY_SWITCH_TARGETS = [
+  { href: '/dashboard/pipelines/vendeur', label: 'Vendeurs', match: 'vendeur' },
+  { href: '/dashboard/pipelines/acheteur', label: 'Acheteurs', match: 'acheteur' },
+  { href: '/dashboard/pipelines/investisseur_france', label: 'Investisseurs', match: 'investisseur_france' },
+]
+
 export default async function PipelineBoardPage({ params }: PageProps<'/dashboard/pipelines/[boardType]'>) {
   const { boardType: bt } = await params
 
@@ -117,9 +123,35 @@ export default async function PipelineBoardPage({ params }: PageProps<'/dashboar
   }))
 
   const isInvestorBoard = INVESTOR_BOARD_TYPES.includes(bt)
+  // Catégorie active pour le sélecteur mobile ci-dessous : les 3 marchés
+  // investisseur comptent comme "Investisseurs" quel que soit celui affiché.
+  const activeCategory = isInvestorBoard ? 'investisseur_france' : bt
 
   return (
     <div className="flex flex-col gap-6">
+      {/* Sélecteur rapide entre les 3 pipelines de catégorie, visible
+          uniquement sur mobile : la barre latérale (où vivent ces mêmes
+          liens) est masquée sous md, et le bouton "Pipelines" de la barre de
+          raccourcis en bas d'écran amène toujours sur Vendeurs — sans ce
+          sélecteur, atteindre Acheteurs ou Investisseurs demandait d'ouvrir
+          le tiroir de menu complet. */}
+      {isFixedCategoryBoard && (
+        <div className="flex w-fit gap-1 rounded-lg border border-neutral-300 p-0.5 text-xs md:hidden">
+          {CATEGORY_SWITCH_TARGETS.map((t) => (
+            <Link
+              key={t.href}
+              href={t.href}
+              aria-current={activeCategory === t.match ? 'page' : undefined}
+              className={cn(
+                'rounded px-3 py-1.5 font-medium transition',
+                activeCategory === t.match ? 'bg-accent text-accent-ink' : 'text-neutral-600 hover:text-neutral-900'
+              )}
+            >
+              {t.label}
+            </Link>
+          ))}
+        </div>
+      )}
       {isCustom ? (
         <BoardHeader boardId={bt} name={boardName} count={cards.length} />
       ) : (

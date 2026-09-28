@@ -68,6 +68,21 @@ export default async function MandatesPage() {
     }
   })
 
+  // Repris ici aussi (en plus du tableau `table` ci-dessous) pour que la vue
+  // Kanban — celle affichée par défaut en arrivant sur cette page — montre
+  // elle aussi les projets investisseur, pas seulement la vue Liste. Pas de
+  // glisser-déposer sur ces cartes (draggable: false) : `onMove` appelle
+  // `moveMandateStage`, propre à la table `mandates`, qui ne trouverait pas
+  // ces id (table `invest_projects`).
+  const investorCards: StageCard[] = investorRows.map((r) => ({
+    id: r.id,
+    title: r.lead?.name || 'Prospect supprimé',
+    subtitle: r.capaciteEmprunt ? formatEUR(r.capaciteEmprunt) : undefined,
+    meta: 'investisseur',
+    href: `/dashboard/investments/${r.id}`,
+    draggable: false,
+  }))
+
   const table = (
     <div className="overflow-x-auto rounded-2xl border border-neutral-200 bg-surface shadow-sm">
       <table className="w-full text-left text-sm">
@@ -186,7 +201,7 @@ export default async function MandatesPage() {
         </Link>
       </div>
 
-      <MandatesView table={table} cards={cards} />
+      <MandatesView table={table} cards={[...cards, ...investorCards]} />
     </div>
   )
 }

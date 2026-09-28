@@ -125,7 +125,7 @@ export default function MonthCalendar({
         {DOW_LABELS_FR.map((d) => (
           <div
             key={d}
-            className="pb-1 text-center text-[10px] font-semibold uppercase tracking-wide text-neutral-400 sm:text-[11px]"
+            className="pb-1 text-center text-[11px] font-semibold uppercase tracking-wide text-neutral-400 sm:text-[11px]"
           >
             {d}
           </div>
@@ -142,26 +142,45 @@ export default function MonthCalendar({
           return (
             <div
               key={dateStr}
-              className={`group/day flex min-h-16 flex-col gap-1 rounded-lg border bg-surface p-1 sm:min-h-24 sm:rounded-xl sm:p-1.5 ${
+              className={`group/day flex min-h-20 flex-col gap-1 rounded-lg border bg-surface p-1 sm:min-h-24 sm:rounded-xl sm:p-1.5 ${
                 isToday ? 'border-accent ring-1 ring-accent' : 'border-neutral-200'
               }`}
             >
               <div className="flex items-center justify-between">
-                <span className="font-mono text-[11px] font-bold text-neutral-500 sm:text-xs">{day}</span>
+                <span
+                  className={`font-mono text-xs font-bold sm:text-xs ${
+                    isToday ? 'text-accent' : 'text-neutral-500'
+                  }`}
+                >
+                  {day}
+                </span>
                 <button
                   type="button"
                   onClick={() => setAddingDate(isAdding ? null : dateStr)}
                   aria-label={`Ajouter un rendez-vous le ${day} ${MONTH_FULL_FR[month]}`}
-                  className="h-4 w-4 rounded text-xs font-bold leading-none text-neutral-300 transition hover:bg-accent hover:text-accent-ink sm:opacity-0 sm:group-hover/day:opacity-100"
+                  className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-sm font-bold leading-none text-neutral-300 transition hover:bg-accent hover:text-accent-ink sm:h-4 sm:w-4 sm:text-xs sm:opacity-0 sm:group-hover/day:opacity-100"
                 >
                   +
                 </button>
               </div>
 
-              {items.slice(0, 3).map((a) => (
+              {/* Sur mobile, seuls 2 RDV tiennent lisiblement dans la case —
+                  le "+N" prend le relais plus tôt qu'en version ordinateur
+                  (3), plutôt que de laisser un 3ème chip devenir illisible. */}
+              {items.slice(0, 2).map((a) => (
                 <AppointmentChip key={a.id} appointment={a} />
               ))}
-              {items.length > 3 && <span className="px-1 text-[10px] text-neutral-400">+{items.length - 3}</span>}
+              <span className="hidden sm:contents">
+                {items.slice(2, 3).map((a) => (
+                  <AppointmentChip key={a.id} appointment={a} />
+                ))}
+              </span>
+              {items.length > 2 && (
+                <span className="px-1 text-[10px] text-neutral-400 sm:hidden">+{items.length - 2}</span>
+              )}
+              {items.length > 3 && (
+                <span className="hidden px-1 text-[10px] text-neutral-400 sm:inline">+{items.length - 3}</span>
+              )}
             </div>
           )
         })}
