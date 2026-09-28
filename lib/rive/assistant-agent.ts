@@ -200,6 +200,12 @@ function buildSystemPrompt(ctx: AgentContext, today: string): string {
     `- Une fois une action effectuée, réponds en une ou deux phrases courtes et concrètes confirmant ce qui a été fait — pensé pour être lu sur un téléphone, jamais de longue explication.`,
     `- Si la demande sort de ce que tu sais faire (supprimer un prospect, créer un mandat, envoyer un message à un client, changer l'agent assigné...), dis-le clairement plutôt que d'improviser une action.`,
     `- Réponds toujours en français.`,
+    ``,
+    `Compte-rendu d'appel ou de visite dicté : si le message commence par "[Compte-rendu d'appel/visite]", l'agent vient de dicter librement, juste après un échange avec un prospect, ce qui s'est dit (souvent en vrac, pas forcément dans l'ordre). Dans ce cas :`,
+    `1. Retrouve le bon prospect via search_prospects à partir du nom mentionné dans la dictée (demande une précision si le nom est ambigu ou introuvable, ne devine jamais).`,
+    `2. N'enregistre JAMAIS la dictée mot pour mot avec add_note. Réécris-la d'abord en un compte-rendu court et clair (2 à 4 phrases : ce qui a été dit, le ressenti/niveau d'intérêt perçu, tout point de vigilance) puis passe CE texte reformulé à add_note.`,
+    `3. Si une prochaine étape ou un rendez-vous est mentionné (rappel, visite, envoi de document...), propose-le ou crée-le (create_appointment si une date est donnée, sinon update_prospect_field sur action_label/action_date).`,
+    `4. Confirme en une phrase ce que tu as retenu et enregistré — assez précis pour que l'agent puisse corriger tout de suite si tu as mal compris un nom ou un détail (la dictée est parfois mal transcrite).`,
   ].join('\n')
 }
 

@@ -8,7 +8,7 @@
 // kanban et dans un digest WhatsApp à l'équipe, jamais un message envoyé au
 // client (même posture RGPD que l'agent de relance, voir relance-agent.ts).
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { leadPriorityScore } from './pipelines'
+import { leadPriorityScore, INVESTOR_BOARD_TYPES } from './pipelines'
 import { generateWithClaude } from './anthropic'
 import { claimDailyAlert } from './daily-alerts'
 import { notifyAlertWhatsApp } from './whatsapp-notify'
@@ -29,13 +29,24 @@ type PriorityPromptInput = {
   notes: string
   history: HistoryEntry[]
   metaAnswers: MetaAnswer[]
+  isInvestor: boolean
 }
 
 function buildPriorityPrompt(input: PriorityPromptInput): string {
+  // Pour un vendeur/acheteur, le score de règles (financement, échéance de
+  // RDV...) est un bon point de départ — l'IA ne fait qu'un ajustement fin.
+  // Pour un investisseur, ces critères administratifs ne veulent pas dire
+  // grand-chose (le financement est rarement suivi de la même façon, il n'y
+  // a pas toujours de RDV planifié) : le signal fiable, ce sont les notes et
+  // les réponses au questionnaire — demandé explicitement par l'agence. Le
+  // score de règles n'est donc plus qu'un repère faible, pas une ancre.
+  const adjustmentInstruction = input.isInvestor
+    ? `Un repère de départ très approximatif a été calculé par règles fixes (${input.ruleScore}/100), mais pour un investisseur il ne veut pas dire grand-chose (il se base sur des critères pensés pour un vendeur). Base ton évaluation PRINCIPALEMENT sur les notes, les derniers échanges et les réponses au formulaire ci-dessous : c'est là que se lit le vrai niveau d'intérêt d'un investisseur (montant évoqué, sérieux du projet, réactivité, doutes exprimés...). S'il n'y a rien de qualitatif à lire, reste sur une estimation prudente (autour de 40-50/100) plutôt que de faire confiance au repère de règles.`
+    : `Un score de priorité par règles fixes a déjà été calculé (0 à 100, plus haut = plus urgent) : ${input.ruleScore}/100. Lis les éléments qualitatifs ci-dessous (notes, échanges, réponses au formulaire) et ajuste ce score UNIQUEMENT si tu y trouves un vrai signal : échéance annoncée, changement de situation, forte motivation exprimée (fais monter le score), ou au contraire un doute, un refus, un projet reporté ou abandonné (fais baisser le score). Sans signal clair dans le texte, garde le score proche de ${input.ruleScore}.`
+
   const lines = [
     `Tu aides un agent immobilier à prioriser ses prospects : qui rappeler en premier.`,
-    `Un score de priorité par règles fixes a déjà été calculé (0 à 100, plus haut = plus urgent) : ${input.ruleScore}/100.`,
-    `Lis les éléments qualitatifs ci-dessous (notes, échanges, réponses au formulaire) et ajuste ce score UNIQUEMENT si tu y trouves un vrai signal : échéance annoncée, changement de situation, forte motivation exprimée (fais monter le score), ou au contraire un doute, un refus, un projet reporté ou abandonné (fais baisser le score). Sans signal clair dans le texte, garde le score proche de ${input.ruleScore}.`,
+    adjustmentInstruction,
     ``,
     `Nom : ${input.name}`,
     `Catégorie : ${input.category || 'non renseignée'}`,
@@ -83,7 +94,7 @@ export async function runAiPriorityForAgency(supabase: SupabaseClient, agencyId:
   const { data: leads } = await supabase
     .from('leads')
     .select(
-      'id, name, category, phone, budget, financement, critere_lieu, action_label, action_date, created_at, notes, meta_answers, assigned_to'
+      'id, name, category, phone, budget, financement, critere_lieu, action_label, action_date, created_at, notes, meta_answers, assigned_to, priority_tier_override'
     )
     .eq('agency_id', agencyId)
   if (!leads || !leads.length) return
@@ -114,8 +125,14 @@ export async function runAiPriorityForAgency(supabase: SupabaseClient, agencyId:
   for (const lead of leads) {
     if (soldLeadIds.has(lead.id)) continue
 
+    // Niveau d'intérêt réglé à la main (lead-edit-form.tsx) : l'affichage
+    // s'en tient à ce choix quoi qu'il arrive, pas la peine de calculer ni
+    // de solliciter Claude pour ce prospect.
+    if (lead.priority_tier_override) continue
+
     const history = historyByLead[lead.id] ?? []
     const metaAnswers: MetaAnswer[] = Array.isArray(lead.meta_answers) ? lead.meta_answers : []
+    const isInvestor = lead.category ? INVESTOR_BOARD_TYPES.includes(lead.category) : false
 
     const ruleScore = leadPriorityScore({
       budget: lead.budget,
@@ -146,6 +163,7 @@ export async function runAiPriorityForAgency(supabase: SupabaseClient, agencyId:
       notes: lead.notes,
       history,
       metaAnswers,
+      isInvestor,
     })
 
     const { text } = await generateWithClaude(prompt)

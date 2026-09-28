@@ -4,6 +4,7 @@ import { useActionState, useState } from 'react'
 import { updateLead, type LeadFormState } from '@/app/actions/leads'
 import { guessCivility } from '@/lib/rive/civility'
 import { useSavedFlash } from '../../_components/use-saved-flash'
+import SegmentedControl from '../../_components/segmented-control'
 
 type Lead = {
   id: string
@@ -22,6 +23,7 @@ type Lead = {
   financement: string
   rendement_vise: number | null
   investor_commission: number | null
+  priority_tier_override: string | null
   action_label: string
   action_date: string | null
   notes: string
@@ -70,6 +72,11 @@ export default function LeadEditForm({ lead, members = [] }: { lead: Lead; membe
   // l'écrase plus automatiquement.
   const [civility, setCivility] = useState(lead.civility)
   const [civilityTouched, setCivilityTouched] = useState(false)
+
+  // Niveau d'intérêt investisseur : 'auto' laisse le calcul automatique
+  // (notes + réponses au formulaire, voir lib/rive/ai-priority.ts) décider ;
+  // les 3 autres valeurs figent l'affichage quel que soit ce calcul.
+  const [priorityOverride, setPriorityOverride] = useState(lead.priority_tier_override ?? 'auto')
 
   return (
     <form action={action} className="flex flex-col gap-8">
@@ -199,6 +206,27 @@ export default function LeadEditForm({ lead, members = [] }: { lead: Lead; membe
               <div className="flex flex-col gap-1.5">
                 <label className={labelClass}>Rendement visé (%)</label>
                 <input name="rendement_vise" type="number" step="0.1" defaultValue={lead.rendement_vise ?? ''} className={inputClass} />
+              </div>
+            )}
+            {isInvestor && (
+              <div className="flex flex-col gap-1.5 sm:col-span-2">
+                <label className={labelClass}>Niveau d&apos;intérêt</label>
+                <input type="hidden" name="priority_tier_override" value={priorityOverride} />
+                <SegmentedControl
+                  value={priorityOverride}
+                  onChange={setPriorityOverride}
+                  options={[
+                    { value: 'auto', label: 'Automatique' },
+                    { value: 'chaud', label: '🔥 Chaud' },
+                    { value: 'tiede', label: '🌤 Tiède' },
+                    { value: 'froid', label: '❄️ Froid' },
+                  ]}
+                />
+                <p className="text-xs text-neutral-400">
+                  &quot;Automatique&quot; laisse Rive évaluer l&apos;intérêt à partir des notes et des réponses au
+                  formulaire publicitaire. Choisis un niveau ici pour l&apos;imposer toi-même à la place — utile
+                  pour un investisseur, dont l&apos;intérêt ne se lit pas dans les mêmes critères qu&apos;un vendeur.
+                </p>
               </div>
             )}
             {isInvestorAbroad && (

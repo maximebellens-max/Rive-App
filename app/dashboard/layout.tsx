@@ -9,6 +9,7 @@ import SidebarNav from './sidebar-nav'
 import MobileNav from './mobile-nav'
 import AccountMenu from './account-menu'
 import InstallPrompt from './_components/install-prompt'
+import GlobalSearch from './global-search'
 
 export default async function DashboardLayout({
   children,
@@ -64,14 +65,15 @@ export default async function DashboardLayout({
   return (
     <div className="flex min-h-screen flex-col">
       <header className="border-b border-neutral-200 bg-surface">
-        <div className="flex items-center justify-between px-4 py-3">
-          <div className="flex items-center gap-1">
+        <div className="flex items-center gap-3 px-4 py-3">
+          <div className="flex shrink-0 items-center gap-1">
             <MobileNav customBoards={customBoards ?? []} createBoard={createBoard} />
             <Link href="/dashboard" className="text-lg font-semibold tracking-tight">
               Rive
             </Link>
           </div>
-          <div className="flex items-center gap-3 text-sm text-neutral-500">
+          <GlobalSearch />
+          <div className="flex shrink-0 items-center gap-3 text-sm text-neutral-500">
             <ThemeToggle />
             <NotificationBell notifications={notifications} />
             <AccountMenu

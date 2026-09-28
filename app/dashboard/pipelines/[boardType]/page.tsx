@@ -30,13 +30,13 @@ export default async function PipelineBoardPage({ params }: PageProps<'/dashboar
     ? supabase
         .from('leads')
         .select(
-          'id, name, category, phone, email, critere_lieu, critere_type, budget, financement, action_date, created_at, positions, assigned_to, collaborator_ids, ai_priority_score, ai_priority_reasoning'
+          'id, name, category, phone, email, critere_lieu, critere_type, budget, financement, action_date, created_at, positions, assigned_to, collaborator_ids, ai_priority_score, ai_priority_reasoning, priority_tier_override'
         )
         .eq('category', bt)
     : supabase
         .from('leads')
         .select(
-          'id, name, category, phone, email, critere_lieu, critere_type, budget, financement, action_date, created_at, positions, assigned_to, collaborator_ids, ai_priority_score, ai_priority_reasoning'
+          'id, name, category, phone, email, critere_lieu, critere_type, budget, financement, action_date, created_at, positions, assigned_to, collaborator_ids, ai_priority_score, ai_priority_reasoning, priority_tier_override'
         )
 
   // Ces 5 requêtes ne dépendent que de bt/profile.agency_id (déjà connus) —
@@ -113,6 +113,7 @@ export default async function PipelineBoardPage({ params }: PageProps<'/dashboar
     }),
     aiScore: l.ai_priority_score,
     aiReasoning: l.ai_priority_reasoning,
+    priorityOverride: l.priority_tier_override,
   }))
 
   const isInvestorBoard = INVESTOR_BOARD_TYPES.includes(bt)

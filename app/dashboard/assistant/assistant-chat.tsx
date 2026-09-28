@@ -19,8 +19,14 @@ type DisplayMessage = { role: 'user' | 'assistant' | 'error'; text: string }
 
 const WELCOME: DisplayMessage = {
   role: 'assistant',
-  text: "Salut ! Dis-moi ce que tu veux faire : chercher un prospect, ajouter une note, le faire avancer dans son pipeline, mettre à jour un champ de sa fiche, créer un nouveau prospect, créer un rendez-vous, ou me demander une statistique (contacts cette semaine, taux de conversion, mandats signés ce mois-ci, relances en retard, honoraires prévisionnels). Tu peux écrire ou utiliser le micro.",
+  text: "Salut ! Dis-moi ce que tu veux faire : chercher un prospect, ajouter une note, le faire avancer dans son pipeline, mettre à jour un champ de sa fiche, créer un nouveau prospect, créer un rendez-vous, ou me demander une statistique (contacts cette semaine, taux de conversion, mandats signés ce mois-ci, relances en retard, honoraires prévisionnels). Tu peux écrire ou utiliser le micro — ou juste après un appel/une visite, utilise le bouton \"📞 Compte-rendu\" pour dicter ce qu'il s'est dit, je le résume proprement sur la bonne fiche.",
 }
+
+// Préfixe reconnu par le system prompt de l'assistant (voir
+// lib/rive/assistant-agent.ts) : signale une dictée brute d'appel/visite à
+// résumer avant de l'enregistrer, plutôt qu'une demande précise à exécuter
+// telle quelle. Doit rester identique au texte attendu côté serveur.
+const CALL_RECAP_PREFIX = "[Compte-rendu d'appel/visite] "
 
 // Web Speech API : pas de type officiel dans le DOM lib TypeScript standard.
 type SpeechRecognitionLike = {
@@ -61,6 +67,10 @@ export default function AssistantChat() {
   const [pending, startTransition] = useTransition()
   const [listening, setListening] = useState(false)
   const [micError, setMicError] = useState<string | null>(null)
+  // Voir CALL_RECAP_PREFIX plus haut : distingue une dictée libre d'appel/
+  // visite (à résumer par l'assistant avant tout enregistrement) d'une
+  // demande normale tapée ou dictée.
+  const [callRecapMode, setCallRecapMode] = useState(false)
   // Détecté une fois à l'initialisation (pas de setState dans l'effet
   // ci-dessous — la disponibilité de l'API ne change pas en cours de vie du
   // composant) : évite le cascading-render que déclencherait un setState
@@ -141,13 +151,29 @@ export default function AssistantChat() {
     else startListening()
   }
 
+  // Bascule le mode "compte-rendu d'appel/visite" : vide le champ et lance
+  // directement la dictée (l'agent n'a qu'à parler juste après avoir
+  // raccroché), sans avoir à cliquer le micro en plus.
+  function startCallRecap() {
+    setCallRecapMode(true)
+    setInput('')
+    if (micSupported && !listening) startListening()
+  }
+
+  function cancelCallRecap() {
+    setCallRecapMode(false)
+    if (listening) stopListening()
+  }
+
   function send(rawText: string) {
     const text = rawText.trim()
     if (!text || pending) return
+    const isRecap = callRecapMode
     setInput('')
-    setLog((prev) => [...prev, { role: 'user', text }])
+    setCallRecapMode(false)
+    setLog((prev) => [...prev, { role: 'user', text: isRecap ? `🎙️ ${text}` : text }])
     startTransition(async () => {
-      const res = await sendAssistantMessage(apiMessages, text)
+      const res = await sendAssistantMessage(apiMessages, isRecap ? `${CALL_RECAP_PREFIX}${text}` : text)
       setApiMessages(res.messages)
       setLog((prev) => [
         ...prev,
@@ -185,6 +211,27 @@ export default function AssistantChat() {
       </div>
 
       {micError && <p className="px-1 text-xs text-danger">{micError}</p>}
+
+      {callRecapMode ? (
+        <div className="flex items-center justify-between gap-2 rounded-lg border border-accent bg-accent/10 px-3 py-2 text-xs text-neutral-700">
+          <span>🎙️ Mode compte-rendu — dis le nom du prospect puis ce qu&apos;il s&apos;est passé, j&apos;en fais un résumé sur sa fiche.</span>
+          <button
+            type="button"
+            onClick={cancelCallRecap}
+            className="shrink-0 rounded-md border border-neutral-300 bg-surface px-2 py-1 font-medium text-neutral-600 hover:bg-neutral-100"
+          >
+            Annuler
+          </button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={startCallRecap}
+          className="w-fit rounded-full border border-neutral-300 px-3 py-1.5 text-xs font-medium text-neutral-600 hover:bg-neutral-100"
+        >
+          📞 Compte-rendu d&apos;appel/visite
+        </button>
+      )}
 
       <form
         onSubmit={(e) => {

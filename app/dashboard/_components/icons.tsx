@@ -308,3 +308,13 @@ export function SendIcon(props: IconProps) {
     </Icon>
   )
 }
+
+// Recherche globale de l'en-tête (voir app/dashboard/global-search.tsx).
+export function SearchIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <circle cx="11" cy="11" r="8" />
+      <path d="m21 21-4.3-4.3" />
+    </Icon>
+  )
+}

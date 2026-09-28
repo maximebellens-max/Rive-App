@@ -223,6 +223,16 @@ export async function updateLead(
 
   const newCategory = str(formData, 'category') || null
 
+  // 'auto' (valeur par défaut du contrôle "Niveau d'intérêt", voir
+  // lead-edit-form.tsx) veut dire "pas de réglage manuel" → stocké comme
+  // null, seule valeur que le calcul automatique (lib/rive/ai-priority.ts)
+  // sait interpréter comme "pas de forçage".
+  const priorityOverrideRaw = str(formData, 'priority_tier_override')
+  const priorityOverride =
+    priorityOverrideRaw === 'chaud' || priorityOverrideRaw === 'tiede' || priorityOverrideRaw === 'froid'
+      ? priorityOverrideRaw
+      : null
+
   // Uniquement pour savoir si la catégorie change (voir plus bas) — ne sert
   // PLUS à recalculer "positions" ici : le faire à partir d'une lecture
   // faite en tout début d'action, puis réécrire l'objet entier, pouvait
@@ -258,6 +268,7 @@ export async function updateLead(
       // Dubaï/Géorgie : pas de mandat, donc pas de barème automatique — la
       // commission se saisit à la main (voir migration 053).
       investor_commission: num(formData, 'investor_commission'),
+      priority_tier_override: priorityOverride,
       action_label: str(formData, 'action_label'),
       action_date: str(formData, 'action_date') || null,
       notes: str(formData, 'notes'),

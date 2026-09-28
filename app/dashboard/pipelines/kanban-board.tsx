@@ -46,6 +46,7 @@ export type PipelineCard = {
   score: number
   aiScore: number | null
   aiReasoning: string
+  priorityOverride: string | null
 }
 
 function formatBudget(n: number | null): string {
@@ -871,7 +872,12 @@ function CardItem({
   onMove?: (cardId: string, columnId: string) => void
 }) {
   const effectiveScore = card.aiScore ?? card.score
-  const tier = priorityTier(effectiveScore)
+  // Un niveau d'intérêt choisi à la main (voir lead-edit-form.tsx) prime
+  // toujours sur le calcul automatique — utile pour un investisseur, dont
+  // l'intérêt réel ne se lit pas forcément dans les mêmes critères qu'un
+  // vendeur ou un acheteur.
+  const isManualTier = card.priorityOverride === 'chaud' || card.priorityOverride === 'tiede' || card.priorityOverride === 'froid'
+  const tier = isManualTier ? (card.priorityOverride as 'chaud' | 'tiede' | 'froid') : priorityTier(effectiveScore)
   // Légère transparence pendant le glisser-déposer (comme les icônes du
   // Finder macOS) : donne un vrai retour visuel sur la carte qu'on déplace,
   // là où avant seule la colonne cible changeait d'apparence.
@@ -907,8 +913,12 @@ function CardItem({
               onMove={(columnId) => onMove(card.id, columnId)}
             />
           )}
-          <span className={`shrink-0 rounded-full border px-1.5 py-0.5 text-[10px] font-medium ${PRIORITY_TIER_CLASS[tier]}`}>
+          <span
+            title={isManualTier ? 'Réglé manuellement' : undefined}
+            className={`shrink-0 rounded-full border px-1.5 py-0.5 text-[10px] font-medium ${PRIORITY_TIER_CLASS[tier]}`}
+          >
             {PRIORITY_TIER_LABEL[tier]}
+            {isManualTier ? ' ✋' : ''}
           </span>
         </div>
       </div>
