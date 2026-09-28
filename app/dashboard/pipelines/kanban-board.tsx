@@ -28,6 +28,7 @@ import {
   columnSuggestsAppointment,
   type BoardType,
 } from '@/lib/rive/pipelines'
+import { telHref } from '@/lib/rive/phone'
 
 export type PipelineColumn = { id: string; name: string; color: string; is_default?: boolean }
 export type PipelineCard = {
@@ -214,51 +215,60 @@ export default function KanbanBoard({
     })
   }
 
+  const filterControlsProps = {
+    selectMode,
+    toggleSelectMode,
+    boardType,
+    categoryFilter,
+    setCategoryFilter,
+    members,
+    agentFilter,
+    setAgentFilter,
+    currentUserId,
+    isOwner,
+  }
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={toggleSelectMode}
-            className={`rounded-lg border px-3 py-1.5 text-xs font-medium ${
-              selectMode ? 'border-accent bg-accent-soft text-accent' : 'border-neutral-300 text-neutral-600 hover:bg-neutral-100'
-            }`}
-          >
-            {selectMode ? 'Annuler la sélection' : '☑ Sélectionner'}
-          </button>
-          {!CATEGORY_BOARD_TYPES.has(boardType) && (
-            <select
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-              aria-label="Filtrer par catégorie"
-              className="rounded-lg border border-neutral-300 bg-surface px-2 py-1.5 text-xs text-neutral-600 outline-none focus:border-accent"
-            >
-              <option value="all">Toutes catégories</option>
-              <option value="vendeur">Vendeur</option>
-              <option value="acheteur">Acheteur</option>
-              <option value="investisseur_france">Investisseur France</option>
-              <option value="investisseur_dubai">Investisseur Dubaï</option>
-              <option value="investisseur_georgie">Investisseur Géorgie</option>
-            </select>
-          )}
-          {members.length > 0 && (
-            <AgentFilterDropdown
-              members={members}
-              selected={agentFilter}
-              onChange={setAgentFilter}
-              currentUserId={currentUserId}
-              isOwner={isOwner}
-            />
-          )}
+        {/* Ordinateur : tous les filtres à plat sur une ligne, comme avant. */}
+        <div className="hidden flex-wrap items-center gap-2 md:flex">
+          <FilterControls {...filterControlsProps} />
           <input
             type="search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="🔎 Rechercher un nom…"
             aria-label="Rechercher un prospect"
-            className="w-32 rounded-lg border border-neutral-300 bg-surface px-2 py-1.5 text-base text-neutral-600 outline-none placeholder:text-neutral-400 focus:w-56 focus:border-accent sm:w-40 sm:text-xs"
+            className="w-40 rounded-lg border border-neutral-300 bg-surface px-2 py-1.5 text-xs text-neutral-600 outline-none placeholder:text-neutral-400 focus:w-56 focus:border-accent"
           />
+        </div>
+        {/* Mobile : recherche toujours visible + le reste replié derrière
+            "Filtres" — avant ce repli, ces contrôles passaient sur 2-3
+            lignes avant même de voir une carte du tableau. */}
+        <div className="flex flex-1 items-center gap-2 md:hidden">
+          <input
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="🔎 Rechercher un nom…"
+            aria-label="Rechercher un prospect"
+            className="w-full min-w-0 flex-1 rounded-lg border border-neutral-300 bg-surface px-2 py-1.5 text-base text-neutral-600 outline-none placeholder:text-neutral-400 focus:border-accent"
+          />
+          <details className="relative shrink-0">
+            <summary
+              className={`list-none rounded-lg border px-3 py-1.5 text-xs font-medium ${
+                selectMode || categoryFilter !== 'all'
+                  ? 'border-accent bg-accent-soft text-accent'
+                  : 'border-neutral-300 text-neutral-600 hover:bg-neutral-100'
+              }`}
+            >
+              Filtres
+            </summary>
+            <div className="absolute right-0 top-full z-20 mt-1 flex w-56 flex-col gap-2 rounded-lg border border-neutral-200 bg-surface p-2 shadow-md">
+              <FilterControls {...filterControlsProps} stacked />
+            </div>
+          </details>
         </div>
         <SegmentedControl
           value={viewMode}
@@ -336,6 +346,75 @@ export default function KanbanBoard({
   )
 }
 
+// Les 3 filtres (sélection multiple, catégorie, agent) factorisés pour être
+// rendus deux fois : à plat sur ordinateur, repliés derrière "Filtres" sur
+// mobile (voir plus haut) — `stacked` passe les contrôles en pleine largeur
+// pour le panneau replié plutôt que la rangée compacte d'ordinateur.
+function FilterControls({
+  selectMode,
+  toggleSelectMode,
+  boardType,
+  categoryFilter,
+  setCategoryFilter,
+  members,
+  agentFilter,
+  setAgentFilter,
+  currentUserId,
+  isOwner,
+  stacked = false,
+}: {
+  selectMode: boolean
+  toggleSelectMode: () => void
+  boardType: BoardType
+  categoryFilter: string
+  setCategoryFilter: (v: string) => void
+  members: BoardMember[]
+  agentFilter: Set<string>
+  setAgentFilter: (next: Set<string>) => void
+  currentUserId?: string
+  isOwner?: boolean
+  stacked?: boolean
+}) {
+  return (
+    <>
+      <button
+        type="button"
+        onClick={toggleSelectMode}
+        className={`rounded-lg border px-3 py-1.5 text-xs font-medium ${stacked ? 'w-full text-left' : ''} ${
+          selectMode ? 'border-accent bg-accent-soft text-accent' : 'border-neutral-300 text-neutral-600 hover:bg-neutral-100'
+        }`}
+      >
+        {selectMode ? 'Annuler la sélection' : '☑ Sélectionner'}
+      </button>
+      {!CATEGORY_BOARD_TYPES.has(boardType) && (
+        <select
+          value={categoryFilter}
+          onChange={(e) => setCategoryFilter(e.target.value)}
+          aria-label="Filtrer par catégorie"
+          className={`rounded-lg border border-neutral-300 bg-surface px-2 py-1.5 text-xs text-neutral-600 outline-none focus:border-accent ${stacked ? 'w-full' : ''}`}
+        >
+          <option value="all">Toutes catégories</option>
+          <option value="vendeur">Vendeur</option>
+          <option value="acheteur">Acheteur</option>
+          <option value="investisseur_france">Investisseur France</option>
+          <option value="investisseur_dubai">Investisseur Dubaï</option>
+          <option value="investisseur_georgie">Investisseur Géorgie</option>
+        </select>
+      )}
+      {members.length > 0 && (
+        <AgentFilterDropdown
+          members={members}
+          selected={agentFilter}
+          onChange={setAgentFilter}
+          currentUserId={currentUserId}
+          isOwner={isOwner}
+          stacked={stacked}
+        />
+      )}
+    </>
+  )
+}
+
 // Sélection multiple d'agents pour filtrer le tableau — remplace l'ancien
 // <select> à choix unique (qui dupliquait "À moi" et son propre nom dans la
 // liste). Aucun agent coché = "Tous les agents".
@@ -345,12 +424,14 @@ function AgentFilterDropdown({
   onChange,
   currentUserId,
   isOwner = false,
+  stacked = false,
 }: {
   members: BoardMember[]
   selected: Set<string>
   onChange: (next: Set<string>) => void
   currentUserId?: string
   isOwner?: boolean
+  stacked?: boolean
 }) {
   const [open, setOpen] = useState(false)
 
@@ -372,7 +453,7 @@ function AgentFilterDropdown({
 
   return (
     <div
-      className="relative"
+      className={`relative ${stacked ? 'w-full' : ''}`}
       onBlur={(e) => {
         if (!e.currentTarget.contains(e.relatedTarget as Node)) setOpen(false)
       }}
@@ -382,7 +463,7 @@ function AgentFilterDropdown({
         onClick={() => setOpen((v) => !v)}
         aria-label="Filtrer par agent"
         aria-expanded={open}
-        className={`rounded-lg border px-2 py-1.5 text-xs ${
+        className={`rounded-lg border px-2 py-1.5 text-xs ${stacked ? 'w-full text-left' : ''} ${
           selected.size > 0
             ? 'border-accent bg-accent-soft text-accent'
             : 'border-neutral-300 bg-surface text-neutral-600 hover:bg-neutral-100'
@@ -888,6 +969,26 @@ function CardItem({
           <span className="min-w-0 truncate font-medium text-neutral-900">{card.name}</span>
         </div>
         <div className="flex shrink-0 items-center gap-1">
+          {/* Appeler en un tap sans ouvrir la fiche — la carte entière est un
+              lien de navigation (draggable en plus), donc un vrai <a
+              href="tel:"> imbriqué serait un <a> dans un <a> (HTML invalide) ;
+              un bouton qui bloque la navigation/le drag fait la même chose
+              proprement. */}
+          {card.phone && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                window.location.href = telHref(card.phone)
+              }}
+              aria-label={`Appeler ${card.name}`}
+              title="Appeler"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-sm leading-none text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700"
+            >
+              📞
+            </button>
+          )}
           {!!columns?.length && onMove && (
             <MoveMenu
               columns={columns}

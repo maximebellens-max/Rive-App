@@ -38,12 +38,12 @@ export default function TenantsEditor({ initial }: { initial: Tenant[] }) {
               value={t.nom}
               onChange={(e) => update(i, { nom: e.target.value })}
               placeholder="Nom du locataire"
-              className="flex-1 rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-accent"
+              className="flex-1 rounded-lg border border-neutral-300 px-3 py-2 text-base outline-none focus:border-accent"
             />
             <select
               value={t.statut}
               onChange={(e) => update(i, { statut: e.target.value })}
-              className="rounded-lg border border-neutral-300 px-2 py-2 text-sm outline-none focus:border-accent"
+              className="rounded-lg border border-neutral-300 px-2 py-2 text-base outline-none focus:border-accent"
             >
               {STATUT_OPTIONS.map((o) => (
                 <option key={o.value} value={o.value}>

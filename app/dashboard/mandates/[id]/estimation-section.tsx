@@ -48,7 +48,7 @@ type Mandate = {
 }
 
 const inputClass =
-  'rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-accent focus:ring-1 focus:ring-accent'
+  'rounded-lg border border-neutral-300 px-3 py-2 text-base outline-none focus:border-accent focus:ring-1 focus:ring-accent'
 
 // Aucun des trois portails n'a d'API publique, et aucun n'expose un
 // paramètre d'URL fiable pour filtrer par secteur (chaque portail a son

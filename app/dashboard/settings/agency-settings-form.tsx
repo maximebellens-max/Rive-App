@@ -27,7 +27,7 @@ type Agency = {
 }
 
 const inputClass =
-  'rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-accent focus:ring-1 focus:ring-accent'
+  'rounded-lg border border-neutral-300 px-3 py-2 text-base outline-none focus:border-accent focus:ring-1 focus:ring-accent'
 const labelClass = 'text-sm font-medium text-neutral-700'
 
 export default function AgencySettingsForm({ agency }: { agency: Agency }) {
@@ -74,7 +74,7 @@ export default function AgencySettingsForm({ agency }: { agency: Agency }) {
           </div>
           <div className="flex flex-col gap-1.5">
             <label className={labelClass}>Téléphone</label>
-            <input name="phone" defaultValue={agency.phone} className={inputClass} />
+            <input name="phone" type="tel" defaultValue={agency.phone} className={inputClass} />
           </div>
           <div className="flex flex-col gap-1.5">
             <label className={labelClass}>Email</label>

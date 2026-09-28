@@ -72,7 +72,7 @@ export default function MessageSection({
         <select
           value={selectedId}
           onChange={(e) => setSelectedId(e.target.value)}
-          className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-accent"
+          className="rounded-lg border border-neutral-300 px-3 py-2 text-base outline-none focus:border-accent"
         >
           {templates.map((t) => (
             <option key={t.id} value={t.id}>
@@ -92,13 +92,13 @@ export default function MessageSection({
       {generated && (
         <div className="flex flex-col gap-2">
           {generated.subject && (
-            <input readOnly value={generated.subject} className="rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm" />
+            <input readOnly value={generated.subject} className="rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 text-base" />
           )}
           <textarea
             readOnly
             value={generated.body}
             rows={4}
-            className="rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm"
+            className="rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 text-base"
           />
           <button
             type="button"

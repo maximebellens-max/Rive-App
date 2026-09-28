@@ -273,7 +273,7 @@ function AppointmentModal({
               value={date}
               onChange={(e) => setDate(e.target.value)}
               required
-              className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-accent"
+              className="rounded-lg border border-neutral-300 px-3 py-2 text-base outline-none focus:border-accent"
             />
           </div>
 
@@ -288,7 +288,7 @@ function AppointmentModal({
               <input
                 name="appointment_time"
                 type="time"
-                className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-accent"
+                className="rounded-lg border border-neutral-300 px-3 py-2 text-base outline-none focus:border-accent"
               />
             </div>
             <div className="flex flex-[2] flex-col gap-1">
@@ -296,7 +296,7 @@ function AppointmentModal({
               <input
                 name="label"
                 placeholder="RDV, appel, visite…"
-                className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-accent"
+                className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-base outline-none focus:border-accent"
               />
             </div>
           </div>
@@ -306,7 +306,7 @@ function AppointmentModal({
             <input
               name="lieu"
               placeholder="Adresse, agence, visio…"
-              className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-accent"
+              className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-base outline-none focus:border-accent"
             />
           </div>
 
@@ -426,7 +426,7 @@ function LeadCombobox({ options, large }: { options: LeadOption[]; large?: boole
   }, [query, selected, options])
 
   const inputClass = large
-    ? 'w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-accent'
+    ? 'w-full rounded-lg border border-neutral-300 px-3 py-2 text-base outline-none focus:border-accent'
     : 'w-full rounded border border-neutral-300 px-1 py-1 text-[11px] outline-none focus:border-accent'
   const itemClass = large
     ? 'block w-full truncate px-3 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-100'

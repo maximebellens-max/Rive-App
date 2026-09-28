@@ -5,7 +5,7 @@ import { updateTemplate, deleteTemplate } from '@/app/actions/templates'
 
 type Template = { id: string; name: string; channel: string; subject: string; body: string }
 
-const inputClass = 'rounded-lg border border-neutral-300 px-2.5 py-1.5 text-sm outline-none focus:border-accent'
+const inputClass = 'rounded-lg border border-neutral-300 px-2.5 py-1.5 text-base outline-none focus:border-accent'
 
 export default function TemplateRow({ template }: { template: Template }) {
   const [editing, setEditing] = useState(false)

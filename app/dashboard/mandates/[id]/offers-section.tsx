@@ -14,7 +14,7 @@ type Offer = {
 type BuyerOption = { id: string; name: string }
 
 const inputClass =
-  'rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-accent focus:ring-1 focus:ring-accent'
+  'rounded-lg border border-neutral-300 px-3 py-2 text-base outline-none focus:border-accent focus:ring-1 focus:ring-accent'
 
 const STATUS_CLASS: Record<string, string> = {
   pending: 'bg-warn-soft text-warn',

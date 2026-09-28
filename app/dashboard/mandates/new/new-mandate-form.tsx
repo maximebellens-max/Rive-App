@@ -17,7 +17,7 @@ type Lead = {
 }
 
 const inputClass =
-  'rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-accent focus:ring-1 focus:ring-accent'
+  'rounded-lg border border-neutral-300 px-3 py-2 text-base outline-none focus:border-accent focus:ring-1 focus:ring-accent'
 
 export default function NewMandateForm({ leads, draft = false }: { leads: Lead[]; draft?: boolean }) {
   const [state, action, pending] = useActionState<MandateFormState, FormData>(
@@ -142,7 +142,7 @@ export default function NewMandateForm({ leads, draft = false }: { leads: Lead[]
                   className={inputClass}
                 />
                 <input name="new_lead_last_name" placeholder="Nom (facultatif)" className={inputClass} />
-                <input name="new_lead_phone" placeholder="Téléphone" className={inputClass} />
+                <input name="new_lead_phone" type="tel" placeholder="Téléphone" className={inputClass} />
                 <input
                   name="new_lead_email"
                   type="email"

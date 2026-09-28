@@ -34,12 +34,14 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     <ToastContext.Provider value={{ push }}>
       {children}
       {/* Positionné au-dessus de la barre de raccourcis mobile (voir
-          mobile-bottom-nav.tsx) et protégé de l'indicateur d'accueil iPhone
-          par la marge de sécurité — sinon le toast serait à moitié caché
-          derrière la barre sur les téléphones récents. */}
+          mobile-bottom-nav.tsx) ET du bouton "Enregistrer" fixé en bas de la
+          fiche prospect sur mobile (voir lead-edit-form.tsx) — sans cette
+          marge supplémentaire, un toast déclenché depuis ce bouton
+          s'afficherait pile dessus. Protégé aussi de l'indicateur d'accueil
+          iPhone par la marge de sécurité. */}
       <div
         aria-live="polite"
-        className="pointer-events-none fixed inset-x-0 bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-[60] flex flex-col items-center gap-2 px-4 md:bottom-6"
+        className="pointer-events-none fixed inset-x-0 bottom-[calc(8.5rem+env(safe-area-inset-bottom))] z-[60] flex flex-col items-center gap-2 px-4 md:bottom-6"
       >
         {items.map((t) => (
           <div

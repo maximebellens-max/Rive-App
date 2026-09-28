@@ -52,7 +52,7 @@ type Mandate = {
 }
 
 const inputClass =
-  'rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-accent focus:ring-1 focus:ring-accent'
+  'rounded-lg border border-neutral-300 px-3 py-2 text-base outline-none focus:border-accent focus:ring-1 focus:ring-accent'
 const labelClass = 'text-sm font-medium text-neutral-700'
 const cardClass = 'flex flex-col gap-4 rounded-2xl border border-neutral-200 bg-surface p-6 shadow-sm'
 const detailsClass = 'group rounded-2xl border border-neutral-200 bg-surface shadow-sm'

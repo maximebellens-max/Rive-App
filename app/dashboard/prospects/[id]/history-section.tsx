@@ -4,7 +4,7 @@ import { formatDate } from '@/lib/rive/mandates'
 type Entry = { id: string; entry_date: string; text: string }
 
 const inputClass =
-  'rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-accent focus:ring-1 focus:ring-accent'
+  'rounded-lg border border-neutral-300 px-3 py-2 text-base outline-none focus:border-accent focus:ring-1 focus:ring-accent'
 
 export default function HistorySection({ leadId, entries }: { leadId: string; entries: Entry[] }) {
   const addWithId = addLeadHistoryEntry.bind(null, leadId)

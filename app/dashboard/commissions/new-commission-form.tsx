@@ -26,7 +26,7 @@ export default function NewCommissionForm({ options }: { options: MandateOption[
         <select
           name="mandate_id"
           required
-          className="w-72 rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-accent"
+          className="w-72 rounded-lg border border-neutral-300 px-3 py-2 text-base outline-none focus:border-accent"
         >
           <option value="">— Choisir un mandat —</option>
           {options.map((o) => (
@@ -41,7 +41,7 @@ export default function NewCommissionForm({ options }: { options: MandateOption[
         <input
           name="amount"
           type="number"
-          className="w-32 rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-accent"
+          className="w-32 rounded-lg border border-neutral-300 px-3 py-2 text-base outline-none focus:border-accent"
         />
       </div>
       {state?.error && <p className="w-full text-sm text-danger">{state.error}</p>}

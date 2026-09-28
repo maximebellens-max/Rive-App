@@ -18,7 +18,7 @@ type Project = {
 }
 
 const inputClass =
-  'rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-accent focus:ring-1 focus:ring-accent'
+  'rounded-lg border border-neutral-300 px-3 py-2 text-base outline-none focus:border-accent focus:ring-1 focus:ring-accent'
 const labelClass = 'text-sm font-medium text-neutral-700'
 
 export default function InvestmentEditForm({ project }: { project: Project }) {

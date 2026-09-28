@@ -16,7 +16,7 @@ type Party = {
 }
 
 const inputClass =
-  'rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-accent focus:ring-1 focus:ring-accent'
+  'rounded-lg border border-neutral-300 px-3 py-2 text-base outline-none focus:border-accent focus:ring-1 focus:ring-accent'
 
 export default function PartiesSection({ mandateId, parties }: { mandateId: string; parties: Party[] }) {
   const addWithId = addMandateParty.bind(null, mandateId)
@@ -68,7 +68,7 @@ export default function PartiesSection({ mandateId, parties }: { mandateId: stri
         <input name="birth_place" placeholder="Né(e) à" className={inputClass} />
         <input name="birth_date" type="date" className={inputClass} />
         <input name="nationality" placeholder="Nationalité" className={inputClass} />
-        <input name="phone" placeholder="Téléphone" className={inputClass} />
+        <input name="phone" type="tel" placeholder="Téléphone" className={inputClass} />
         <input name="email" type="email" placeholder="Email" className={`${inputClass} col-span-2`} />
         <button
           type="submit"

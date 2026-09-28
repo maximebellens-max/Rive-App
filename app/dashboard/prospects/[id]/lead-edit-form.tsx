@@ -394,6 +394,24 @@ export default function LeadEditForm({ lead, members = [] }: { lead: Lead; membe
       >
         {pending ? 'Enregistrement…' : justSaved && !state?.error ? '✓ Enregistré' : 'Enregistrer'}
       </button>
+
+      {/* Doublon du bouton ci-dessus, fixé en bas d'écran sur mobile
+          uniquement : ce formulaire compte une trentaine de champs, tout
+          redescendre jusqu'en bas pour enregistrer à chaque modification
+          était pénible. Reste masqué automatiquement quand un autre onglet
+          que "Fiche" est actif (l'attribut `hidden` posé par Tabs sur
+          l'ancêtre s'applique aussi à ce bouton, même en position fixed). */}
+      <div className="fixed inset-x-0 bottom-[4.75rem] z-40 border-t border-neutral-200 bg-surface px-4 py-3 md:hidden">
+        <button
+          type="submit"
+          disabled={pending}
+          className={`w-full rounded-lg px-5 py-2.5 text-sm font-medium transition disabled:opacity-60 ${
+            justSaved && !state?.error ? 'bg-good text-good-ink' : 'bg-accent text-accent-ink hover:bg-accent-hover'
+          }`}
+        >
+          {pending ? 'Enregistrement…' : justSaved && !state?.error ? '✓ Enregistré' : 'Enregistrer'}
+        </button>
+      </div>
     </form>
   )
 }

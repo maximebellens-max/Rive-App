@@ -6,7 +6,7 @@ import { PARTNER_ROLES } from '@/lib/rive/templates'
 
 type Partner = { id: string; name: string; role: string; phone: string; email: string; notes: string }
 
-const inputClass = 'rounded-lg border border-neutral-300 px-2.5 py-1.5 text-sm outline-none focus:border-accent'
+const inputClass = 'rounded-lg border border-neutral-300 px-2.5 py-1.5 text-base outline-none focus:border-accent'
 
 export default function PartnerRow({ partner }: { partner: Partner }) {
   const [editing, setEditing] = useState(false)
@@ -30,7 +30,7 @@ export default function PartnerRow({ partner }: { partner: Partner }) {
             </option>
           ))}
         </select>
-        <input name="phone" defaultValue={partner.phone} className={inputClass} />
+        <input name="phone" type="tel" defaultValue={partner.phone} className={inputClass} />
         <input name="email" defaultValue={partner.email} className={inputClass} />
         <input name="notes" defaultValue={partner.notes} className={`${inputClass} sm:col-span-2`} />
         <div className="flex gap-2 sm:col-span-2">

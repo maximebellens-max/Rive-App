@@ -25,12 +25,12 @@ export default function PartnerForm() {
         name="name"
         placeholder="Nom"
         required
-        className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-accent"
+        className="rounded-lg border border-neutral-300 px-3 py-2 text-base outline-none focus:border-accent"
       />
       <select
         name="role"
         defaultValue={PARTNER_ROLES[0]}
-        className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-accent"
+        className="rounded-lg border border-neutral-300 px-3 py-2 text-base outline-none focus:border-accent"
       >
         {PARTNER_ROLES.map((r) => (
           <option key={r} value={r}>
@@ -40,19 +40,20 @@ export default function PartnerForm() {
       </select>
       <input
         name="phone"
+        type="tel"
         placeholder="Téléphone"
-        className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-accent"
+        className="rounded-lg border border-neutral-300 px-3 py-2 text-base outline-none focus:border-accent"
       />
       <input
         name="email"
         type="email"
         placeholder="Email"
-        className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-accent"
+        className="rounded-lg border border-neutral-300 px-3 py-2 text-base outline-none focus:border-accent"
       />
       <input
         name="notes"
         placeholder="Notes"
-        className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-accent sm:col-span-2"
+        className="rounded-lg border border-neutral-300 px-3 py-2 text-base outline-none focus:border-accent sm:col-span-2"
       />
       {state?.error && <p className="text-sm text-danger sm:col-span-2">{state.error}</p>}
       <button

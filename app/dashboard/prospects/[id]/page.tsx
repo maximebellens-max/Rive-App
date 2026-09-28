@@ -5,6 +5,7 @@ import { leadMatchesBien, type MatchLead, type MatchMandate } from '@/lib/rive/m
 import { formatEUR } from '@/lib/rive/mandates'
 import { RECONTACT_THRESHOLD_DAYS, daysAgo } from '@/lib/rive/today'
 import { generateBriefingBrief, generateRelanceBrief, generateVisitReportBrief } from '@/lib/rive/ai-prompts'
+import { telHref, waHref } from '@/lib/rive/phone'
 import { saveAIBriefing, saveAIRelanceDraft, saveAIVisitReport } from '@/app/actions/ai'
 import { markLeadContacted } from '@/app/actions/pipelines'
 import { CATEGORY_LABEL, BOARD_LABELS as CATEGORY_LABEL_PLURAL } from '@/lib/rive/pipelines'
@@ -104,6 +105,34 @@ export default async function ProspectDetailPage({ params }: PageProps<'/dashboa
           )}
         </div>
         <div className="flex shrink-0 items-center gap-2">
+          {/* Appeler / WhatsApp en un tap — le numéro n'était jusque-là
+              affiché que dans l'onglet Fiche, à recopier à la main pour
+              composer. Surtout utile sur téléphone, là où l'appareil a
+              justement un vrai clavier de numérotation et WhatsApp installés. */}
+          {lead.phone && (
+            <>
+              <a
+                href={telHref(lead.phone)}
+                aria-label={`Appeler ${lead.name}`}
+                title="Appeler"
+                className="flex h-10 w-10 items-center justify-center rounded-lg border border-neutral-300 text-base text-neutral-600 hover:bg-neutral-100"
+              >
+                📞
+              </a>
+              {waHref(lead.phone) && (
+                <a
+                  href={waHref(lead.phone) as string}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={`Écrire à ${lead.name} sur WhatsApp`}
+                  title="WhatsApp"
+                  className="flex h-10 w-10 items-center justify-center rounded-lg border border-neutral-300 text-base text-neutral-600 hover:bg-neutral-100"
+                >
+                  💬
+                </a>
+              )}
+            </>
+          )}
           {isNewProspect && (
             <form action={markLeadContacted.bind(null, lead.id)}>
               <button
