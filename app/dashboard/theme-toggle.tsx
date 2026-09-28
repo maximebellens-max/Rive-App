@@ -63,7 +63,7 @@ export default function ThemeToggle() {
   // app/layout.tsx ; ce placeholder évite seulement un flash d'ICÔNE
   // incohérente le temps que l'effet ci-dessus lise localStorage.
   if (!mounted) {
-    return <span className="block h-8 w-8" aria-hidden="true" />
+    return <span className="block h-10 w-10" aria-hidden="true" />
   }
 
   return (
@@ -72,7 +72,7 @@ export default function ThemeToggle() {
       onClick={cycle}
       aria-label={MODE_LABEL[mode]}
       title={MODE_LABEL[mode]}
-      className="rounded-lg border border-neutral-300 p-1.5 text-neutral-600 hover:bg-neutral-100"
+      className="flex h-10 w-10 items-center justify-center rounded-lg border border-neutral-300 text-neutral-600 hover:bg-neutral-100"
     >
       {mode === 'light' && (
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

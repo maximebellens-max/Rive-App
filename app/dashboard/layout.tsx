@@ -6,10 +6,14 @@ import { createBoard } from '@/app/actions/boards'
 import NotificationBell, { type NotificationItem } from './notification-bell'
 import ThemeToggle from './theme-toggle'
 import SidebarNav from './sidebar-nav'
-import MobileNav from './mobile-nav'
+import { MobileNavTrigger, MobileNavDrawer } from './mobile-nav'
 import AccountMenu from './account-menu'
 import InstallPrompt from './_components/install-prompt'
 import GlobalSearch from './global-search'
+import { MobileNavProvider } from './_components/mobile-nav-context'
+import { ToastProvider } from './_components/toast'
+import HeaderQuickLinks from './_components/header-quick-links'
+import MobileBottomNav from './_components/mobile-bottom-nav'
 
 export default async function DashboardLayout({
   children,
@@ -63,38 +67,45 @@ export default async function DashboardLayout({
   }))
 
   return (
-    <div className="flex min-h-screen flex-col">
-      <header className="border-b border-neutral-200 bg-surface">
-        <div className="flex items-center gap-3 px-4 py-3">
-          <div className="flex shrink-0 items-center gap-1">
-            <MobileNav customBoards={customBoards ?? []} createBoard={createBoard} />
-            <Link href="/dashboard" className="text-lg font-semibold tracking-tight">
-              Rive
-            </Link>
+    <ToastProvider>
+      <MobileNavProvider>
+        <div className="flex min-h-screen flex-col">
+          <header className="border-b border-neutral-200 bg-surface">
+            <div className="flex items-center gap-3 px-4 py-3">
+              <div className="flex shrink-0 items-center gap-1">
+                <MobileNavTrigger />
+                <Link href="/dashboard" className="text-lg font-semibold tracking-tight">
+                  Rive
+                </Link>
+              </div>
+              <GlobalSearch />
+              <div className="flex shrink-0 items-center gap-2 text-sm text-neutral-500">
+                <HeaderQuickLinks />
+                <ThemeToggle />
+                <NotificationBell notifications={notifications} />
+                <AccountMenu
+                  name={profile?.full_name || ''}
+                  email={user.email || ''}
+                  agencyName={agencyName}
+                  avatarUrl={profile?.avatar_url}
+                  logoutAction={logout}
+                />
+              </div>
+            </div>
+          </header>
+          <MobileNavDrawer customBoards={customBoards ?? []} createBoard={createBoard} />
+          <div className="mx-auto w-full max-w-7xl px-4 pt-4">
+            <InstallPrompt />
           </div>
-          <GlobalSearch />
-          <div className="flex shrink-0 items-center gap-3 text-sm text-neutral-500">
-            <ThemeToggle />
-            <NotificationBell notifications={notifications} />
-            <AccountMenu
-              name={profile?.full_name || ''}
-              email={user.email || ''}
-              agencyName={agencyName}
-              avatarUrl={profile?.avatar_url}
-              logoutAction={logout}
-            />
+          <div className="mx-auto flex w-full max-w-7xl flex-1 gap-8 px-4 pt-8 pb-24 md:pb-8">
+            <aside className="hidden w-52 shrink-0 flex-col gap-6 md:flex">
+              <SidebarNav customBoards={customBoards ?? []} createBoard={createBoard} />
+            </aside>
+            <main className="min-w-0 flex-1">{children}</main>
           </div>
+          <MobileBottomNav />
         </div>
-      </header>
-      <div className="mx-auto w-full max-w-7xl px-4 pt-4">
-        <InstallPrompt />
-      </div>
-      <div className="mx-auto flex w-full max-w-7xl flex-1 gap-8 px-4 py-8">
-        <aside className="hidden w-52 shrink-0 flex-col gap-6 md:flex">
-          <SidebarNav customBoards={customBoards ?? []} createBoard={createBoard} />
-        </aside>
-        <main className="min-w-0 flex-1">{children}</main>
-      </div>
-    </div>
+      </MobileNavProvider>
+    </ToastProvider>
   )
 }
