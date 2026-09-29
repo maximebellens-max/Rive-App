@@ -124,8 +124,14 @@ export default async function TodayPage() {
   // dossiers du client de l'agent connecté (même filtre que les autres
   // widgets).
   const furnishingUpcoming = (furnishingRows ?? [])
-    .filter((r) => (r.leads as { assigned_to: string | null }[] | null)?.[0]?.assigned_to === userId)
+    // lead_id est une relation simple (un seul prospect par dossier) :
+    // Supabase/PostgREST renvoie donc `leads` comme un objet unique, pas un
+    // tableau (voir ameublement/page.tsx) — le caster en tableau et lire [0]
+    // renvoyait toujours undefined, donc ce filtre excluait systématiquement
+    // tous les dossiers, quelles que soient leurs dates.
+    .filter((r) => (r.leads as unknown as { assigned_to: string | null } | null)?.assigned_to === userId)
     .map((r) => {
+      const lead = r.leads as unknown as { name: string; category: string | null } | null
       const milestone = nearestUpcomingMilestone([
         { label: 'Livraison IKEA', date: r.date_livraison_ikea },
         { label: 'Livraison E.D', date: r.date_livraison_ed },
@@ -135,8 +141,8 @@ export default async function TodayPage() {
       return {
         id: r.id,
         leadId: r.lead_id,
-        leadName: (r.leads as { name: string }[] | null)?.[0]?.name ?? 'Client',
-        category: (r.leads as { category: string | null }[] | null)?.[0]?.category ?? null,
+        leadName: lead?.name ?? 'Client',
+        category: lead?.category ?? null,
         milestone,
       }
     })
@@ -144,8 +150,11 @@ export default async function TodayPage() {
     .sort((a, b) => a.milestone.date.localeCompare(b.milestone.date))
 
   const kitchenUpcoming = (kitchenRows ?? [])
-    .filter((r) => (r.leads as { assigned_to: string | null }[] | null)?.[0]?.assigned_to === userId)
+    // Même remarque que pour furnishingUpcoming ci-dessus : `leads` est un
+    // objet unique, pas un tableau.
+    .filter((r) => (r.leads as unknown as { assigned_to: string | null } | null)?.assigned_to === userId)
     .map((r) => {
+      const lead = r.leads as unknown as { name: string; category: string | null } | null
       const milestone = nearestUpcomingMilestone([
         { label: 'Livraison', date: r.date_livraison },
         { label: 'Début pose', date: r.date_pose_debut },
@@ -155,8 +164,8 @@ export default async function TodayPage() {
       return {
         id: r.id,
         leadId: r.lead_id,
-        leadName: (r.leads as { name: string }[] | null)?.[0]?.name ?? 'Client',
-        category: (r.leads as { category: string | null }[] | null)?.[0]?.category ?? null,
+        leadName: lead?.name ?? 'Client',
+        category: lead?.category ?? null,
         milestone,
       }
     })
@@ -164,8 +173,11 @@ export default async function TodayPage() {
     .sort((a, b) => a.milestone.date.localeCompare(b.milestone.date))
 
   const worksUpcoming = (worksRows ?? [])
-    .filter((r) => (r.leads as { assigned_to: string | null }[] | null)?.[0]?.assigned_to === userId)
+    // Même remarque que pour furnishingUpcoming ci-dessus : `leads` est un
+    // objet unique, pas un tableau.
+    .filter((r) => (r.leads as unknown as { assigned_to: string | null } | null)?.assigned_to === userId)
     .map((r) => {
+      const lead = r.leads as unknown as { name: string; category: string | null } | null
       const milestone = nearestUpcomingMilestone([
         { label: 'Début travaux', date: r.echeance_debut },
         { label: 'Fin travaux', date: r.echeance_fin },
@@ -174,8 +186,8 @@ export default async function TodayPage() {
       return {
         id: r.id,
         leadId: r.lead_id,
-        leadName: (r.leads as { name: string }[] | null)?.[0]?.name ?? 'Client',
-        category: (r.leads as { category: string | null }[] | null)?.[0]?.category ?? null,
+        leadName: lead?.name ?? 'Client',
+        category: lead?.category ?? null,
         milestone,
       }
     })
