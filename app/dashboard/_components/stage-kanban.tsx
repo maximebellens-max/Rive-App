@@ -77,9 +77,29 @@ export default function StageKanban({
                 >
                   <div className="flex items-start justify-between gap-2">
                     <span className="min-w-0 truncate font-medium text-neutral-900">{card.title}</span>
-                    {card.assignedName && (
-                      <Avatar name={card.assignedName} avatarUrl={card.assignedAvatarUrl} size={18} />
-                    )}
+                    <div className="flex shrink-0 items-center gap-1">
+                      {card.assignedName && (
+                        <Avatar name={card.assignedName} avatarUrl={card.assignedAvatarUrl} size={18} />
+                      )}
+                      {/* Le glisser-déposer HTML5 natif (draggable/onDragStart ci-dessus) ne se
+                          déclenche pas au doigt sur mobile/tactile — sans ce menu, il n'existait
+                          aucun moyen de faire avancer un mandat ou une commission d'étape depuis
+                          un téléphone. Masqué pour les cartes non-draggable (ex. projet
+                          investisseur) : `onMove` appellerait une mutation qui ne trouverait pas
+                          leur id et échouerait en silence (voir StageCard.draggable ci-dessus). */}
+                      {card.draggable !== false && (
+                        <StageMoveMenu
+                          columns={columns}
+                          currentValue={override[card.id] ?? card.meta}
+                          onMove={(stage) => {
+                            setOverride((prev) => ({ ...prev, [card.id]: stage }))
+                            startTransition(() => {
+                              onMove(card.id, stage)
+                            })
+                          }}
+                        />
+                      )}
+                    </div>
                   </div>
                   {card.subtitle && <span className="text-xs text-neutral-500">{card.subtitle}</span>}
                 </Link>
@@ -119,6 +139,76 @@ function DropZone({
       }`}
     >
       {children}
+    </div>
+  )
+}
+
+// Menu "⇄ Déplacer vers" — équivalent tactile du glisser-déposer, sur le
+// même principe que MoveMenu dans pipelines/kanban-board.tsx (colonnes
+// libres, `id`/`name`) mais adapté aux colonnes fixes de StageKanban
+// (`value`/`label`). La carte entière est un <Link> : preventDefault +
+// stopPropagation empêchent un clic sur ce bouton de déclencher la
+// navigation vers la fiche.
+function StageMoveMenu({
+  columns,
+  currentValue,
+  onMove,
+}: {
+  columns: StageColumn[]
+  currentValue: string | undefined
+  onMove: (value: string) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const targets = columns.filter((c) => c.value !== currentValue)
+
+  if (!targets.length) return null
+
+  return (
+    <div
+      className="relative"
+      onBlur={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node)) setOpen(false)
+      }}
+    >
+      <button
+        type="button"
+        onClick={(e) => {
+          e.preventDefault()
+          e.stopPropagation()
+          setOpen((v) => !v)
+        }}
+        aria-label="Déplacer vers une autre étape"
+        aria-expanded={open}
+        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-sm leading-none text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700"
+      >
+        ⇄
+      </button>
+      {open && (
+        <div className="absolute right-0 top-6 z-20 w-44 rounded-lg border border-neutral-200 bg-surface p-1 shadow-md">
+          <p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-neutral-400">
+            Déplacer vers
+          </p>
+          {targets.map((c) => (
+            <button
+              key={c.value}
+              type="button"
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                setOpen(false)
+                onMove(c.value)
+              }}
+              className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs text-neutral-700 hover:bg-neutral-100"
+            >
+              <span
+                className="h-2 w-2 shrink-0 rounded-full"
+                style={{ backgroundColor: COLUMN_COLOR_HEX[c.color] ?? '#64748b' }}
+              />
+              <span className="truncate">{c.label}</span>
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

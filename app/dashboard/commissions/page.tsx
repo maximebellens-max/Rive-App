@@ -1,8 +1,7 @@
-import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { formatEUR, formatDate } from '@/lib/rive/mandates'
 import { monthlySignedCounts, conversionRate } from '@/lib/rive/commissions'
-import CommissionsView from './commissions-view'
+import CommissionsView, { type CommissionRow } from './commissions-view'
 import NewCommissionForm from './new-commission-form'
 import type { StageCard } from '../_components/stage-kanban'
 
@@ -55,46 +54,24 @@ export default async function CommissionsPage() {
     }
   })
 
-  const table = (
-    <div className="overflow-x-auto rounded-2xl border border-neutral-200 bg-surface shadow-sm">
-      <table className="w-full text-left text-sm">
-        <thead className="border-b border-neutral-200 text-neutral-500">
-          <tr>
-            <th className="sticky left-0 z-20 whitespace-nowrap border-r border-neutral-200 bg-surface px-4 py-3 font-medium">
-              Mandat
-            </th>
-            <th className="px-4 py-3 font-medium">Montant</th>
-            <th className="px-4 py-3 font-medium">Statut</th>
-            <th className="px-4 py-3 font-medium">Date de paiement</th>
-          </tr>
-        </thead>
-        <tbody>
-          {!commissions?.length && (
-            <tr>
-              <td colSpan={4} className="px-4 py-8 text-center text-neutral-400">
-                Aucune commission pour l&apos;instant.
-              </td>
-            </tr>
-          )}
-          {commissions?.map((c) => {
-            const mandate = c.mandates as unknown as { id: string; address: string; property_type: string } | null
-            return (
-              <tr key={c.id} className="group border-b border-neutral-100 last:border-0 hover:bg-neutral-50">
-                <td className="sticky left-0 z-10 whitespace-nowrap border-r border-neutral-200 bg-surface px-4 py-3 group-hover:bg-neutral-50">
-                  <Link href={`/dashboard/commissions/${c.id}`} className="font-medium text-neutral-900 hover:underline">
-                    {mandate?.address || mandate?.property_type || 'Mandat'}
-                  </Link>
-                </td>
-                <td className="px-4 py-3 tabular-nums text-neutral-600">{c.amount ? formatEUR(c.amount) : '—'}</td>
-                <td className="px-4 py-3 text-neutral-600">{c.paid_date ? 'Payé' : 'En attente'}</td>
-                <td className="px-4 py-3 text-neutral-600">{c.paid_date ? formatDate(c.paid_date) : '—'}</td>
-              </tr>
-            )
-          })}
-        </tbody>
-      </table>
-    </div>
-  )
+  // Mise en forme faite ici (côté serveur) pour que CommissionsView (client,
+  // pour le tri/la recherche/l'export CSV) n'ait plus qu'à afficher des
+  // chaînes et des nombres déjà prêts.
+  const commissionRows: CommissionRow[] = (commissions ?? []).map((c) => {
+    const mandate = c.mandates as unknown as { id: string; address: string; property_type: string } | null
+    const title = mandate?.address || mandate?.property_type || 'Mandat'
+    return {
+      id: c.id,
+      href: `/dashboard/commissions/${c.id}`,
+      title,
+      searchText: title.toLowerCase(),
+      amount: c.amount,
+      amountLabel: c.amount ? formatEUR(c.amount) : '',
+      statusLabel: c.paid_date ? 'Payé' : 'En attente',
+      paidDate: c.paid_date,
+      paidDateLabel: c.paid_date ? formatDate(c.paid_date) : null,
+    }
+  })
 
   return (
     <div className="flex flex-col gap-6">
@@ -136,7 +113,7 @@ export default async function CommissionsPage() {
 
       <NewCommissionForm options={options} />
 
-      <CommissionsView table={table} cards={cards} />
+      <CommissionsView rows={commissionRows} cards={cards} />
     </div>
   )
 }

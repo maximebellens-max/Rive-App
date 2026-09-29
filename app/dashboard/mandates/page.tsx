@@ -8,17 +8,8 @@ import {
   formatEUR,
   formatDate,
 } from '@/lib/rive/mandates'
-import MandatesView from './mandates-view'
-import Avatar from '../_components/avatar'
-import EmptyState from '../_components/empty-state'
+import MandatesView, { type MandateRow } from './mandates-view'
 import type { StageCard } from '../_components/stage-kanban'
-
-const URGENCY_CLASS: Record<string, string> = {
-  overdue: 'bg-danger-soft text-danger',
-  soon: 'bg-warn-soft text-warn',
-  ok: 'bg-neutral-100 text-neutral-600',
-  none: 'bg-neutral-100 text-neutral-400',
-}
 
 export default async function MandatesPage() {
   const supabase = await createClient()
@@ -83,104 +74,51 @@ export default async function MandatesPage() {
     draggable: false,
   }))
 
-  const table = (
-    <div className="overflow-x-auto rounded-2xl border border-neutral-200 bg-surface shadow-sm">
-      <table className="w-full text-left text-sm">
-          <thead className="border-b border-neutral-200 text-neutral-500">
-            <tr>
-              {/* Colonne figée (sticky) pendant le défilement horizontal — sans
-                  elle, sur petit écran, on perd de vue à qui appartient la ligne
-                  dès qu'on scrolle vers la droite. */}
-              <th className="sticky left-0 z-20 whitespace-nowrap border-r border-neutral-200 bg-surface px-4 py-3 font-medium">
-                Bien / Client
-              </th>
-              <th className="px-4 py-3 font-medium">Agent</th>
-              <th className="px-4 py-3 font-medium">Type</th>
-              <th className="px-4 py-3 font-medium">Prix</th>
-              <th className="px-4 py-3 font-medium">Exclusivité</th>
-              <th className="px-4 py-3 font-medium">Étape</th>
-              <th className="px-4 py-3 font-medium">Renouvellement</th>
-            </tr>
-          </thead>
-          <tbody>
-            {!mandates?.length && !investorRows.length && (
-              <tr>
-                <td colSpan={7}>
-                  <EmptyState
-                    icon="📄"
-                    title="Aucun mandat pour l'instant"
-                    subtitle="Les mandats de vente et de recherche signés apparaîtront ici."
-                  />
-                </td>
-              </tr>
-            )}
-            {investorRows.map((r) => (
-              <tr key={`investment-${r.id}`} className="group border-b border-neutral-100 last:border-0 hover:bg-neutral-50">
-                <td className="sticky left-0 z-10 whitespace-nowrap border-r border-neutral-200 bg-surface px-4 py-3 group-hover:bg-neutral-50">
-                  <Link href={`/dashboard/investments/${r.id}`} className="font-medium text-neutral-900 hover:underline">
-                    {r.lead?.name || 'Prospect supprimé'}
-                  </Link>
-                </td>
-                <td className="px-4 py-3">
-                  <span className="text-neutral-300">—</span>
-                </td>
-                <td className="px-4 py-3">
-                  <span className="rounded-full bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-700">Investisseur</span>
-                </td>
-                <td className="px-4 py-3 tabular-nums text-neutral-600">
-                  {r.capaciteEmprunt ? formatEUR(r.capaciteEmprunt) : <span className="text-neutral-300">—</span>}
-                </td>
-                <td className="px-4 py-3 text-neutral-600">
-                  <span className="text-neutral-300">—</span>
-                </td>
-                <td className="px-4 py-3 text-neutral-600">Mandat</td>
-                <td className="px-4 py-3 text-neutral-600">
-                  {r.dateMandat ? formatDate(r.dateMandat) : <span className="text-neutral-300">—</span>}
-                </td>
-              </tr>
-            ))}
-            {mandates?.map((m) => {
-              const notice = mandateIsActive(m.stage)
-                ? mandateNoticeDate(m.signed_date, m.duration_months, m.renewal_notice_days)
-                : null
-              const urgency = dateUrgency(notice)
-              const agent = m.assigned_to ? memberById.get(m.assigned_to) : undefined
-              return (
-                <tr key={m.id} className="group border-b border-neutral-100 last:border-0 hover:bg-neutral-50">
-                  <td className="sticky left-0 z-10 whitespace-nowrap border-r border-neutral-200 bg-surface px-4 py-3 group-hover:bg-neutral-50">
-                    <Link href={`/dashboard/mandates/${m.id}`} className="font-medium text-neutral-900 hover:underline">
-                      {m.address || m.property_type || 'Mandat sans adresse'}
-                    </Link>
-                  </td>
-                  <td className="px-4 py-3">
-                    {agent ? (
-                      <Avatar name={agent.full_name || 'Agent'} avatarUrl={agent.avatar_url} size={22} />
-                    ) : (
-                      <span className="text-neutral-300">—</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-neutral-600 capitalize">{m.type}</td>
-                  <td className="px-4 py-3 tabular-nums text-neutral-600">{formatEUR(m.price)}</td>
-                  <td className="px-4 py-3 text-neutral-600">{exclusivityLabel(m.exclusivity) || '—'}</td>
-                  <td className="px-4 py-3 text-neutral-600">
-                    {m.stage === 'vendu' ? 'Vendu' : m.stage === 'compromis_signe' ? 'Compromis signé' : 'En cours'}
-                  </td>
-                  <td className="px-4 py-3">
-                    {notice ? (
-                      <span className={`rounded-full px-2.5 py-1 text-xs font-medium tabular-nums ${URGENCY_CLASS[urgency]}`}>
-                        {formatDate(notice)}
-                      </span>
-                    ) : (
-                      <span className="text-neutral-300">—</span>
-                    )}
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-      </table>
-    </div>
-  )
+  // Une ligne par mandat classique + une par projet investisseur "en mandat" —
+  // toute la mise en forme se fait ici (côté serveur) pour que MandatesView
+  // (client, pour le tri/la recherche/l'export CSV) n'ait plus qu'à afficher
+  // des chaînes et des nombres déjà prêts.
+  const investorMandateRows: MandateRow[] = investorRows.map((r) => ({
+    id: `investment-${r.id}`,
+    href: `/dashboard/investments/${r.id}`,
+    title: r.lead?.name || 'Prospect supprimé',
+    searchText: (r.lead?.name || '').toLowerCase(),
+    agentName: null,
+    agentAvatarUrl: null,
+    typeLabel: 'Investisseur',
+    price: r.capaciteEmprunt,
+    priceLabel: r.capaciteEmprunt ? formatEUR(r.capaciteEmprunt) : '',
+    exclusivityLabel: null,
+    stageLabel: 'Mandat',
+    noticeDate: r.dateMandat,
+    noticeLabel: r.dateMandat ? formatDate(r.dateMandat) : null,
+    urgency: 'none',
+  }))
+
+  const mandateRows: MandateRow[] = (mandates ?? []).map((m) => {
+    const notice = mandateIsActive(m.stage)
+      ? mandateNoticeDate(m.signed_date, m.duration_months, m.renewal_notice_days)
+      : null
+    const urgency = dateUrgency(notice)
+    const agent = m.assigned_to ? memberById.get(m.assigned_to) : undefined
+    const title = m.address || m.property_type || 'Mandat sans adresse'
+    return {
+      id: m.id,
+      href: `/dashboard/mandates/${m.id}`,
+      title,
+      searchText: `${title} ${agent?.full_name || ''}`.toLowerCase(),
+      agentName: agent?.full_name || null,
+      agentAvatarUrl: agent?.avatar_url || null,
+      typeLabel: m.type === 'vente' ? 'Vente' : 'Recherche',
+      price: m.price,
+      priceLabel: formatEUR(m.price),
+      exclusivityLabel: exclusivityLabel(m.exclusivity) || null,
+      stageLabel: m.stage === 'vendu' ? 'Vendu' : m.stage === 'compromis_signe' ? 'Compromis signé' : 'En cours',
+      noticeDate: notice ? notice.toISOString() : null,
+      noticeLabel: notice ? formatDate(notice) : null,
+      urgency,
+    }
+  })
 
   return (
     <div className="flex flex-col gap-6">
@@ -201,7 +139,7 @@ export default async function MandatesPage() {
         </Link>
       </div>
 
-      <MandatesView table={table} cards={[...cards, ...investorCards]} />
+      <MandatesView rows={[...investorMandateRows, ...mandateRows]} cards={[...cards, ...investorCards]} />
     </div>
   )
 }

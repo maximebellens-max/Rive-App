@@ -3,11 +3,12 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { DIAGNOSTIC_TYPES, type Diagnostics, type Copropriete, type OriginePropriete } from '@/lib/rive/mandates'
+import { MANDATE_FILES_BUCKET, saveMandateFile } from '@/lib/rive/mandate-files'
 
 // Bucket de stockage privé créé par la migration 00000000000045 — jamais
 // public, l'accès passe toujours par une URL signée générée côté serveur
 // (voir mandateFileUrl ci-dessous, utilisée par la page fiche mandat).
-const BUCKET = 'mandate-files'
+const BUCKET = MANDATE_FILES_BUCKET
 
 function str(formData: FormData, key: string): string {
   return String(formData.get(key) || '').trim()
@@ -127,36 +128,7 @@ export async function uploadMandateFile(mandateId: string, formData: FormData) {
   const diagnosticType = category === 'document' ? str(formData, 'diagnostic_type') || null : null
   const label = str(formData, 'label') || file.name
 
-  const dot = file.name.lastIndexOf('.')
-  const ext = dot >= 0 ? file.name.slice(dot) : ''
-  const storagePath = `${agencyId}/${mandateId}/${crypto.randomUUID()}${ext}`
-
-  const { error: uploadError } = await supabase.storage
-    .from(BUCKET)
-    .upload(storagePath, file, { contentType: file.type || undefined })
-  if (uploadError) {
-    console.error('[mandate-files] Échec de l’upload :', uploadError)
-    return
-  }
-
-  const { count } = await supabase
-    .from('mandate_files')
-    .select('*', { count: 'exact', head: true })
-    .eq('mandate_id', mandateId)
-    .eq('category', category)
-
-  await supabase.from('mandate_files').insert({
-    agency_id: agencyId,
-    mandate_id: mandateId,
-    category,
-    diagnostic_type: diagnosticType,
-    label,
-    storage_path: storagePath,
-    content_type: file.type || null,
-    size_bytes: file.size,
-    position: count ?? 0,
-    uploaded_by: userId,
-  })
+  await saveMandateFile(supabase, { agencyId, mandateId, userId, file, category, diagnosticType, label })
 
   revalidatePath(`/dashboard/mandates/${mandateId}`)
 }

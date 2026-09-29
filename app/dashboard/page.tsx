@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { getAuthedProfile } from '@/lib/supabase/session'
 import { formatDate, formatEUR, feeForPrice } from '@/lib/rive/mandates'
 import { BOARD_TYPES } from '@/lib/rive/pipelines'
@@ -304,6 +305,35 @@ export default async function TodayPage() {
 
   const now = new Date()
   const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+  const nowTimeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+
+  // ---------- Prochain rendez-vous ----------
+  // Mis en évidence en haut de page plutôt que noyé dans la grille du mois :
+  // avant, repérer le prochain RDV du jour demandait de scanner toute la
+  // grille. "Mes" RDV = ceux où l'agent connecté est participant, + les RDV
+  // sans participant précisé (ouverts à toute l'agence) — même logique que
+  // les prospects sans agent assigné plus haut (myLeadsList).
+  const nextAppointmentRaw = (appointmentsRaw ?? [])
+    .filter((a) => {
+      const participantIds = (a.participant_ids ?? []) as string[]
+      return participantIds.length === 0 || (!!userId && participantIds.includes(userId))
+    })
+    .filter((a) => a.appointment_date > todayStr || (a.appointment_date === todayStr && (a.appointment_time ?? '99:99') >= nowTimeStr))
+    .sort((a, b) =>
+      `${a.appointment_date}${a.appointment_time ?? '99:99'}`.localeCompare(`${b.appointment_date}${b.appointment_time ?? '99:99'}`)
+    )[0]
+  const nextAppointment = nextAppointmentRaw
+    ? {
+        id: nextAppointmentRaw.id,
+        leadId: nextAppointmentRaw.lead_id,
+        leadName: (nextAppointmentRaw.leads as unknown as { name: string } | null)?.name ?? null,
+        label: nextAppointmentRaw.label,
+        lieu: nextAppointmentRaw.lieu,
+        date: nextAppointmentRaw.appointment_date,
+        time: nextAppointmentRaw.appointment_time,
+        isToday: nextAppointmentRaw.appointment_date === todayStr,
+      }
+    : null
 
   return (
     <div className="flex flex-col gap-6">
@@ -311,6 +341,8 @@ export default async function TodayPage() {
         <h1 className="text-xl font-semibold tracking-tight">Aujourd’hui</h1>
         <p className="mt-1 text-sm text-neutral-500">Ce qui a besoin de toi, sans avoir à rouvrir chaque fiche.</p>
       </div>
+
+      {nextAppointment && <NextAppointmentCard appointment={nextAppointment} />}
 
       <div className="grid grid-cols-2 gap-4 sm:max-w-md">
         <MoneyTile label="Commissions en attente" value={formatEUR(myPendingCommissions)} />
@@ -341,4 +373,48 @@ function MoneyTile({ label, value }: { label: string; value: string }) {
       <p className="mt-1 text-xl font-semibold tabular-nums">{value}</p>
     </Card>
   )
+}
+
+function NextAppointmentCard({
+  appointment,
+}: {
+  appointment: {
+    id: string
+    leadId: string | null
+    leadName: string | null
+    label: string
+    lieu: string
+    date: string
+    time: string | null
+    isToday: boolean
+  }
+}) {
+  const when = appointment.isToday ? "Aujourd'hui" : formatDate(appointment.date)
+  const content = (
+    <>
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent text-lg text-accent-ink">
+        📅
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">Prochain rendez-vous</p>
+        <p className="mt-0.5 truncate text-sm font-semibold text-neutral-900">
+          {when} {appointment.time ? `à ${appointment.time}` : ''} — {appointment.label}
+          {appointment.leadName ? ` · ${appointment.leadName}` : ''}
+        </p>
+        {appointment.lieu && <p className="mt-0.5 truncate text-xs text-neutral-500">📍 {appointment.lieu}</p>}
+      </div>
+    </>
+  )
+
+  if (appointment.leadId) {
+    return (
+      <Link
+        href={`/dashboard/prospects/${appointment.leadId}`}
+        className="flex items-center gap-3 rounded-2xl border border-accent/30 bg-accent-soft p-4 shadow-sm hover:border-accent"
+      >
+        {content}
+      </Link>
+    )
+  }
+  return <div className="flex items-center gap-3 rounded-2xl border border-accent/30 bg-accent-soft p-4 shadow-sm">{content}</div>
 }
