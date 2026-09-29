@@ -189,9 +189,12 @@ export default async function ProspectDetailPage({ params }: PageProps<'/dashboa
               <>
                 {Array.isArray(lead.meta_answers) && lead.meta_answers.length > 0 && (
                   <div className="rounded-2xl border border-neutral-200 bg-surface p-5 shadow-sm">
-                    <h2 className="text-sm font-semibold text-neutral-900">📝 Réponses au formulaire Meta</h2>
+                    {/* Intitulé générique (pas spécifique à Meta) : cette même
+                        colonne stocke aussi les réponses envoyées par une
+                        landing page (voir app/api/webhooks/landing/[token]). */}
+                    <h2 className="text-sm font-semibold text-neutral-900">📝 Réponses au formulaire</h2>
                     <p className="mt-1 text-xs text-neutral-500">
-                      Récupérées automatiquement depuis le formulaire publicitaire rempli par le prospect.
+                      Récupérées automatiquement depuis {lead.source || 'le formulaire rempli par le prospect'}.
                     </p>
                     <dl className="mt-3 flex flex-col gap-2.5">
                       {(lead.meta_answers as { question: string; answer: string }[]).map((qa, i) => (

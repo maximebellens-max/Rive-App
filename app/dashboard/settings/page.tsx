@@ -4,6 +4,7 @@ import AgencySettingsForm from './agency-settings-form'
 import TeamSection from './team-section'
 import BackupSection from './backup-section'
 import MetaSection from './meta-section'
+import LandingPagesSection from './landing-pages-section'
 import WhatsAppSection from './whatsapp-section'
 import PushSection from './push-section'
 import AgendaSyncSection from './agenda-sync-section'
@@ -28,31 +29,42 @@ export default async function SettingsPage({ searchParams }: PageProps<'/dashboa
 
   if (!profile?.agency_id) notFound()
 
-  const [{ data: agency }, { data: members }, { data: invites }, { data: metaConnection }, { data: metaCampaigns }] =
-    await Promise.all([
-      supabase.from('agencies').select('*').eq('id', profile.agency_id).single(),
-      supabase
-        .from('profiles')
-        .select('id, full_name, role, avatar_url')
-        .eq('agency_id', profile.agency_id)
-        .order('role', { ascending: false }),
-      supabase
-        .from('agency_invites')
-        .select('id, email, token, created_at')
-        .eq('agency_id', profile.agency_id)
-        .is('accepted_at', null)
-        .order('created_at', { ascending: false }),
-      supabase
-        .from('meta_connections')
-        .select('ad_account_id, ad_account_name, page_id, page_name, available_ad_accounts, available_pages')
-        .eq('agency_id', profile.agency_id)
-        .maybeSingle(),
-      supabase
-        .from('meta_campaigns')
-        .select('id, campaign_name, status, owner_id, target_category, created_time')
-        .eq('agency_id', profile.agency_id)
-        .order('created_time', { ascending: false, nullsFirst: false }),
-    ])
+  const [
+    { data: agency },
+    { data: members },
+    { data: invites },
+    { data: metaConnection },
+    { data: metaCampaigns },
+    { data: landingPages },
+  ] = await Promise.all([
+    supabase.from('agencies').select('*').eq('id', profile.agency_id).single(),
+    supabase
+      .from('profiles')
+      .select('id, full_name, role, avatar_url')
+      .eq('agency_id', profile.agency_id)
+      .order('role', { ascending: false }),
+    supabase
+      .from('agency_invites')
+      .select('id, email, token, created_at')
+      .eq('agency_id', profile.agency_id)
+      .is('accepted_at', null)
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('meta_connections')
+      .select('ad_account_id, ad_account_name, page_id, page_name, available_ad_accounts, available_pages')
+      .eq('agency_id', profile.agency_id)
+      .maybeSingle(),
+    supabase
+      .from('meta_campaigns')
+      .select('id, campaign_name, status, owner_id, target_category, created_time')
+      .eq('agency_id', profile.agency_id)
+      .order('created_time', { ascending: false, nullsFirst: false }),
+    supabase
+      .from('landing_pages')
+      .select('id, token, label, url, category, owner_id')
+      .eq('agency_id', profile.agency_id)
+      .order('created_at', { ascending: false }),
+  ])
 
   if (!agency) notFound()
 
@@ -95,15 +107,22 @@ export default async function SettingsPage({ searchParams }: PageProps<'/dashboa
       id: 'publicite',
       label: 'Publicité & Leads',
       title: 'Publicité & Leads',
-      description: 'Connecte Meta (Facebook/Instagram) pour récupérer automatiquement tes leads publicitaires.',
+      description: 'Connecte Meta et tes landing pages pour récupérer automatiquement tes leads.',
       content: (
-        <MetaSection
-          connection={metaConnection ?? null}
-          campaigns={sortedCampaigns}
-          members={members ?? []}
-          successMessage={metaSuccessMessage}
-          errorMessage={metaErrorMessage}
-        />
+        <div className="flex flex-col gap-6">
+          <MetaSection
+            connection={metaConnection ?? null}
+            campaigns={sortedCampaigns}
+            members={members ?? []}
+            successMessage={metaSuccessMessage}
+            errorMessage={metaErrorMessage}
+          />
+          <LandingPagesSection
+            landingPages={landingPages ?? []}
+            members={members ?? []}
+            appUrl={process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}
+          />
+        </div>
       ),
     },
     {
