@@ -72,6 +72,7 @@ export async function GET(request: NextRequest) {
 // ponctuelle...), auquel cas l'appelant se replie sur l'alerte simple.
 async function composeAppointmentBrief(
   supabase: AdminClient,
+  agencyId: string,
   lead: {
     id: string
     name: string
@@ -107,7 +108,7 @@ async function composeAppointmentBrief(
     entries ?? []
   )
 
-  const { text } = await generateWithClaude(prompt)
+  const { text } = await generateWithClaude(prompt, { supabase, agencyId })
   if (!text) return null
   return text.length > BRIEF_MAX_LENGTH ? `${text.slice(0, BRIEF_MAX_LENGTH)}…` : text
 }
@@ -125,7 +126,7 @@ async function sendAppointmentAlerts(supabase: AdminClient, agencyId: string, to
     const isNew = await claimDailyAlert(supabase, agencyId, 'appointment', lead.id, today)
     if (!isNew) continue
 
-    const brief = await composeAppointmentBrief(supabase, lead)
+    const brief = await composeAppointmentBrief(supabase, agencyId, lead)
     if (brief) {
       await notifyAlertWhatsApp(supabase, agencyId, lead.assigned_to, `RDV aujourd'hui — ${lead.name}`, brief)
     } else {

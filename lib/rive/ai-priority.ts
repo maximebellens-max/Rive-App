@@ -166,7 +166,7 @@ export async function runAiPriorityForAgency(supabase: SupabaseClient, agencyId:
       isInvestor,
     })
 
-    const { text } = await generateWithClaude(prompt)
+    const { text } = await generateWithClaude(prompt, { supabase, agencyId })
     const parsed = text ? parsePriorityResponse(text) : null
     const finalScore = parsed?.score ?? ruleScore
     const reasoning = parsed?.reasoning ?? ''

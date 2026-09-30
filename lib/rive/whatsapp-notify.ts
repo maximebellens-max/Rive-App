@@ -19,6 +19,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { sendWhatsAppTemplate } from './whatsapp'
 import { CATEGORY_LABEL } from './pipelines'
+import { recordUsage } from './billing/usage'
 
 type TeamRecipient = { to: string; senderPhoneNumberId?: string }
 
@@ -74,17 +75,27 @@ async function recipientsForAssignee(
   return recipient ? [recipient] : []
 }
 
-async function sendToRecipients(recipients: TeamRecipient[], templateName: string, params: string[]) {
+// supabase/agencyId servent uniquement à comptabiliser l'envoi dans le
+// compteur d'usage mensuel (voir lib/rive/billing/usage.ts) — un envoi par
+// destinataire, comme facturé côté Meta.
+async function sendToRecipients(
+  supabase: SupabaseClient,
+  agencyId: string,
+  recipients: TeamRecipient[],
+  templateName: string,
+  params: string[]
+) {
   if (!recipients.length) return
   await Promise.all(
     recipients.map(({ to, senderPhoneNumberId }) =>
       sendWhatsAppTemplate({ to, templateName, params, phoneNumberId: senderPhoneNumberId })
     )
   )
+  await Promise.all(recipients.map(() => recordUsage(supabase, agencyId, 'whatsapp')))
 }
 
 async function broadcastToTeam(supabase: SupabaseClient, agencyId: string, templateName: string, params: string[]) {
-  await sendToRecipients(await optedInTeamRecipients(supabase, agencyId), templateName, params)
+  await sendToRecipients(supabase, agencyId, await optedInTeamRecipients(supabase, agencyId), templateName, params)
 }
 
 // Appelée après la création d'un lead, qu'il vienne d'un formulaire Meta ou
@@ -111,7 +122,7 @@ export async function notifyAppointmentWhatsApp(
   appointment: { leadName: string; actionLabel: string }
 ) {
   const recipients = await recipientsForAssignee(supabase, agencyId, assignedTo)
-  await sendToRecipients(recipients, 'rive_rendezvous_jour', [
+  await sendToRecipients(supabase, agencyId, recipients, 'rive_rendezvous_jour', [
     appointment.leadName,
     appointment.actionLabel || 'Rendez-vous',
   ])
@@ -126,7 +137,10 @@ export async function notifyMandateRenewalWhatsApp(
   mandate: { address: string; noticeDate: string }
 ) {
   const recipients = await recipientsForAssignee(supabase, agencyId, assignedTo)
-  await sendToRecipients(recipients, 'rive_mandat_echeance', [mandate.address || 'ce bien', mandate.noticeDate])
+  await sendToRecipients(supabase, agencyId, recipients, 'rive_mandat_echeance', [
+    mandate.address || 'ce bien',
+    mandate.noticeDate,
+  ])
 }
 
 // Alerte générique — rapprochement acheteur/bien, relance, brief du jour, et
@@ -142,7 +156,7 @@ export async function notifyAlertWhatsApp(
   body: string
 ) {
   const recipients = await recipientsForAssignee(supabase, agencyId, assignedTo)
-  await sendToRecipients(recipients, 'rive_alerte', [title, body])
+  await sendToRecipients(supabase, agencyId, recipients, 'rive_alerte', [title, body])
 }
 
 // Version toujours envoyée à toute l'équipe opted-in — réservée aux
