@@ -1,6 +1,11 @@
-// Assistant IA : génère un prompt structuré à copier-coller dans l'IA de ton
-// choix ; sa réponse se colle ensuite dans le champ prévu, qui reste attaché
-// à la fiche. Repris à l'identique du prototype Rive (3 usages).
+// Assistant IA : génère un prompt structuré, envoyé directement à Claude
+// (voir generateWithClaude) — sa réponse se colle ensuite dans le champ
+// prévu, qui reste attaché à la fiche. Chaque prompt ne contient QUE les
+// quelques champs explicitement listés ci-dessous pour UN prospect/mandat à
+// la fois (jamais un accès libre à la base) : Claude ne reçoit rien de plus
+// que le texte construit ici, n'a aucun outil pour aller chercher
+// d'information par lui-même, et ne garde aucune mémoire d'un appel à
+// l'autre.
 import { CONDITION_LEVELS, FEATURE_KEYS, formatDate, formatEUR, rentalYield, type EstimationResult } from './mandates'
 
 type MandateForBrief = {
