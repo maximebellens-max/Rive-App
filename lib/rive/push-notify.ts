@@ -20,7 +20,7 @@ function ensureVapid(): boolean {
   const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
   const privateKey = process.env.VAPID_PRIVATE_KEY
   if (!publicKey || !privateKey) return false
-  setVapidDetails(`mailto:${process.env.VAPID_SUBJECT_EMAIL || 'contact@hevrest.fr'}`, publicKey, privateKey)
+  setVapidDetails(`mailto:${process.env.VAPID_SUBJECT_EMAIL || 'contact@rive.app'}`, publicKey, privateKey)
   vapidReady = true
   return true
 }
@@ -93,7 +93,7 @@ export async function notifyPushForAssignee(
 
 // Toujours toute l'équipe, quel que soit l'agent assigné — pour les mêmes
 // événements que notifyTeamAlertWhatsApp (nouveau prospect, chantiers,
-// rapport hebdomadaire, vœux de fin d'année).
+// rapport hebdomadaire).
 export async function notifyPushTeam(supabase: SupabaseClient, agencyId: string, type: PushType, payload: PushPayload) {
   await sendToProfileIds(supabase, await teamProfileIds(supabase, agencyId), type, payload)
 }

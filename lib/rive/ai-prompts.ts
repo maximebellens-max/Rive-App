@@ -213,13 +213,6 @@ export function generateBirthdayBrief(leadName: string): string {
   ].join('\n')
 }
 
-export function generateYearEndWishesBrief(): string {
-  return [
-    `Rédige un message de vœux de fin d'année, chaleureux et professionnel, à envoyer à l'ensemble des prospects et clients d'une agence immobilière (Hevrest, bassin genevois / Annecy).`,
-    `Assez court pour un SMS ou WhatsApp, sans mention de nom spécifique (il sera envoyé tel quel à toute la liste de diffusion).`,
-  ].join('\n')
-}
-
 export function generateGoogleReviewBrief(leadName: string, address: string, daysSince: number): string {
   return [
     `Rédige un court message chaleureux pour demander un avis Google (ou une recommandation) à un client dont la transaction vient d'être conclue, sans être insistant.`,
@@ -241,9 +234,14 @@ export function generateEstimationFollowupBrief(leadName: string, address: strin
 }
 
 // Rapport hebdomadaire automatique (voir lib/rive/weekly-report.ts) : synthèse
-// factuelle envoyée par WhatsApp à l'équipe chaque lundi matin.
+// factuelle envoyée par WhatsApp à l'équipe chaque lundi matin. agencyName et
+// teamSize viennent de la base (agencies.name, nombre de profils de
+// l'agence) plutôt que d'être écrits en dur, pour que le message reste
+// correct quelle que soit l'agence qui utilise Rive.
 export function generateWeeklyReportBrief(stats: {
   weekLabel: string
+  agencyName: string
+  teamSize: number
   newLeadsCount: number
   newLeadsByCategory: Record<string, number>
   mandatesSignedCount: number
@@ -254,7 +252,7 @@ export function generateWeeklyReportBrief(stats: {
     .map(([label, count]) => `${label} : ${count}`)
     .join(', ')
   return [
-    `Rédige un court message WhatsApp de synthèse hebdomadaire pour une agence immobilière (Hevrest, bassin genevois / Annecy), à destination de l'équipe (2 agents, ce sont des frères). Ton professionnel, factuel, chaleureux sans excès, en français. Reste sobre et honnête, pas de superlatifs si les chiffres sont faibles.`,
+    `Rédige un court message WhatsApp de synthèse hebdomadaire pour une agence immobilière (${stats.agencyName}), à destination de son équipe (${stats.teamSize} agent${stats.teamSize > 1 ? 's' : ''}). Ton professionnel, factuel, chaleureux sans excès, en français. Reste sobre et honnête, pas de superlatifs si les chiffres sont faibles.`,
     ``,
     `Semaine du ${stats.weekLabel}.`,
     `Nouveaux prospects : ${stats.newLeadsCount}${categoryLines ? ` (${categoryLines})` : ''}`,

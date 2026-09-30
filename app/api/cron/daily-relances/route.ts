@@ -4,8 +4,8 @@ import { runRelanceAgent } from '@/lib/rive/relance-agent'
 
 // Agent de relance automatique : détecte plusieurs situations qui méritent
 // un rappel (prospect sans retour, anniversaire de vente/achat,
-// anniversaire client, vœux de fin d'année, demande d'avis Google,
-// estimation sans suite) et alerte l'agent par WhatsApp avec un brouillon
+// anniversaire client, demande d'avis Google, estimation sans suite) et
+// alerte l'agent par WhatsApp avec un brouillon
 // rédigé par Claude — jamais d'envoi automatique au client (voir
 // lib/rive/relance-agent.ts pour le détail et le rappel RGPD). Cron Vercel
 // quotidien séparé du digest RDV/mandats (voir /api/cron/daily-whatsapp)

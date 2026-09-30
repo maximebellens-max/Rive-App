@@ -35,7 +35,9 @@ export async function runWeeklyReportForAgency(supabase: SupabaseClient, agencyI
   const endExclusive = new Date(`${end}T00:00:00Z`)
   endExclusive.setUTCDate(endExclusive.getUTCDate() + 1)
 
-  const [{ data: newLeads }, { data: signedMandates }, { data: soldMandates }] = await Promise.all([
+  const [{ data: agency }, { count: teamSize }, { data: newLeads }, { data: signedMandates }, { data: soldMandates }] = await Promise.all([
+    supabase.from('agencies').select('name').eq('id', agencyId).single(),
+    supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('agency_id', agencyId),
     supabase
       .from('leads')
       .select('id, category')
@@ -67,6 +69,8 @@ export async function runWeeklyReportForAgency(supabase: SupabaseClient, agencyI
 
   const stats = {
     weekLabel: label,
+    agencyName: agency?.name || 'l\'agence',
+    teamSize: teamSize || 1,
     newLeadsCount: newLeads?.length ?? 0,
     newLeadsByCategory,
     mandatesSignedCount: signedMandates?.length ?? 0,

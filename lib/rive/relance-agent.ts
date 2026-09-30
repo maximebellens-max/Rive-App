@@ -4,13 +4,11 @@
 // client. L'envoi de messages automatiques directement aux clients demande
 // un mécanisme de consentement RGPD séparé, pas encore construit ; ici,
 // c'est toujours l'agent qui relit le brouillon et l'envoie lui-même.
-// Toutes les relances détectées un jour donné (6 des 7 déclencheurs
-// ci-dessous — pas les vœux de fin d'année, voir plus bas) sont regroupées
-// en UN SEUL message WhatsApp "Relances" par agent, plutôt qu'un message
-// par relance individuelle — voir sendRelanceDigest tout en bas de ce
-// fichier.
+// Toutes les relances détectées un jour donné sont regroupées en UN SEUL
+// message WhatsApp "Relances" par agent, plutôt qu'un message par relance
+// individuelle — voir sendRelanceDigest tout en bas de ce fichier.
 //
-// 7 déclencheurs :
+// 6 déclencheurs :
 // 1. Nouveau prospect sans retour : relances à J+3, J+7, J+14 depuis le
 //    dernier point de contact (création du prospect, ou date de la
 //    dernière note si plus récente). Une nouvelle note reporte la séquence
@@ -23,11 +21,10 @@
 //    recherche — rien ne distingue formellement les deux aujourd'hui, la
 //    formulation du message s'adapte via la catégorie du prospect).
 // 3. Anniversaire du client (vendeurs et investisseurs) : via leads.birth_date.
-// 4. Vœux de fin d'année : un seul message groupé, le 15 décembre.
-// 5. Demande d'avis Google : 7 jours après une transaction conclue.
-// 6. Relance estimation sans suite : 7 jours après une estimation
+// 4. Demande d'avis Google : 7 jours après une transaction conclue.
+// 5. Relance estimation sans suite : 7 jours après une estimation
 //    (mandat brouillon) jamais transformée en mandat signé.
-// 7. Vendeur bloqué en "RDV 2 finalisé" (tableau Vendeurs) : J+7 / J+15 /
+// 6. Vendeur bloqué en "RDV 2 finalisé" (tableau Vendeurs) : J+7 / J+15 /
 //    J+30 sans mandat signé depuis l'entrée dans cette colonne.
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { firstColumnId, columnIdByName } from './pipeline-positions'
@@ -44,14 +41,13 @@ import {
   generateNoResponseRelanceBrief,
   generateAnniversaryBrief,
   generateBirthdayBrief,
-  generateYearEndWishesBrief,
   generateGoogleReviewBrief,
   generateEstimationFollowupBrief,
   generateVendeurStallBrief,
 } from './ai-prompts'
 import { generateWithClaude } from './anthropic'
-import { notifyAlertWhatsApp, notifyTeamAlertWhatsApp } from './whatsapp-notify'
-import { notifyPushForAssignee, notifyPushTeam } from './push-notify'
+import { notifyAlertWhatsApp } from './whatsapp-notify'
+import { notifyPushForAssignee } from './push-notify'
 
 function appUrl(): string {
   return process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
@@ -253,24 +249,7 @@ async function processBirthdayRelances(supabase: SupabaseClient, agencyId: strin
   }
 }
 
-// 4. Vœux de fin d'année — un seul message groupé, le 15 décembre.
-async function processYearEndWishes(supabase: SupabaseClient, agencyId: string, today: string) {
-  if (monthDay(today) !== '12-15') return
-
-  const isNew = await claimDailyAlert(supabase, agencyId, 'year_end_wishes', agencyId, today)
-  if (!isNew) return
-
-  const { text } = await generateWithClaude(generateYearEndWishesBrief())
-  const body = text || "Toute l'équipe Hevrest vous souhaite de très belles fêtes de fin d'année !"
-  await notifyTeamAlertWhatsApp(supabase, agencyId, 'Vœux de fin d\'année', `${body}\n\nÀ copier-coller vers ta liste de diffusion.`)
-  await notifyPushTeam(supabase, agencyId, 'voeux_fin_annee', {
-    title: "Vœux de fin d'année",
-    body,
-    url: '/dashboard',
-  })
-}
-
-// 5. Demande d'avis Google, 7 jours après une transaction conclue.
+// 4. Demande d'avis Google, 7 jours après une transaction conclue.
 async function processGoogleReviewRequests(supabase: SupabaseClient, agencyId: string, today: string, items: RelanceItem[]) {
   const { data: mandates } = await supabase
     .from('mandates')
@@ -306,7 +285,7 @@ async function processGoogleReviewRequests(supabase: SupabaseClient, agencyId: s
   }
 }
 
-// 6. Relance estimation sans suite, 7 jours après une estimation
+// 5. Relance estimation sans suite, 7 jours après une estimation
 // (mandat brouillon) jamais transformée en mandat signé.
 async function processStaleEstimations(supabase: SupabaseClient, agencyId: string, today: string, items: RelanceItem[]) {
   const { data: mandates } = await supabase
@@ -343,7 +322,7 @@ async function processStaleEstimations(supabase: SupabaseClient, agencyId: strin
   }
 }
 
-// 7. Vendeur bloqué en "RDV 2 finalisé" (J+7 / J+15 / J+30), sans mandat
+// 6. Vendeur bloqué en "RDV 2 finalisé" (J+7 / J+15 / J+30), sans mandat
 // signé depuis son entrée dans cette colonne du tableau Vendeurs.
 async function processVendeurStalledRelances(supabase: SupabaseClient, agencyId: string, today: string, items: RelanceItem[]) {
   const rdv2Col = await columnIdByName(supabase, agencyId, 'vendeur', 'RDV 2 finalisé')
@@ -439,10 +418,6 @@ export async function runRelanceAgent(supabase: SupabaseClient, agencyId: string
   await processNoResponseRelances(supabase, agencyId, items)
   await processAnniversaryRelances(supabase, agencyId, today, items)
   await processBirthdayRelances(supabase, agencyId, today, items)
-  // Vœux de fin d'année : format à part (texte à copier-coller vers les
-  // clients, pas un rappel d'action pour l'agent) — reste son propre
-  // message, comme avant, une fois par an.
-  await processYearEndWishes(supabase, agencyId, today)
   await processGoogleReviewRequests(supabase, agencyId, today, items)
   await processStaleEstimations(supabase, agencyId, today, items)
   await processVendeurStalledRelances(supabase, agencyId, today, items)

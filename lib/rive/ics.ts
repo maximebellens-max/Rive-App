@@ -55,7 +55,7 @@ export function icsEvent(a: ICSAppointment, dtstamp: string): string {
     const start = `${pad2(h)}${pad2(m)}00`
     const end = `${pad2((h + 1) % 24)}${pad2(m)}00`
     return `BEGIN:VEVENT
-UID:${a.id}@rive.hevrest
+UID:${a.id}@rive.app
 DTSTAMP:${dtstamp}
 DTSTART:${dateCompact}T${start}
 DTEND:${dateCompact}T${end}
@@ -64,7 +64,7 @@ END:VEVENT`
   }
 
   return `BEGIN:VEVENT
-UID:${a.id}@rive.hevrest
+UID:${a.id}@rive.app
 DTSTAMP:${dtstamp}
 DTSTART;VALUE=DATE:${dateCompact}
 SUMMARY:${summary}${description}${location}

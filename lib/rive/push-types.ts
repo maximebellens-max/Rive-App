@@ -1,4 +1,4 @@
-// Catalogue des types de notification push — 16 types au total, un par
+// Catalogue des types de notification push — 15 types au total, un par
 // événement métier existant (mêmes déclencheurs que les alertes WhatsApp,
 // voir lib/rive/whatsapp-notify.ts), avec les 3 tableaux de suivi chantier
 // (Ameublement/Cuisine/Travaux) gardés séparés plutôt que groupés sous un
@@ -18,7 +18,6 @@ export const PUSH_TYPES = [
   'relance_avis_google',
   'relance_estimation',
   'relance_vendeur_bloque',
-  'voeux_fin_annee',
   'rapport_hebdo',
   'chantier_ameublement',
   'chantier_cuisine',
@@ -39,7 +38,6 @@ export const PUSH_TYPE_LABELS: Record<PushType, string> = {
   relance_avis_google: "Relance — demande d'avis Google",
   relance_estimation: 'Relance — estimation sans suite',
   relance_vendeur_bloque: 'Relance — vendeur bloqué',
-  voeux_fin_annee: "Vœux de fin d'année",
   rapport_hebdo: 'Rapport hebdomadaire',
   chantier_ameublement: 'Chantier — Ameublement',
   chantier_cuisine: 'Chantier — Cuisine',
@@ -70,7 +68,7 @@ export const PUSH_TYPE_GROUPS: { label: string; types: PushType[] }[] = [
   },
   {
     label: 'Synthèses d’équipe',
-    types: ['voeux_fin_annee', 'rapport_hebdo'],
+    types: ['rapport_hebdo'],
   },
 ]
 

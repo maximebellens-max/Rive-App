@@ -14,9 +14,8 @@
 // charge. Exception volontaire : l'alerte "nouveau prospect" reste envoyée à
 // toute l'équipe, assigné ou pas — toute l'équipe doit être mise au courant
 // dès qu'un prospect arrive, voir notifyNewLeadWhatsApp. Les synthèses qui ne
-// portent pas sur un prospect/mandat précis (rapport hebdomadaire, vœux de
-// fin d'année) restent elles aussi envoyées à toute l'équipe — voir
-// notifyTeamAlertWhatsApp.
+// portent pas sur un prospect/mandat précis (rapport hebdomadaire) restent
+// elles aussi envoyées à toute l'équipe — voir notifyTeamAlertWhatsApp.
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { sendWhatsAppTemplate } from './whatsapp'
 import { CATEGORY_LABEL } from './pipelines'
@@ -148,7 +147,7 @@ export async function notifyAlertWhatsApp(
 
 // Version toujours envoyée à toute l'équipe opted-in — réservée aux
 // synthèses qui ne portent pas sur un prospect/mandat précis (rapport
-// hebdomadaire, vœux de fin d'année). Modèle Meta : "rive_alerte".
+// hebdomadaire). Modèle Meta : "rive_alerte".
 export async function notifyTeamAlertWhatsApp(
   supabase: SupabaseClient,
   agencyId: string,

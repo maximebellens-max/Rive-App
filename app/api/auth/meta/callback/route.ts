@@ -64,15 +64,13 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // On croyait Hevrest limité à une seule Page, mais rien ne le garantit
-    // (même défaut déjà rencontré côté compte publicitaire, cf. commentaire
-    // adAccount ci-dessous) : si le compte Meta connecté administre plus
-    // d'une Page, prendre pages[0] à l'aveugle peut silencieusement
-    // connecter la mauvaise. On essaie d'abord de repérer "Hevrest" par son
-    // nom, sinon on retombe sur la première — mais on garde la liste
-    // complète (avec le jeton propre à chaque Page) pour permettre de
-    // corriger le choix depuis Réglages sans reconnexion complète.
-    const page = pages.find((p) => p.name.trim().toLowerCase() === 'hevrest') ?? pages[0]
+    // Si le compte Meta connecté administre plusieurs Pages, on ne peut pas
+    // deviner laquelle correspond à cette agence (même défaut déjà rencontré
+    // côté compte publicitaire, cf. commentaire adAccount ci-dessous) — on
+    // prend la première par défaut, mais on garde la liste complète (avec le
+    // jeton propre à chaque Page) pour permettre de corriger le choix depuis
+    // Réglages sans reconnexion complète.
+    const page = pages[0]
     // Pour le compte publicitaire, une personne peut avoir accès à
     // plusieurs comptes Meta (pro, perso, anciens comptes...) — on ne peut
     // pas deviner le bon. On prend le premier par défaut (cas le plus
