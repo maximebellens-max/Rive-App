@@ -8,7 +8,12 @@ import LandingPagesSection from './landing-pages-section'
 import WhatsAppSection from './whatsapp-section'
 import PushSection from './push-section'
 import AgendaSyncSection from './agenda-sync-section'
+import UsageSection from './usage-section'
 import SettingsShell, { type SettingsSection } from './settings-shell'
+
+function currentMonth(): string {
+  return new Date().toISOString().slice(0, 7) // 'YYYY-MM'
+}
 
 export default async function SettingsPage({ searchParams }: PageProps<'/dashboard/settings'>) {
   const supabase = await createClient()
@@ -36,6 +41,7 @@ export default async function SettingsPage({ searchParams }: PageProps<'/dashboa
     { data: metaConnection },
     { data: metaCampaigns },
     { data: landingPages },
+    { data: usage },
   ] = await Promise.all([
     supabase.from('agencies').select('*').eq('id', profile.agency_id).single(),
     supabase
@@ -64,6 +70,12 @@ export default async function SettingsPage({ searchParams }: PageProps<'/dashboa
       .select('id, token, label, url, category, owner_id')
       .eq('agency_id', profile.agency_id)
       .order('created_at', { ascending: false }),
+    supabase
+      .from('usage_counters')
+      .select('ai_generations_count, whatsapp_messages_count')
+      .eq('agency_id', profile.agency_id)
+      .eq('month', currentMonth())
+      .maybeSingle(),
   ])
 
   if (!agency) notFound()
@@ -158,6 +170,21 @@ export default async function SettingsPage({ searchParams }: PageProps<'/dashboa
       content: (
         <AgendaSyncSection
           icsUrl={`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/ics/agent/${profile.ics_token}`}
+        />
+      ),
+    },
+    {
+      id: 'usage',
+      label: 'Usage',
+      title: 'Usage',
+      description: "Suis l'usage IA et WhatsApp de l'agence, mois par mois.",
+      content: (
+        <UsageSection
+          planKey={agency.plan ?? null}
+          month={currentMonth()}
+          aiCount={usage?.ai_generations_count ?? 0}
+          whatsappCount={usage?.whatsapp_messages_count ?? 0}
+          seatCount={members?.length ?? 0}
         />
       ),
     },
