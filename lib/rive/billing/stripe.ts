@@ -83,6 +83,15 @@ export async function createCheckoutSession(params: {
     ...(params.existingCustomerId
       ? { customer: params.existingCustomerId }
       : { customer_email: params.customerEmail }),
+          // Offre de lancement (-30% les 3 premiers mois, sur les 3 paliers) : un
+    // coupon Stripe existant (créé une fois côté dashboard, durée
+    // "repeating" 3 mois), identifié par variable d'environnement plutôt que
+    // figé ici — Stripe arrête de l'appliquer tout seul après 3 mois, aucun
+    // code à toucher le jour où l'offre de lancement s'arrête (il suffit de
+    // retirer la variable). Voir deploy-notes/guide-depot-O-modules-admin-juridique.md
+    ...(process.env.STRIPE_LAUNCH_COUPON_ID
+      ? { discounts: [{ coupon: process.env.STRIPE_LAUNCH_COUPON_ID }] }
+      : {}),
     // Dupliqué sur la session ET sur l'abonnement créé : le webhook
     // checkout.session.completed lit le premier, un futur
     // customer.subscription.updated pourra lire le second sans avoir à

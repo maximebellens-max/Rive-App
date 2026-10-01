@@ -1,11 +1,18 @@
+import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { formatEUR, formatDate } from '@/lib/rive/mandates'
+import { getAccessContext } from '@/lib/rive/access'
 import InvestmentsView from './investments-view'
 import NewInvestmentForm from './new-investment-form'
 import type { StageCard } from '../_components/stage-kanban'
 
 export default async function InvestmentsPage() {
+  // Fait partie du module optionnel "investissement" (voir migration 058) —
+  // accès direct par URL bloqué pour une agence qui ne l'a pas, pas
+  // seulement masqué dans le menu (sidebar-nav.tsx).
+  const { hasModule } = await getAccessContext()
+  if (!hasModule('investissement')) notFound()
   const supabase = await createClient()
 
   const {

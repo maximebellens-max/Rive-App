@@ -28,57 +28,90 @@ import {
   FolderKanbanIcon,
   PlusIcon,
   MessageCircleIcon,
+  ShieldIcon,
   type IconProps,
 } from './_components/icons'
 
 type NavLink = { href: string; label: string; icon: (props: IconProps) => React.ReactElement }
 type NavGroup = { label: string; links: NavLink[] }
 
-const NAV_GROUPS: NavGroup[] = [
-  {
-    label: 'Vue d’ensemble',
-    links: [
-      { href: '/dashboard', label: 'Aujourd’hui', icon: LayoutDashboardIcon },
-      { href: '/dashboard/assistant', label: 'Assistant IA', icon: MessageCircleIcon },
-      { href: '/dashboard/sectors', label: 'Secteurs', icon: MapPinIcon },
-      { href: '/dashboard/performance', label: 'Performance', icon: TrendingUpIcon },
-      { href: '/dashboard/campaigns', label: 'Campagnes', icon: MegaphoneIcon },
-    ],
-  },
-  {
-    label: 'Pipelines',
-    links: [
-      { href: '/dashboard/pipelines/vendeur', label: 'Vendeurs', icon: UsersIcon },
-      { href: '/dashboard/pipelines/acheteur', label: 'Acheteurs', icon: HomeIcon },
-      { href: '/dashboard/pipelines/investisseur_france', label: 'Investisseurs', icon: BriefcaseIcon },
-    ],
-  },
-  {
-    label: 'Gestion',
-    links: [
-      { href: '/dashboard/estimations', label: 'Estimations', icon: CalculatorIcon },
-      { href: '/dashboard/mandates', label: 'Mandats', icon: FileTextIcon },
-      { href: '/dashboard/commissions', label: 'Commissions', icon: EuroIcon },
-      { href: '/dashboard/investments', label: 'Projets investisseur', icon: Building2Icon },
-      { href: '/dashboard/locations', label: 'Location', icon: KeyIcon },
-    ],
-  },
-  {
-    label: 'Suivi chantiers',
-    links: [
-      { href: '/dashboard/ameublement', label: 'Ameublement', icon: SofaIcon },
-      { href: '/dashboard/cuisine', label: 'Cuisine', icon: UtensilsCrossedIcon },
-      { href: '/dashboard/travaux', label: 'Travaux', icon: HammerIcon },
-    ],
-  },
-  {
-    label: 'Outils',
-    links: [
-      { href: '/dashboard/partners', label: 'Contacts pro', icon: ContactIcon },
-      { href: '/dashboard/templates', label: 'Modèles', icon: LayoutTemplateIcon },
-    ],
-  },
-]
+// Certains liens dépendent de ce que cette agence a le droit de voir (voir
+// lib/rive/access.ts) : Mandats et le tableau Investisseurs ne sont pas
+// construits depuis une liste statique comme le reste, mais filtrés juste en
+// dessous à partir des props isInterne/hasInvestissement/isPlatformAdmin.
+function navGroups({
+  isInterne,
+  hasInvestissement,
+  isPlatformAdmin,
+}: {
+  isInterne: boolean
+  hasInvestissement: boolean
+  isPlatformAdmin: boolean
+}): NavGroup[] {
+  const groups: NavGroup[] = [
+    {
+      label: 'Vue d’ensemble',
+      links: [
+        { href: '/dashboard', label: 'Aujourd’hui', icon: LayoutDashboardIcon },
+        { href: '/dashboard/assistant', label: 'Assistant IA', icon: MessageCircleIcon },
+        { href: '/dashboard/sectors', label: 'Secteurs', icon: MapPinIcon },
+        { href: '/dashboard/performance', label: 'Performance', icon: TrendingUpIcon },
+        { href: '/dashboard/campaigns', label: 'Campagnes', icon: MegaphoneIcon },
+      ],
+    },
+    {
+      label: 'Pipelines',
+      links: [
+        { href: '/dashboard/pipelines/vendeur', label: 'Vendeurs', icon: UsersIcon },
+        { href: '/dashboard/pipelines/acheteur', label: 'Acheteurs', icon: HomeIcon },
+        ...(hasInvestissement
+          ? [{ href: '/dashboard/pipelines/investisseur_france', label: 'Investisseurs', icon: BriefcaseIcon }]
+          : []),
+      ],
+    },
+    {
+      label: 'Gestion',
+      links: [
+        { href: '/dashboard/estimations', label: 'Estimations', icon: CalculatorIcon },
+        // Génération de mandats réservée à Hevrest pour l'instant — voir
+        // app/actions/mandates.ts (canGenerateMandates) et migration 058.
+        ...(isInterne ? [{ href: '/dashboard/mandates', label: 'Mandats', icon: FileTextIcon }] : []),
+        { href: '/dashboard/commissions', label: 'Commissions', icon: EuroIcon },
+        ...(hasInvestissement
+          ? [{ href: '/dashboard/investments', label: 'Projets investisseur', icon: Building2Icon }]
+          : []),
+        { href: '/dashboard/locations', label: 'Location', icon: KeyIcon },
+      ],
+    },
+    {
+      label: 'Suivi chantiers',
+      links: [
+        { href: '/dashboard/ameublement', label: 'Ameublement', icon: SofaIcon },
+        { href: '/dashboard/cuisine', label: 'Cuisine', icon: UtensilsCrossedIcon },
+        { href: '/dashboard/travaux', label: 'Travaux', icon: HammerIcon },
+      ],
+    },
+    {
+      label: 'Outils',
+      links: [
+        { href: '/dashboard/partners', label: 'Contacts pro', icon: ContactIcon },
+        { href: '/dashboard/templates', label: 'Modèles', icon: LayoutTemplateIcon },
+      ],
+    },
+  ]
+
+  // Visible uniquement pour le profil admin plateforme (voir migration 058)
+  // — jamais pour le reste de Hevrest (donc pas Mandin), ni pour une agence
+  // cliente même interne-équivalente.
+  if (isPlatformAdmin) {
+    groups.push({
+      label: 'Administration',
+      links: [{ href: '/dashboard/admin', label: 'Agences clientes', icon: ShieldIcon }],
+    })
+  }
+
+  return groups
+}
 
 function isActive(pathname: string, href: string): boolean {
   if (href === '/dashboard') return pathname === '/dashboard'
@@ -111,15 +144,22 @@ function NavItem({ href, label, icon: Icon, active }: NavLink & { active: boolea
 export default function SidebarNav({
   customBoards,
   createBoard,
+  isInterne,
+  hasInvestissement,
+  isPlatformAdmin,
 }: {
   customBoards: { id: string; name: string }[]
   createBoard: (formData: FormData) => void | Promise<void>
+  isInterne: boolean
+  hasInvestissement: boolean
+  isPlatformAdmin: boolean
 }) {
   const pathname = usePathname()
+  const groups = navGroups({ isInterne, hasInvestissement, isPlatformAdmin })
 
   return (
     <>
-      {NAV_GROUPS.map((group) => (
+      {groups.map((group) => (
         <div key={group.label} className="flex flex-col gap-1">
           <span className="px-2.5 text-xs font-semibold uppercase tracking-wide text-neutral-400">
             {group.label}

@@ -1,5 +1,7 @@
 import Link from 'next/link'
+import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { getAccessContext } from '@/lib/rive/access'
 import {
   mandateNoticeDate,
   mandateIsActive,
@@ -12,6 +14,11 @@ import MandatesView, { type MandateRow } from './mandates-view'
 import type { StageCard } from '../_components/stage-kanban'
 
 export default async function MandatesPage() {
+  // Aucun mandat signé ne peut exister pour une agence non interne (voir
+  // canGenerateMandates) — accès direct par URL bloqué pour rester cohérent
+  // avec le lien de menu, masqué pour les mêmes agences (sidebar-nav.tsx).
+  const { isInterne } = await getAccessContext()
+  if (!isInterne) notFound()
   const supabase = await createClient()
 
   const [{ data: mandates }, { data: members }, { data: investorMandates }] = await Promise.all([

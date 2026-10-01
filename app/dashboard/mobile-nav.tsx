@@ -31,9 +31,15 @@ export function MobileNavTrigger() {
 export function MobileNavDrawer({
   customBoards,
   createBoard,
+  isInterne,
+  hasInvestissement,
+  isPlatformAdmin,
 }: {
   customBoards: { id: string; name: string }[]
   createBoard: (formData: FormData) => void | Promise<void>
+  isInterne: boolean
+  hasInvestissement: boolean
+  isPlatformAdmin: boolean
 }) {
   const { open, setOpen } = useMobileNav()
   const pathname = usePathname()
@@ -83,7 +89,13 @@ export function MobileNavDrawer({
             <XIcon className="h-5 w-5" strokeWidth={1.75} aria-hidden="true" />
           </button>
         </div>
-        <SidebarNav customBoards={customBoards} createBoard={createBoard} />
+        <SidebarNav
+          customBoards={customBoards}
+          createBoard={createBoard}
+          isInterne={isInterne}
+          hasInvestissement={hasInvestissement}
+          isPlatformAdmin={isPlatformAdmin}
+        />
       </div>
     </div>
   )

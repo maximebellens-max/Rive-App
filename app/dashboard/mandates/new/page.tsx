@@ -1,9 +1,21 @@
+import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { getAccessContext } from '@/lib/rive/access'
 import NewMandateForm from './new-mandate-form'
 
 export default async function NewMandatePage({ searchParams }: PageProps<'/dashboard/mandates/new'>) {
   const params = await searchParams
   const draft = params?.draft === '1'
+
+  // La génération d'un mandat réel reste pour l'instant réservée à Hevrest
+  // (voir canGenerateMandates dans app/actions/mandates.ts) — une agence
+  // cliente atterrissant ici sans le savoir est redirigée vers le parcours
+  // qu'elle a réellement, l'estimation, plutôt que de voir un formulaire
+  // dont la soumission échouerait silencieusement.
+  if (!draft) {
+    const { isInterne } = await getAccessContext()
+    if (!isInterne) redirect('/dashboard/mandates/new?draft=1')
+  }
 
   const supabase = await createClient()
   const { data: leads } = await supabase

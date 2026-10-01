@@ -42,6 +42,11 @@ export default async function MandateDetailPage({ params }: PageProps<'/dashboar
       : Promise.resolve({ data: null }),
   ])
   if (!mandate) notFound()
+  // La bascule brouillon → mandat signé reste réservée à Hevrest pour
+  // l'instant (voir canGenerateMandates, app/actions/mandates.ts) : le
+  // bouton est masqué plutôt que de rester visible pour ne rien faire au
+  // clic côté client.
+  const isInterne = (agency as { plan?: string | null } | null)?.plan === 'interne'
 
   const endDate = mandateEndDate(mandate.signed_date, mandate.duration_months)
   const noticeDate = mandateNoticeDate(mandate.signed_date, mandate.duration_months, mandate.renewal_notice_days)
@@ -164,8 +169,7 @@ export default async function MandateDetailPage({ params }: PageProps<'/dashboar
               Fiche bien (.html)
             </a>
           )}
-          {mandate.is_draft && <ActivateMandateButton mandateId={mandate.id} />}
-          {!mandate.is_draft && <GenerateMandateButton mandateId={mandate.id} />}
+          {mandate.is_draft && isInterne && <ActivateMandateButton mandateId={mandate.id} />}          {!mandate.is_draft && <GenerateMandateButton mandateId={mandate.id} />}
           <DeleteMandateButton mandateId={mandate.id} />
         </div>
       </div>

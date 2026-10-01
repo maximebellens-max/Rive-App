@@ -1,11 +1,14 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
+import { getAccessContext } from '@/lib/rive/access'
 import InvestmentEditForm from './investment-edit-form'
 import DeleteInvestmentButton from './delete-investment-button'
 
 export default async function InvestmentDetailPage({ params }: PageProps<'/dashboard/investments/[id]'>) {
   const { id } = await params
+  const { hasModule } = await getAccessContext()
+  if (!hasModule('investissement')) notFound()
   const supabase = await createClient()
 
   const { data: project } = await supabase

@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { getAuthedProfile } from '@/lib/supabase/session'
+import { getAccessContext } from '@/lib/rive/access'
 import KanbanBoard from '../kanban-board'
 import BoardHeader from '../board-header'
 import {
@@ -14,17 +14,32 @@ import { cn } from '@/lib/rive/cn'
 
 type BoardRow = { id: string; name: string; kind: string }
 
-const CATEGORY_SWITCH_TARGETS = [
-  { href: '/dashboard/pipelines/vendeur', label: 'Vendeurs', match: 'vendeur' },
-  { href: '/dashboard/pipelines/acheteur', label: 'Acheteurs', match: 'acheteur' },
-  { href: '/dashboard/pipelines/investisseur_france', label: 'Investisseurs', match: 'investisseur_france' },
-]
-
 export default async function PipelineBoardPage({ params }: PageProps<'/dashboard/pipelines/[boardType]'>) {
   const { boardType: bt } = await params
 
-  const { supabase, user, profile } = await getAuthedProfile()
+  const { supabase, user, profile, isInterne, hasModule } = await getAccessContext()
   if (!user || !profile?.agency_id) notFound()
+
+  // Investisseurs France fait partie du module optionnel "investissement" ;
+  // Dubaï et Géorgie restent propres à Hevrest, jamais vendus (voir
+  // deploy-notes/rive-commercialisation-grille-tarifaire.md). Un accès
+  // direct par URL à un tableau non autorisé est bloqué ici, pas seulement
+  // masqué dans le menu (sidebar-nav.tsx).
+  const hasInvestissement = hasModule('investissement')
+  const accessibleInvestorBoardTypes = isInterne
+    ? INVESTOR_BOARD_TYPES
+    : hasInvestissement
+      ? ['investisseur_france']
+      : []
+  if (INVESTOR_BOARD_TYPES.includes(bt) && !accessibleInvestorBoardTypes.includes(bt)) notFound()
+
+  const categorySwitchTargets = [
+    { href: '/dashboard/pipelines/vendeur', label: 'Vendeurs', match: 'vendeur' },
+    { href: '/dashboard/pipelines/acheteur', label: 'Acheteurs', match: 'acheteur' },
+    ...(hasInvestissement
+      ? [{ href: '/dashboard/pipelines/investisseur_france', label: 'Investisseurs', match: 'investisseur_france' }]
+      : []),
+  ]
 
   const isFixedCategoryBoard = CATEGORY_BOARD_TYPES.has(bt)
 
@@ -137,7 +152,7 @@ export default async function PipelineBoardPage({ params }: PageProps<'/dashboar
           le tiroir de menu complet. */}
       {isFixedCategoryBoard && (
         <div className="flex w-fit gap-1 rounded-lg border border-neutral-300 p-0.5 text-xs md:hidden">
-          {CATEGORY_SWITCH_TARGETS.map((t) => (
+          {categorySwitchTargets.map((t) => (
             <Link
               key={t.href}
               href={t.href}
@@ -172,9 +187,12 @@ export default async function PipelineBoardPage({ params }: PageProps<'/dashboar
               </Link>
             )}
           </div>
-          {isInvestorBoard && (
+          {/* Onglets France/Dubaï/Géorgie : inutiles à afficher s'il n'y a
+              qu'un seul marché accessible (agence cliente avec le module
+              investissement, mais sans Dubaï/Géorgie, propres à Hevrest). */}
+          {isInvestorBoard && accessibleInvestorBoardTypes.length > 1 && (
             <div className="flex w-fit rounded-lg border border-neutral-300 p-0.5 text-xs">
-              {INVESTOR_BOARD_TYPES.map((type) => (
+              {accessibleInvestorBoardTypes.map((type) => (
                 <Link
                   key={type}
                   href={`/dashboard/pipelines/${type}`}

@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { getAuthedProfile } from '@/lib/supabase/session'
+import { getAccessContext } from '@/lib/rive/access'
 import { logout } from '@/app/actions/auth'
 import { createBoard } from '@/app/actions/boards'
 import NotificationBell, { type NotificationItem } from './notification-bell'
@@ -20,11 +20,13 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode
 }) {
-  const { supabase, user, profile } = await getAuthedProfile()
+  const { supabase, user, profile, isInterne, isPlatformAdmin, hasModule } = await getAccessContext()
 
   if (!user) {
     redirect('/login')
   }
+
+  const hasInvestissement = hasModule('investissement')
 
   const agencyName = (profile?.agencies as unknown as { name: string } | null)?.name
 
@@ -93,17 +95,29 @@ export default async function DashboardLayout({
               </div>
             </div>
           </header>
-          <MobileNavDrawer customBoards={customBoards ?? []} createBoard={createBoard} />
+          <MobileNavDrawer
+            customBoards={customBoards ?? []}
+            createBoard={createBoard}
+            isInterne={isInterne}
+            hasInvestissement={hasInvestissement}
+            isPlatformAdmin={isPlatformAdmin}
+          />
           <div className="mx-auto w-full max-w-7xl px-4 pt-4">
             <InstallPrompt />
           </div>
           <div className="mx-auto flex w-full max-w-7xl flex-1 gap-8 px-4 pt-8 pb-24 md:pb-8">
             <aside className="hidden w-52 shrink-0 flex-col gap-6 md:flex">
-              <SidebarNav customBoards={customBoards ?? []} createBoard={createBoard} />
+              <SidebarNav
+                customBoards={customBoards ?? []}
+                createBoard={createBoard}
+                isInterne={isInterne}
+                hasInvestissement={hasInvestissement}
+                isPlatformAdmin={isPlatformAdmin}
+              />
             </aside>
             <main className="min-w-0 flex-1">{children}</main>
           </div>
-          <MobileBottomNav />
+          <MobileBottomNav isInterne={isInterne} />
         </div>
       </MobileNavProvider>
     </ToastProvider>

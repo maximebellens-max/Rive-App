@@ -19,7 +19,7 @@ export const getAuthedProfile = cache(async () => {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('agency_id, full_name, role, avatar_url, agencies ( name )')
+    .select('agency_id, full_name, role, avatar_url, is_platform_admin, agencies ( name, plan, enabled_modules )')
     .eq('id', user.id)
     .single()
 

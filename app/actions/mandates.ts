@@ -9,6 +9,23 @@ import { engagedColumnId } from '@/lib/rive/pipeline-positions'
 import { notifyMatchesForMandateId } from '@/lib/rive/match-notify'
 import { notifyNewLead } from '@/lib/rive/new-lead-notify'
 import { guessCivility } from '@/lib/rive/civility'
+import { getAccessContext } from '@/lib/rive/access'
+
+// La génération d'un mandat réel (is_draft passant à false, quel que soit le
+// chemin) est volontairement réservée à Hevrest pour l'instant — voir
+// migration 058 et deploy-notes/rive-commercialisation-grille-tarifaire.md :
+// un mandat est un document contractuel encadré par la loi Hoguet, pas
+// encore "béton" pour être généré par un tiers externe à Hevrest. Les
+// brouillons/estimations (is_draft = true) restent ouverts à tous — ce
+// garde-fou ne s'applique qu'à la bascule vers un mandat signé. Renvoie un
+// booléen plutôt que de lever une exception : les appelants suivent déjà la
+// convention "retour silencieux" du fichier (voir `if (!agencyId) return`
+// ci-dessous) plutôt que de laisser remonter une erreur non gérée jusqu'à
+// l'interface.
+async function canGenerateMandates(): Promise<boolean> {
+  const { isInterne } = await getAccessContext()
+  return isInterne
+}
 
 export type MandateFormState = { error?: string } | undefined
 
@@ -61,6 +78,9 @@ export async function createMandate(
   // engagement signé) n'exige pas encore une adresse complète — le bien peut
   // n'être identifié que par un secteur à ce stade.
   const isDraft = str(formData, 'is_draft') === 'true'
+    if (!isDraft && !(await canGenerateMandates())) {
+    return { error: 'La génération de mandats n’est pas encore disponible sur cette offre.' }
+  }
 
   const address = str(formData, 'address')
   if (type === 'vente' && !isDraft && !address) {
@@ -295,6 +315,7 @@ export async function updateMandate(
 export async function moveMandateStage(mandateId: string, stage: string) {
   const { supabase, agencyId } = await getAgencyId()
   if (!agencyId) return
+  if (!(await canGenerateMandates())) return
 
   const { data: before } = await supabase
     .from('mandates')
@@ -339,6 +360,7 @@ export async function moveMandateStage(mandateId: string, stage: string) {
 export async function activateMandateDraft(mandateId: string) {
   const { supabase, agencyId } = await getAgencyId()
   if (!agencyId) return
+  if (!(await canGenerateMandates())) return
 
   const { data: mandate } = await supabase.from('mandates').select('lead_id').eq('id', mandateId).single()
 

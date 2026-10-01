@@ -9,7 +9,15 @@
 // hamburger (état partagé, voir mobile-nav-context.tsx) pour tout le reste.
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboardIcon, FolderKanbanIcon, MessageCircleIcon, FileTextIcon, MenuIcon, type IconProps } from './icons'
+import {
+  LayoutDashboardIcon,
+  FolderKanbanIcon,
+  MessageCircleIcon,
+  FileTextIcon,
+  CalculatorIcon,
+  MenuIcon,
+  type IconProps,
+} from './icons'
 import { useMobileNav } from './mobile-nav-context'
 
 type NavTarget = {
@@ -19,7 +27,7 @@ type NavTarget = {
   match: (pathname: string) => boolean
 }
 
-const TARGETS: NavTarget[] = [
+const BASE_TARGETS: NavTarget[] = [
   { href: '/dashboard', label: 'Aujourd’hui', icon: LayoutDashboardIcon, match: (p) => p === '/dashboard' },
   {
     href: '/dashboard/pipelines/vendeur',
@@ -33,12 +41,28 @@ const TARGETS: NavTarget[] = [
     icon: MessageCircleIcon,
     match: (p) => p.startsWith('/dashboard/assistant'),
   },
-  { href: '/dashboard/mandates', label: 'Mandats', icon: FileTextIcon, match: (p) => p.startsWith('/dashboard/mandates') },
 ]
 
-export default function MobileBottomNav() {
+// 4e raccourci : Mandats pour Hevrest, Estimations pour une agence cliente
+// (qui n'a pas accès à la génération de mandats — voir migration 058) —
+// jamais un slot vide plutôt que de retirer le raccourci sans remplacement.
+const MANDATES_TARGET: NavTarget = {
+  href: '/dashboard/mandates',
+  label: 'Mandats',
+  icon: FileTextIcon,
+  match: (p) => p.startsWith('/dashboard/mandates'),
+}
+const ESTIMATIONS_TARGET: NavTarget = {
+  href: '/dashboard/estimations',
+  label: 'Estimations',
+  icon: CalculatorIcon,
+  match: (p) => p.startsWith('/dashboard/estimations'),
+}
+
+export default function MobileBottomNav({ isInterne }: { isInterne: boolean }) {
   const pathname = usePathname()
   const { setOpen } = useMobileNav()
+  const TARGETS = [...BASE_TARGETS, isInterne ? MANDATES_TARGET : ESTIMATIONS_TARGET]
 
   return (
     <nav

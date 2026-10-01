@@ -6,6 +6,7 @@ import { nextColumnColor, CATEGORY_BOARD_TYPES, MANDATE_BOARD_TYPES, BOARD_LABEL
 import { ensureMandateDraftForLead, activateMandateForLead } from '@/lib/rive/automation'
 import { notifyNewLead } from '@/lib/rive/new-lead-notify'
 import { guessCivility } from '@/lib/rive/civility'
+import { getAccessContext } from '@/lib/rive/access'
 
 async function getAgencyId() {
   const supabase = await createClient()
@@ -71,9 +72,17 @@ export async function moveLeadCard(leadId: string, boardType: BoardType, columnI
 
     const ids = (columns ?? []).map((c) => c.id)
     const idx = ids.indexOf(columnId)
-    if (idx >= 0 && idx === ids.length - 1) {
-      await activateMandateForLead(supabase, lead)
-      revalidatePath('/dashboard/mandates')
+        if (idx >= 0 && idx === ids.length - 1) {
+      // L'activation (brouillon → mandat signé) est réservée à Hevrest — voir
+      // canGenerateMandates dans app/actions/mandates.ts. Le brouillon lui-même
+      // (branche ci-dessous, "estimation") reste ouvert à tous : on laisse donc
+      // la carte avancer dans tous les cas, seule l'automatisation mandat est
+      // sautée pour une agence non interne.
+      const { isInterne } = await getAccessContext()
+      if (isInterne) {
+        await activateMandateForLead(supabase, lead)
+        revalidatePath('/dashboard/mandates')
+      }
     } else if (idx >= 0 && idx === ids.length - 2) {
       await ensureMandateDraftForLead(supabase, lead)
     }
