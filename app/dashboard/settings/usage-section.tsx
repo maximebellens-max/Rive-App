@@ -5,7 +5,20 @@
 // depuis le déploiement de cette fonctionnalité (pas d'historique
 // rétroactif) : le mois en cours peut donc démarrer à 0 même sur une
 // agence déjà active.
-import { planFor } from '@/lib/rive/billing/plans'
+import { planFor, type PlanKey } from '@/lib/rive/billing/plans'
+import BillingActions from './billing-actions'
+import type { PurchasablePlan } from '@/lib/rive/billing/stripe'
+
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
+}
+
+const STATUS_LABEL: Record<string, { text: string; tone: 'neutral' | 'danger' }> = {
+  trialing: { text: 'Période d’essai', tone: 'neutral' },
+  active: { text: 'Actif', tone: 'neutral' },
+  past_due: { text: 'Paiement en retard', tone: 'danger' },
+  canceled: { text: 'Résilié', tone: 'danger' },
+}
 
 function monthLabel(month: string): string {
   const [year, m] = month.split('-').map(Number)
@@ -33,31 +46,77 @@ export default function UsageSection({
   aiCount,
   whatsappCount,
   seatCount,
+  isOwner,
+  subscriptionStatus,
+  trialEndsAt,
+  stripeCustomerId,
+  checkoutAvailable,
 }: {
   planKey: string | null
   month: string
   aiCount: number
   whatsappCount: number
   seatCount: number
+  isOwner: boolean
+  subscriptionStatus: string | null
+  trialEndsAt: string | null
+  stripeCustomerId: string | null
+  checkoutAvailable: Record<PurchasablePlan, boolean>
 }) {
   const plan = planFor(planKey)
   const isUnlimited = plan.aiMonthlyLimit === null && plan.seatLimit === null
+  const resolvedPlanKey: PlanKey = (planKey as PlanKey) ?? 'interne'
+  const isInternal = resolvedPlanKey === 'interne'
+  const status = subscriptionStatus ? STATUS_LABEL[subscriptionStatus] : null
 
   return (
     <div className="flex flex-col gap-6">
       <div className="rounded-2xl border border-neutral-200 bg-surface p-5 shadow-sm">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold text-neutral-900">Palier actuel</h2>
-          <span className="rounded-full bg-neutral-100 px-2.5 py-1 text-xs font-medium text-neutral-700">
-            {plan.label}
-          </span>
+          <div className="flex items-center gap-2">
+            {status && (
+              <span
+                className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                  status.tone === 'danger' ? 'bg-danger-soft text-danger' : 'bg-neutral-100 text-neutral-700'
+                }`}
+              >
+                {status.text}
+              </span>
+            )}
+            <span className="rounded-full bg-neutral-100 px-2.5 py-1 text-xs font-medium text-neutral-700">
+              {plan.label}
+            </span>
+          </div>
         </div>
         <p className="mt-1.5 text-xs text-neutral-500">
-          {isUnlimited
+          {isUnlimited && isInternal
             ? 'Agence fondatrice — aucune limite appliquée, quels que soient les chiffres ci-dessous.'
             : 'Les limites indiquées sont provisoires, le temps de valider les paliers définitifs.'}
         </p>
+        {subscriptionStatus === 'trialing' && trialEndsAt && (
+          <p className="mt-1.5 text-xs text-neutral-500">Essai gratuit jusqu’au {formatDate(trialEndsAt)}.</p>
+        )}
       </div>
+
+      {!isInternal && (
+        <div className="rounded-2xl border border-neutral-200 bg-surface p-5 shadow-sm">
+          <h2 className="text-sm font-semibold text-neutral-900">Abonnement</h2>
+          <p className="mt-1 text-xs text-neutral-500">
+            {stripeCustomerId
+              ? 'Gère ton palier, ton moyen de paiement et tes factures depuis le portail Stripe.'
+              : 'Passe à un palier payant pour lever les limites ci-dessus.'}
+          </p>
+          <div className="mt-3">
+            <BillingActions
+              isOwner={isOwner}
+              currentPlan={resolvedPlanKey}
+              hasStripeCustomer={!!stripeCustomerId}
+              checkoutAvailable={checkoutAvailable}
+            />
+          </div>
+        </div>
+      )}
 
       <div className="rounded-2xl border border-neutral-200 bg-surface p-5 shadow-sm">
         <h2 className="text-sm font-semibold text-neutral-900">Usage — {monthLabel(month)}</h2>

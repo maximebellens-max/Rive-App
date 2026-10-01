@@ -9,7 +9,10 @@ import WhatsAppSection from './whatsapp-section'
 import PushSection from './push-section'
 import AgendaSyncSection from './agenda-sync-section'
 import UsageSection from './usage-section'
+import { isCheckoutAvailable, type PurchasablePlan } from '@/lib/rive/billing/stripe'
 import SettingsShell, { type SettingsSection } from './settings-shell'
+
+const PURCHASABLE_PLANS: PurchasablePlan[] = ['solo', 'equipe', 'agence']
 
 function currentMonth(): string {
   return new Date().toISOString().slice(0, 7) // 'YYYY-MM'
@@ -185,6 +188,13 @@ export default async function SettingsPage({ searchParams }: PageProps<'/dashboa
           aiCount={usage?.ai_generations_count ?? 0}
           whatsappCount={usage?.whatsapp_messages_count ?? 0}
           seatCount={members?.length ?? 0}
+          isOwner={profile.role === 'owner'}
+          subscriptionStatus={agency.subscription_status ?? null}
+          trialEndsAt={agency.trial_ends_at ?? null}
+          stripeCustomerId={agency.stripe_customer_id ?? null}
+          checkoutAvailable={Object.fromEntries(
+            PURCHASABLE_PLANS.map((p) => [p, isCheckoutAvailable(p)])
+          ) as Record<PurchasablePlan, boolean>}
         />
       ),
     },
