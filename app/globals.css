@@ -156,3 +156,86 @@ h3 {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
 }
+
+/* Mise en forme du texte des pages légales (mentions légales, CGU, CGV,
+   confidentialité) — simple h2/h3/p/ul/table stylés avec les tokens déjà
+   définis ci-dessus (donc cohérent en mode sombre) sans ajouter de
+   dépendance (@tailwindcss/typography) pour seulement 4 pages de texte. */
+.legal-content h2 {
+  margin-top: 2.5rem;
+  margin-bottom: 0.75rem;
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--color-neutral-900);
+}
+
+.legal-content h2:first-child {
+  margin-top: 0;
+}
+
+.legal-content h3 {
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--color-neutral-900);
+}
+
+.legal-content p {
+  margin-top: 0.75rem;
+  color: var(--color-neutral-700);
+  line-height: 1.7;
+}
+
+.legal-content ul,
+.legal-content ol {
+  margin-top: 0.75rem;
+  padding-left: 1.25rem;
+  color: var(--color-neutral-700);
+  line-height: 1.7;
+}
+
+.legal-content ul {
+  list-style: disc;
+}
+
+.legal-content ol {
+  list-style: decimal;
+}
+
+.legal-content li + li {
+  margin-top: 0.35rem;
+}
+
+.legal-content strong {
+  color: var(--color-neutral-900);
+  font-weight: 700;
+}
+
+.legal-content a {
+  color: var(--color-accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.legal-content table {
+  margin-top: 1rem;
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.legal-content th,
+.legal-content td {
+  border: 1px solid var(--color-neutral-200);
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.legal-content th {
+  background-color: var(--color-neutral-100);
+  font-weight: 700;
+  color: var(--color-neutral-900);
+}

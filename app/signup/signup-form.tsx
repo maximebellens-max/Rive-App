@@ -104,6 +104,22 @@ export default function SignupForm({ invite = null }: { invite?: Invite | null }
         {pending ? 'Création…' : invite ? 'Rejoindre l’agence' : 'Créer mon agence'}
       </button>
 
+      <p className="text-center text-xs text-neutral-400">
+        En continuant, vous acceptez les{' '}
+        <Link href="/cgu" className="underline hover:text-neutral-600">
+          CGU
+        </Link>
+        , les{' '}
+        <Link href="/cgv" className="underline hover:text-neutral-600">
+          CGV
+        </Link>{' '}
+        et la{' '}
+        <Link href="/confidentialite" className="underline hover:text-neutral-600">
+          politique de confidentialité
+        </Link>{' '}
+        de Rive.
+      </p>
+
       <p className="text-center text-sm text-neutral-500">
         Déjà un compte ?{' '}
         <Link href="/login" className="font-medium text-neutral-900 underline">

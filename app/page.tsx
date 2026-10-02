@@ -436,11 +436,25 @@ export default function Home() {
         </div>
       </section>
 
-      <footer className="border-t border-neutral-200 py-10">
-        <div className="mx-auto flex w-full max-w-6xl flex-col items-center gap-2 px-5 text-center text-xs text-neutral-500 sm:px-8">
+            <footer className="border-t border-neutral-200 py-10">
+        <div className="mx-auto flex w-full max-w-6xl flex-col items-center gap-3 px-5 text-center text-xs text-neutral-500 sm:px-8">
           <span>Rive — CRM immobilier</span>
-          <a href="mailto:contact@rive.app" className="hover:text-neutral-700 hover:underline">
-            contact@rive.app
+          <nav className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
+            <Link href="/mentions-legales" className="hover:text-neutral-700 hover:underline">
+              Mentions légales
+            </Link>
+            <Link href="/cgu" className="hover:text-neutral-700 hover:underline">
+              CGU
+            </Link>
+            <Link href="/cgv" className="hover:text-neutral-700 hover:underline">
+              CGV
+            </Link>
+            <Link href="/confidentialite" className="hover:text-neutral-700 hover:underline">
+              Confidentialité
+            </Link>
+          </nav>
+          <a href="mailto:contact.rive.crm@gmail.com" className="hover:text-neutral-700 hover:underline">
+            contact.rive.crm@gmail.com
           </a>
         </div>
       </footer>
