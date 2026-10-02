@@ -51,6 +51,7 @@ export default function UsageSection({
   trialEndsAt,
   stripeCustomerId,
   checkoutAvailable,
+  hasWhatsapp,
 }: {
   planKey: string | null
   month: string
@@ -62,6 +63,7 @@ export default function UsageSection({
   trialEndsAt: string | null
   stripeCustomerId: string | null
   checkoutAvailable: Record<PurchasablePlan, boolean>
+  hasWhatsapp: boolean
 }) {
   const plan = planFor(planKey)
   const isUnlimited = plan.aiMonthlyLimit === null && plan.seatLimit === null
@@ -136,12 +138,14 @@ export default function UsageSection({
             <UsageBar used={aiCount} limit={plan.aiMonthlyLimit} />
           </div>
 
-          <div>
-            <div className="flex items-baseline justify-between text-sm">
-              <span className="text-neutral-700">Messages WhatsApp envoyés</span>
-              <span className="font-medium text-neutral-900 tabular-nums">{whatsappCount}</span>
+          {hasWhatsapp && (
+            <div>
+              <div className="flex items-baseline justify-between text-sm">
+                <span className="text-neutral-700">Messages WhatsApp envoyés</span>
+                <span className="font-medium text-neutral-900 tabular-nums">{whatsappCount}</span>
+              </div>
             </div>
-          </div>
+          )}
 
           <div>
             <div className="flex items-baseline justify-between text-sm">

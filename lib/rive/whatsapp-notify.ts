@@ -20,6 +20,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { sendWhatsAppTemplate } from './whatsapp'
 import { CATEGORY_LABEL } from './pipelines'
 import { recordUsage } from './billing/usage'
+import { agencyHasModule } from './billing/modules'
 
 type TeamRecipient = { to: string; senderPhoneNumberId?: string }
 
@@ -29,6 +30,14 @@ type TeamRecipient = { to: string; senderPhoneNumberId?: string }
 // lib/rive/whatsapp.ts). Les deux cas coexistent tant que tout le monde n'a
 // pas configuré son propre numéro.
 async function optedInTeamRecipients(supabase: SupabaseClient, agencyId: string): Promise<TeamRecipient[]> {
+  // WhatsApp est un module optionnel (voir lib/rive/billing/modules.ts),
+  // réservé à Hevrest et activable au cas par cas depuis /dashboard/admin —
+  // vérifié ici, au point d'entrée commun à toutes les alertes, plutôt que
+  // de compter uniquement sur le fait que Réglages > WhatsApp est masqué
+  // pour les agences sans le module (une agence qui avait déjà activé les
+  // alertes avant ce changement ne doit pas continuer à en recevoir).
+  if (!(await agencyHasModule(supabase, agencyId, 'whatsapp'))) return []
+
   const { data } = await supabase
     .from('profiles')
     .select('whatsapp_number, whatsapp_sender_phone_number_id')
@@ -52,6 +61,8 @@ async function optedInAgentRecipient(
   agencyId: string,
   agentId: string
 ): Promise<TeamRecipient | null> {
+  if (!(await agencyHasModule(supabase, agencyId, 'whatsapp'))) return null
+
   const { data } = await supabase
     .from('profiles')
     .select('whatsapp_number, whatsapp_sender_phone_number_id')

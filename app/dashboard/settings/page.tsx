@@ -83,6 +83,14 @@ export default async function SettingsPage({ searchParams }: PageProps<'/dashboa
 
   if (!agency) notFound()
 
+  // WhatsApp est un module optionnel (voir lib/rive/billing/modules.ts),
+  // réservé à Hevrest et activable au cas par cas depuis /dashboard/admin —
+  // calculé directement depuis l'agence déjà chargée ci-dessus plutôt que
+  // via getAccessContext() (qui referait une requête profils/agences déjà
+  // faite ici).
+  const hasWhatsapp =
+    agency.plan === 'interne' || ((agency.enabled_modules ?? []) as string[]).includes('whatsapp')
+
   // Les campagnes actives passent en premier (ce sont celles qui comptent
   // au quotidien), puis le reste par ordre chronologique décroissant (déjà
   // fait par la requête ci-dessus) — tri stable, donc l'ordre chronologique
@@ -140,19 +148,27 @@ export default async function SettingsPage({ searchParams }: PageProps<'/dashboa
         </div>
       ),
     },
-    {
-      id: 'whatsapp',
-      label: 'WhatsApp',
-      title: 'WhatsApp',
-      description: 'Reçois une alerte WhatsApp pour chaque nouveau lead ou rendez-vous.',
-      content: (
-        <WhatsAppSection
-          whatsappNumber={profile.whatsapp_number ?? ''}
-          whatsappAlertsEnabled={profile.whatsapp_alerts_enabled ?? false}
-          whatsappSenderPhoneNumberId={profile.whatsapp_sender_phone_number_id ?? ''}
-        />
-      ),
-    },
+    // Module optionnel (voir hasWhatsapp ci-dessus) : masqué plutôt
+    // qu'affiché vide pour une agence qui n'a pas ce module, cohérent avec
+    // le fait que lib/rive/whatsapp-notify.ts n'envoie plus rien pour elle
+    // non plus — pas de réglage pour une fonctionnalité qui n'agit pas.
+    ...(hasWhatsapp
+      ? [
+          {
+            id: 'whatsapp',
+            label: 'WhatsApp',
+            title: 'WhatsApp',
+            description: 'Reçois une alerte WhatsApp pour chaque nouveau lead ou rendez-vous.',
+            content: (
+              <WhatsAppSection
+                whatsappNumber={profile.whatsapp_number ?? ''}
+                whatsappAlertsEnabled={profile.whatsapp_alerts_enabled ?? false}
+                whatsappSenderPhoneNumberId={profile.whatsapp_sender_phone_number_id ?? ''}
+              />
+            ),
+          },
+        ]
+      : []),
     {
       id: 'notifications',
       label: 'Notifications',
@@ -180,7 +196,9 @@ export default async function SettingsPage({ searchParams }: PageProps<'/dashboa
       id: 'usage',
       label: 'Usage',
       title: 'Usage',
-      description: "Suis l'usage IA et WhatsApp de l'agence, mois par mois.",
+      description: hasWhatsapp
+        ? "Suis l'usage IA et WhatsApp de l'agence, mois par mois."
+        : "Suis l'usage IA de l'agence, mois par mois.",
       content: (
         <UsageSection
           planKey={agency.plan ?? null}
@@ -192,6 +210,7 @@ export default async function SettingsPage({ searchParams }: PageProps<'/dashboa
           subscriptionStatus={agency.subscription_status ?? null}
           trialEndsAt={agency.trial_ends_at ?? null}
           stripeCustomerId={agency.stripe_customer_id ?? null}
+          hasWhatsapp={hasWhatsapp}
           checkoutAvailable={Object.fromEntries(
             PURCHASABLE_PLANS.map((p) => [p, isCheckoutAvailable(p)])
           ) as Record<PurchasablePlan, boolean>}
