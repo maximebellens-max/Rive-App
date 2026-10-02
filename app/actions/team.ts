@@ -3,6 +3,8 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { sendTestWhatsAppTemplate } from '@/lib/rive/whatsapp'
+import { planFor } from '@/lib/rive/billing/plans'
+import { seatCountForAgency, syncAgencySeats } from '@/lib/rive/billing/seats'
 
 async function getOwnerContext() {
   const supabase = await createClient()
@@ -30,6 +32,21 @@ export async function createInvite(_prevState: InviteFormState, formData: FormDa
 
   const email = String(formData.get('email') || '').trim().toLowerCase()
   if (!email || !email.includes('@')) return { error: 'Adresse email invalide.' }
+
+  // Palier avec un plafond strict (Solo : 1 seul poste, pas de notion de
+  // poste supplémentaire payant) — contrairement à Équipe/Agence, où
+  // inviter au-delà du nombre inclus est autorisé et simplement facturé en
+  // plus (voir syncAgencySeats, appelée à l'acceptation de l'invitation).
+  const { data: agency } = await supabase.from('agencies').select('plan').eq('id', agencyId).maybeSingle()
+  const plan = planFor(agency?.plan)
+  if (plan.seatLimit !== null) {
+    const seatCount = await seatCountForAgency(supabase, agencyId)
+    if (seatCount >= plan.seatLimit) {
+      return {
+        error: `L'offre ${plan.label} est limitée à ${plan.seatLimit} poste${plan.seatLimit > 1 ? 's' : ''}. Passez à l'offre Équipe pour inviter des coéquipiers.`,
+      }
+    }
+  }
 
   const { data: pending } = await supabase
     .from('agency_invites')
@@ -64,6 +81,10 @@ export async function removeTeamMember(profileId: string) {
   if (profileId === userId) return // on ne peut pas se retirer soi-même
 
   await supabase.from('profiles').delete().eq('id', profileId).eq('agency_id', agencyId)
+  // Un poste libéré peut faire repasser l'effectif sous le nombre de postes
+  // déjà facturés en supplément — recale l'abonnement Stripe en conséquence
+  // (sans effet si l'agence n'a pas d'abonnement actif, voir seats.ts).
+  await syncAgencySeats(supabase, agencyId)
   revalidatePath('/dashboard/settings')
 }
 

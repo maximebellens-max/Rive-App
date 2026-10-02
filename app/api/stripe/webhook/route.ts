@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import type Stripe from 'stripe'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getStripeClient, planForPriceId } from '@/lib/rive/billing/stripe'
+import { syncAgencySeats } from '@/lib/rive/billing/seats'
 
 // Reçoit les événements d'abonnement Stripe (paiement réussi, changement de
 // palier, résiliation...) et synchronise la ligne `agencies` correspondante.
@@ -58,6 +59,12 @@ export async function POST(request: NextRequest) {
             ...(session.metadata?.plan ? { plan: session.metadata.plan } : {}),
           })
           .eq('id', agencyId)
+
+        // La session de paiement inclut déjà la bonne ligne "poste
+        // supplémentaire" si besoin (voir createCheckoutSession), mais on
+        // recale quand même au cas où l'effectif aurait changé entre la
+        // création de la session et sa validation.
+        await syncAgencySeats(supabase, agencyId)
         break
       }
 
@@ -71,16 +78,30 @@ export async function POST(request: NextRequest) {
         const subscription = event.data.object as Stripe.Subscription
         const customerId =
           typeof subscription.customer === 'string' ? subscription.customer : subscription.customer.id
-        const priceId = subscription.items.data[0]?.price?.id
-        const plan = priceId ? planForPriceId(priceId) : null
+        // Ignore la ligne "poste supplémentaire" elle-même pour déduire le
+        // palier : items.data peut contenir les deux lignes dans n'importe
+        // quel ordre selon comment l'abonnement a été modifié.
+        const planItem = subscription.items.data.find((item) => planForPriceId(item.price.id))
+        const plan = planItem ? planForPriceId(planItem.price.id) : null
 
-        await supabase
+        const { data: updatedAgency } = await supabase
           .from('agencies')
           .update({
             subscription_status: mapStripeStatus(subscription.status, event.type),
             ...(plan ? { plan } : {}),
           })
           .eq('stripe_customer_id', customerId)
+          .select('id')
+          .maybeSingle()
+
+        // Un changement de palier fait depuis le portail Stripe (plutôt que
+        // depuis Rive) change le nombre de postes inclus sans changer
+        // l'effectif réel — recale la ligne "poste supplémentaire" en
+        // conséquence. Inutile sur une résiliation (customer.subscription.
+        // deleted) : l'abonnement n'existe plus, rien à ajuster dessus.
+        if (updatedAgency?.id && event.type === 'customer.subscription.updated') {
+          await syncAgencySeats(supabase, updatedAgency.id)
+        }
         break
       }
 

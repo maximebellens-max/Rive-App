@@ -26,10 +26,9 @@ export type Plan = {
   // de siège supplémentaire) et 'interne'.
   baseSeats: number | null
   // Prix d'un agent au-delà de baseSeats, en centimes — null si non
-  // applicable à ce palier. Pas encore facturé automatiquement par Stripe
-  // (quantité fixe à 1 sur la session Checkout, voir lib/rive/billing/
-  // stripe.ts) : à construire quand la facturation par siège sera prête,
-  // cette valeur sert déjà de référence à l'affichage (landing page, etc.).
+  // applicable à ce palier. Facturé automatiquement par Stripe via une
+  // ligne d'abonnement séparée, maintenue à jour par
+  // lib/rive/billing/seats.ts (voir billableExtraSeats ci-dessous).
   extraSeatPriceCents: number | null
 }
 
@@ -63,6 +62,20 @@ export const PLANS: Record<PlanKey, Plan> = {
 
 export function planFor(planKey: string | null | undefined): Plan {
   return PLANS[(planKey as PlanKey) ?? 'interne'] ?? PLANS.interne
+}
+
+// Nombre de postes facturables en supplément pour ce palier, étant donné un
+// effectif réel (nombre de profils rattachés à l'agence, propriétaire
+// inclus) — 0 si le palier n'a pas de notion de postes inclus (solo,
+// interne) ou si l'effectif ne dépasse pas le nombre inclus dans le prix de
+// base. Pure fonction de calcul : la synchronisation avec Stripe (créer/
+// ajuster/retirer la ligne d'abonnement correspondante) est dans
+// lib/rive/billing/seats.ts, qui s'appuie sur cette fonction plutôt que de
+// dupliquer la règle.
+export function billableExtraSeats(planKey: string | null | undefined, seatCount: number): number {
+  const plan = planFor(planKey)
+  if (plan.baseSeats === null || plan.extraSeatPriceCents === null) return 0
+  return Math.max(0, seatCount - plan.baseSeats)
 }
 
 // Durée de l'essai gratuit proposé aux nouvelles agences — doit rester

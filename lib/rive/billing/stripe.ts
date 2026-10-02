@@ -40,6 +40,16 @@ export function priceIdForPlan(plan: PurchasablePlan): string | null {
   return process.env[PRICE_ENV_BY_PLAN[plan]] || null
 }
 
+// Prix Stripe d'un poste supplémentaire au-delà de ceux inclus dans le
+// palier (voir PLANS.*.extraSeatPriceCents) — un seul prix, partagé entre
+// Équipe et Agence puisqu'il est identique sur les deux (45€/mois). Ajouté
+// comme ligne séparée sur l'abonnement plutôt que reflété dans le prix de
+// base, pour que Stripe proratise automatiquement chaque variation
+// d'effectif (voir lib/rive/billing/seats.ts).
+export function extraSeatPriceId(): string | null {
+  return process.env.STRIPE_PRICE_EXTRA_SEAT || null
+}
+
 // Sens inverse (utilisé par le webhook pour déduire le palier à partir du
 // prix Stripe réellement souscrit, plus fiable que de faire confiance à une
 // métadonnée qui peut devenir périmée après un changement de palier fait
@@ -65,15 +75,24 @@ export async function createCheckoutSession(params: {
   existingCustomerId: string | null
   successUrl: string
   cancelUrl: string
+  // Postes déjà facturables en supplément au moment de la souscription (ex.
+  // une agence qui a grandi pendant son essai, avant de passer sur un
+  // palier payant) — voir billableExtraSeats dans plans.ts. 0 si aucun, ou
+  // si le palier n'a pas de notion de poste supplémentaire (solo).
+  extraSeats: number
 }): Promise<string> {
   const stripe = getStripeClient()
   if (!stripe) throw new Error("Stripe n'est pas configuré sur ce déploiement (STRIPE_SECRET_KEY manquante).")
   const priceId = priceIdForPlan(params.plan)
   if (!priceId) throw new Error(`Aucun prix Stripe configuré pour le palier "${params.plan}".`)
 
+  const extraPriceId = extraSeatPriceId()
+  const extraSeatLineItem =
+    params.extraSeats > 0 && extraPriceId ? [{ price: extraPriceId, quantity: params.extraSeats }] : []
+
   const session = await stripe.checkout.sessions.create({
     mode: 'subscription',
-    line_items: [{ price: priceId, quantity: 1 }],
+    line_items: [{ price: priceId, quantity: 1 }, ...extraSeatLineItem],
     success_url: params.successUrl,
     cancel_url: params.cancelUrl,
     client_reference_id: params.agencyId,
@@ -102,6 +121,37 @@ export async function createCheckoutSession(params: {
 
   if (!session.url) throw new Error("Stripe n'a pas renvoyé d'URL de paiement.")
   return session.url
+}
+
+// Recale la ligne "poste supplémentaire" d'un abonnement existant sur un
+// nombre de postes facturables donné — crée la ligne si elle n'existe pas
+// encore et qu'il en faut une, ajuste sa quantité si elle existe déjà avec
+// un nombre différent, ou la supprime si l'agence ne doit plus rien payer en
+// supplément (effectif redescendu sous le nombre de postes inclus, ou
+// changement de palier vers un palier sans notion de poste supplémentaire).
+// Stripe proratise automatiquement la différence sur la facture suivante.
+// Appelée par lib/rive/billing/seats.ts, qui calcule le nombre de postes
+// facturables à partir de l'effectif réel — jamais directement avec un
+// nombre "à la main".
+export async function updateSubscriptionExtraSeats(subscriptionId: string, extraSeats: number): Promise<void> {
+  const stripe = getStripeClient()
+  const priceId = extraSeatPriceId()
+  if (!stripe || !priceId) return
+
+  const subscription = await stripe.subscriptions.retrieve(subscriptionId)
+  const existingItem = subscription.items.data.find((item) => item.price.id === priceId)
+
+  if (extraSeats > 0) {
+    if (existingItem) {
+      if (existingItem.quantity !== extraSeats) {
+        await stripe.subscriptionItems.update(existingItem.id, { quantity: extraSeats })
+      }
+    } else {
+      await stripe.subscriptionItems.create({ subscription: subscriptionId, price: priceId, quantity: extraSeats })
+    }
+  } else if (existingItem) {
+    await stripe.subscriptionItems.del(existingItem.id)
+  }
 }
 
 export async function createPortalSession(params: { customerId: string; returnUrl: string }): Promise<string> {

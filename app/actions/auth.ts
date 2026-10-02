@@ -3,6 +3,8 @@
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { syncAgencySeats } from '@/lib/rive/billing/seats'
 
 export type AuthState = { error?: string; info?: string } | undefined
 
@@ -64,6 +66,24 @@ export async function signup(
       return { error: 'Un compte existe déjà avec cet email.' }
     }
     return { error: "Une erreur est survenue lors de l'inscription." }
+  }
+
+  // Rejoindre une agence existante augmente son effectif facturable — le
+  // trigger handle_new_user (migration 1) a déjà créé le profil dans la
+  // même transaction que le signUp ci-dessus, donc l'effectif est déjà à
+  // jour ici. Client admin (service role) plutôt que `supabase` : avec la
+  // confirmation par email activée, il n'y a pas encore de session
+  // authentifiée à ce stade pour relire le profil.
+  if (inviteToken && data.user) {
+    const admin = createAdminClient()
+    const { data: newProfile } = await admin
+      .from('profiles')
+      .select('agency_id')
+      .eq('id', data.user.id)
+      .maybeSingle()
+    if (newProfile?.agency_id) {
+      await syncAgencySeats(admin, newProfile.agency_id)
+    }
   }
 
   // Si la confirmation par email est activée sur le projet Supabase, il n'y a

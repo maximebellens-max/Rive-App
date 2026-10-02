@@ -3,6 +3,8 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createCheckoutSession, createPortalSession, isPurchasablePlan } from '@/lib/rive/billing/stripe'
+import { billableExtraSeats } from '@/lib/rive/billing/plans'
+import { seatCountForAgency } from '@/lib/rive/billing/seats'
 
 export type BillingState = { error?: string } | undefined
 
@@ -44,6 +46,13 @@ export async function startCheckoutAction(_prevState: BillingState, formData: Fo
     .eq('id', ctx.agencyId)
     .single()
 
+  // Une agence peut avoir grandi pendant son essai, avant tout abonnement
+  // Stripe — on inclut directement les postes déjà au-delà du nombre inclus
+  // sur la session de paiement, plutôt que de facturer l'offre de base puis
+  // rattraper au prochain ajout/retrait de coéquipier.
+  const seatCount = await seatCountForAgency(ctx.supabase, ctx.agencyId)
+  const extraSeats = billableExtraSeats(plan, seatCount)
+
   let checkoutUrl: string
   try {
     checkoutUrl = await createCheckoutSession({
@@ -53,6 +62,7 @@ export async function startCheckoutAction(_prevState: BillingState, formData: Fo
       existingCustomerId: agency?.stripe_customer_id ?? null,
       successUrl: `${appUrl()}/dashboard/settings?section=usage&stripe=success`,
       cancelUrl: `${appUrl()}/dashboard/settings?section=usage&stripe=cancel`,
+      extraSeats,
     })
   } catch (err) {
     return { error: err instanceof Error ? err.message : 'Impossible de démarrer le paiement.' }

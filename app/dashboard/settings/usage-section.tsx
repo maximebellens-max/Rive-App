@@ -5,7 +5,7 @@
 // depuis le déploiement de cette fonctionnalité (pas d'historique
 // rétroactif) : le mois en cours peut donc démarrer à 0 même sur une
 // agence déjà active.
-import { planFor, type PlanKey } from '@/lib/rive/billing/plans'
+import { planFor, billableExtraSeats, type PlanKey } from '@/lib/rive/billing/plans'
 import BillingActions from './billing-actions'
 import type { PurchasablePlan } from '@/lib/rive/billing/stripe'
 
@@ -18,6 +18,10 @@ const STATUS_LABEL: Record<string, { text: string; tone: 'neutral' | 'danger' }>
   active: { text: 'Actif', tone: 'neutral' },
   past_due: { text: 'Paiement en retard', tone: 'danger' },
   canceled: { text: 'Résilié', tone: 'danger' },
+}
+
+function euros(cents: number): string {
+  return `${Math.round(cents / 100)} €`
 }
 
 function monthLabel(month: string): string {
@@ -67,6 +71,7 @@ export default function UsageSection({
 }) {
   const plan = planFor(planKey)
   const isUnlimited = plan.aiMonthlyLimit === null && plan.seatLimit === null
+  const extraSeats = billableExtraSeats(planKey, seatCount)
   const resolvedPlanKey: PlanKey = (planKey as PlanKey) ?? 'interne'
   const isInternal = resolvedPlanKey === 'interne'
   const status = subscriptionStatus ? STATUS_LABEL[subscriptionStatus] : null
@@ -155,6 +160,13 @@ export default function UsageSection({
                 {plan.seatLimit !== null && <span className="text-neutral-400"> / {plan.seatLimit}</span>}
               </span>
             </div>
+            {extraSeats > 0 && plan.extraSeatPriceCents !== null && (
+              <p className="mt-1 text-xs text-neutral-500">
+                Dont {extraSeats} poste{extraSeats > 1 ? 's' : ''} au-delà des {plan.baseSeats} inclus, facturé
+                {extraSeats > 1 ? 's' : ''} {euros(plan.extraSeatPriceCents)}/mois chacun (
+                {euros(extraSeats * plan.extraSeatPriceCents)}/mois au total).
+              </p>
+            )}
           </div>
         </div>
       </div>
