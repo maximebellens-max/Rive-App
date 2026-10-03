@@ -85,7 +85,7 @@ export async function runWeeklyReportForAgency(supabase: SupabaseClient, agencyI
   if (!claimed) return
 
   const prompt = generateWeeklyReportBrief(stats)
-  const { text } = await generateWithClaude(prompt, { supabase, agencyId })
+  const { text } = await generateWithClaude(prompt, { supabase, agencyId, background: true })
   const body =
     text ||
     [

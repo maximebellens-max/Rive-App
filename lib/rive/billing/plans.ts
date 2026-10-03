@@ -10,6 +10,18 @@
 // encore confrontées à un usage réel) : un seul fichier à modifier le jour
 // où elles doivent bouger, aucune migration ni redéploiement de logique.
 //
+// aiMonthlyLimit ne couvre QUE l'usage déclenché par un agent (bouton
+// "Générer", assistant conversationnel) — jamais les automatisations
+// (scoring de priorité, relances, rapport hebdomadaire), suivies à part et
+// jamais bloquées (voir lib/rive/billing/usage.ts, generateWithClaude dans
+// lib/rive/anthropic.ts). Chiffres remontés une 1re fois (50→150 sur Solo,
+// 400→600 sur Équipe) en séparant ce budget de celui des automatisations :
+// avant cette séparation, le scoring de priorité nocturne pouvait à lui
+// seul épuiser le quota d'une agence avant toute action manuelle — modèle
+// Haiku (le moins cher de la gamme) utilisé partout, donc marge dispo pour
+// rester généreux ici plutôt que de brider l'assistant conversationnel, qui
+// peut à lui seul coûter plusieurs appels par message.
+//
 // 'interne' est réservé aux agences fondatrices (Hevrest) : jamais
 // limitées, jamais facturées via ce mécanisme.
 export type PlanKey = 'solo' | 'equipe' | 'agence' | 'interne'
@@ -33,11 +45,11 @@ export type Plan = {
 }
 
 export const PLANS: Record<PlanKey, Plan> = {
-  solo: { label: 'Solo', seatLimit: 1, aiMonthlyLimit: 50, priceCents: 9000, baseSeats: null, extraSeatPriceCents: null },
+  solo: { label: 'Solo', seatLimit: 1, aiMonthlyLimit: 150, priceCents: 9000, baseSeats: null, extraSeatPriceCents: null },
   equipe: {
     label: 'Équipe',
     seatLimit: null,
-    aiMonthlyLimit: 400,
+    aiMonthlyLimit: 600,
     priceCents: 15000,
     baseSeats: 3,
     extraSeatPriceCents: 4500,

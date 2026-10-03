@@ -1,10 +1,14 @@
-// Affichage en lecture seule de l'usage IA/WhatsApp du mois en cours — pas
-// encore de limite réellement appliquée (voir lib/rive/billing/), mais
-// Maxime voulait pouvoir suivre ces chiffres dès maintenant plutôt que
-// d'attendre qu'un palier limité existe. Les compteurs ne remontent que
-// depuis le déploiement de cette fonctionnalité (pas d'historique
-// rétroactif) : le mois en cours peut donc démarrer à 0 même sur une
-// agence déjà active.
+// Affichage en lecture seule de l'usage IA/WhatsApp du mois en cours. Les
+// compteurs ne remontent que depuis le déploiement de cette fonctionnalité
+// (pas d'historique rétroactif) : le mois en cours peut donc démarrer à 0
+// même sur une agence déjà active.
+//
+// 2 compteurs IA distincts (voir lib/rive/billing/usage.ts) : aiCount est
+// l'usage déclenché par l'agent (bouton "Générer", assistant) — celui
+// comparé à la limite du palier et affiché avec une barre de progression.
+// aiBackgroundCount est l'usage des automatisations (scoring de priorité,
+// relances, rapport hebdomadaire) — purement informatif, jamais limité,
+// affiché sans barre pour ne pas laisser croire qu'il compte dans le quota.
 import { planFor, billableExtraSeats, type PlanKey } from '@/lib/rive/billing/plans'
 import BillingActions from './billing-actions'
 import type { PurchasablePlan } from '@/lib/rive/billing/stripe'
@@ -48,6 +52,7 @@ export default function UsageSection({
   planKey,
   month,
   aiCount,
+  aiBackgroundCount,
   whatsappCount,
   seatCount,
   isOwner,
@@ -60,6 +65,7 @@ export default function UsageSection({
   planKey: string | null
   month: string
   aiCount: number
+  aiBackgroundCount: number
   whatsappCount: number
   seatCount: number
   isOwner: boolean
@@ -142,6 +148,20 @@ export default function UsageSection({
             </div>
             <UsageBar used={aiCount} limit={plan.aiMonthlyLimit} />
           </div>
+
+          {aiBackgroundCount > 0 && (
+            <div>
+              <div className="flex items-baseline justify-between text-sm">
+                <span className="text-neutral-700">
+                  Dont automatisations (scoring, relances, rapport)
+                </span>
+                <span className="font-medium text-neutral-900 tabular-nums">{aiBackgroundCount}</span>
+              </div>
+              <p className="mt-1 text-xs text-neutral-500">
+                Généré sans action de ta part — jamais compté dans la limite ci-dessus.
+              </p>
+            </div>
+          )}
 
           {hasWhatsapp && (
             <div>

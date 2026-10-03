@@ -7,6 +7,16 @@
 // Toujours agent-facing : le score ajusté et sa raison s'affichent sur le
 // kanban et dans un digest WhatsApp à l'équipe, jamais un message envoyé au
 // client (même posture RGPD que l'agent de relance, voir relance-agent.ts).
+//
+// Incrémental depuis la migration 061 (ai_priority_scored_at) : un prospect
+// n'est resollicité auprès de Claude que si quelque chose a changé depuis
+// son dernier passage (notes/critères modifiés, ou nouvel échange) — avant
+// ça, TOUT prospect actif avec du contenu qualitatif était rescoré chaque
+// nuit, pour rien la plupart du temps, ce qui suffisait à épuiser le quota
+// IA mensuel d'une agence Solo/Équipe en quelques jours. Appel passé en
+// `background: true` (voir generateWithClaude, lib/rive/anthropic.ts) :
+// cette automatisation ne doit de toute façon jamais bloquer un agent, quel
+// que soit le volume.
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { leadPriorityScore, INVESTOR_BOARD_TYPES } from './pipelines'
 import { generateWithClaude } from './anthropic'
@@ -94,7 +104,7 @@ export async function runAiPriorityForAgency(supabase: SupabaseClient, agencyId:
   const { data: leads } = await supabase
     .from('leads')
     .select(
-      'id, name, category, phone, budget, financement, critere_lieu, action_label, action_date, created_at, notes, meta_answers, assigned_to, priority_tier_override'
+      'id, name, category, phone, budget, financement, critere_lieu, action_label, action_date, created_at, updated_at, notes, meta_answers, assigned_to, priority_tier_override, ai_priority_scored_at, ai_priority_score, ai_priority_reasoning'
     )
     .eq('agency_id', agencyId)
   if (!leads || !leads.length) return
@@ -151,6 +161,30 @@ export async function runAiPriorityForAgency(supabase: SupabaseClient, agencyId:
       continue
     }
 
+    // Déjà noté depuis le dernier changement réel (fiche pas modifiée, pas
+    // de nouvel échange depuis le dernier passage) : le score déjà en base
+    // reste valable, inutile de resolliciter Claude pour rien — mais on
+    // garde ce prospect candidat au digest du jour avec son score/sa raison
+    // déjà connus, sinon un prospect resté prioritaire mais stable
+    // disparaîtrait du digest simplement parce qu'il n'a pas été retraité
+    // aujourd'hui.
+    const latestHistoryDate = history[0]?.entry_date ?? null
+    const needsRescore =
+      !lead.ai_priority_scored_at ||
+      new Date(lead.updated_at) > new Date(lead.ai_priority_scored_at) ||
+      (latestHistoryDate !== null && new Date(latestHistoryDate) > new Date(lead.ai_priority_scored_at))
+    if (!needsRescore) {
+      if (lead.ai_priority_reasoning) {
+        digestCandidates.push({
+          name: lead.name,
+          score: lead.ai_priority_score ?? ruleScore,
+          reasoning: lead.ai_priority_reasoning,
+          assigned_to: lead.assigned_to,
+        })
+      }
+      continue
+    }
+
     const prompt = buildPriorityPrompt({
       name: lead.name,
       category: lead.category,
@@ -166,14 +200,18 @@ export async function runAiPriorityForAgency(supabase: SupabaseClient, agencyId:
       isInvestor,
     })
 
-    const { text } = await generateWithClaude(prompt, { supabase, agencyId })
+    const { text } = await generateWithClaude(prompt, { supabase, agencyId, background: true })
     const parsed = text ? parsePriorityResponse(text) : null
     const finalScore = parsed?.score ?? ruleScore
     const reasoning = parsed?.reasoning ?? ''
 
     await supabase
       .from('leads')
-      .update({ ai_priority_score: finalScore, ai_priority_reasoning: reasoning })
+      .update({
+        ai_priority_score: finalScore,
+        ai_priority_reasoning: reasoning,
+        ai_priority_scored_at: new Date().toISOString(),
+      })
       .eq('id', lead.id)
 
     if (reasoning) digestCandidates.push({ name: lead.name, score: finalScore, reasoning, assigned_to: lead.assigned_to })

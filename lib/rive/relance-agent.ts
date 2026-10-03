@@ -158,6 +158,7 @@ async function processNoResponseRelances(supabase: SupabaseClient, agencyId: str
       const { text } = await generateWithClaude(generateNoResponseRelanceBrief(lead.name, step, daysSince), {
         supabase,
         agencyId,
+        background: true,
       })
       const body =
         text || `Toujours sans nouvelles de ${lead.name}, ${daysSince} jours après son dernier point de contact.`
@@ -211,7 +212,7 @@ async function processAnniversaryRelances(supabase: SupabaseClient, agencyId: st
 
     const { text } = await generateWithClaude(
       generateAnniversaryBrief(lead.name, mandate.address || '', years, lead.category),
-      { supabase, agencyId }
+      { supabase, agencyId, background: true }
     )
     const body = text || `Cela fait ${years} an${years > 1 ? 's' : ''} aujourd'hui.`
     items.push({
@@ -242,7 +243,7 @@ async function processBirthdayRelances(supabase: SupabaseClient, agencyId: strin
     const isNew = await claimDailyAlert(supabase, agencyId, 'lead_birthday', lead.id, today)
     if (!isNew) continue
 
-    const { text } = await generateWithClaude(generateBirthdayBrief(lead.name), { supabase, agencyId })
+    const { text } = await generateWithClaude(generateBirthdayBrief(lead.name), { supabase, agencyId, background: true })
     const body = text || `C'est l'anniversaire de ${lead.name} aujourd'hui.`
     items.push({ assignedTo: lead.assigned_to, title: `Anniversaire — ${lead.name}`, body: `${body}\n${leadUrl(lead.id)}` })
     await notifyPushForAssignee(supabase, agencyId, lead.assigned_to, 'relance_anniversaire_client', {
@@ -274,7 +275,7 @@ async function processGoogleReviewRequests(supabase: SupabaseClient, agencyId: s
 
     const { text } = await generateWithClaude(
       generateGoogleReviewBrief(lead.name, mandate.address || '', GOOGLE_REVIEW_DELAY_DAYS),
-      { supabase, agencyId }
+      { supabase, agencyId, background: true }
     )
     const body = text || `Ça fait ${GOOGLE_REVIEW_DELAY_DAYS} jours que la transaction est conclue avec ${lead.name} — bon moment pour demander un avis.`
     items.push({
@@ -312,7 +313,7 @@ async function processStaleEstimations(supabase: SupabaseClient, agencyId: strin
 
     const { text } = await generateWithClaude(
       generateEstimationFollowupBrief(lead.name, mandate.address || '', ESTIMATION_FOLLOWUP_DELAY_DAYS),
-      { supabase, agencyId }
+      { supabase, agencyId, background: true }
     )
     const body = text || `Estimation envoyée à ${lead.name} il y a ${ESTIMATION_FOLLOWUP_DELAY_DAYS} jours, toujours sans mandat signé.`
     items.push({
@@ -372,6 +373,7 @@ async function processVendeurStalledRelances(supabase: SupabaseClient, agencyId:
       const { text } = await generateWithClaude(generateVendeurStallBrief(lead.name, step, daysSince), {
         supabase,
         agencyId,
+        background: true,
       })
       const body =
         text || `${lead.name} est toujours en "RDV 2 finalisé" sans mandat signé, ${daysSince} jours après.`

@@ -23,6 +23,7 @@ import { createAppointment } from '@/app/actions/appointments'
 import { feeForPrice } from '@/lib/rive/mandates'
 import { BOARD_TYPES } from '@/lib/rive/pipelines'
 
+
 const MODEL = 'claude-haiku-4-5-20251001'
 const MAX_STEPS = 6
 
@@ -468,6 +469,19 @@ export async function runAssistantTurn(
   let working = [...history]
 
   for (let step = 0; step < MAX_STEPS; step++) {
+    // Vérifié à CHAQUE itération (pas une seule fois avant la boucle) : un
+    // tour de conversation peut déclencher jusqu'à MAX_STEPS appels à Claude
+    // (un par usage d'outil) — le quota peut donc être atteint en cours de
+    // route, pas seulement au premier appel.
+    const status = await aiUsageStatus(ctx.supabase, ctx.agencyId)
+    if (!status.allowed) {
+      return {
+        messages: working,
+        reply: `Quota IA mensuel atteint (${status.used}/${status.limit} ce mois-ci). Passez à un palier supérieur pour continuer, ou patientez le mois prochain.`,
+        error: 'quota_exceeded',
+      }
+    }
+
     let res: Response
     try {
       res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -495,6 +509,10 @@ export async function runAssistantTurn(
     }
 
     const data = await res.json()
+    // Un enregistrement par appel réellement effectué (pas un seul par tour
+    // de conversation) : c'est ce qui consomme le quota et le budget Claude,
+    // même principe que generateWithClaude (voir lib/rive/anthropic.ts).
+    await recordUsage(ctx.supabase, ctx.agencyId, 'ai')
     const content: ContentBlock[] = data?.content ?? []
     working = [...working, { role: 'assistant', content }]
 

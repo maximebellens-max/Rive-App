@@ -75,7 +75,7 @@ export default async function SettingsPage({ searchParams }: PageProps<'/dashboa
       .order('created_at', { ascending: false }),
     supabase
       .from('usage_counters')
-      .select('ai_generations_count, whatsapp_messages_count')
+      .select('ai_generations_count, ai_background_count, whatsapp_messages_count')
       .eq('agency_id', profile.agency_id)
       .eq('month', currentMonth())
       .maybeSingle(),
@@ -204,6 +204,7 @@ export default async function SettingsPage({ searchParams }: PageProps<'/dashboa
           planKey={agency.plan ?? null}
           month={currentMonth()}
           aiCount={usage?.ai_generations_count ?? 0}
+          aiBackgroundCount={usage?.ai_background_count ?? 0}
           whatsappCount={usage?.whatsapp_messages_count ?? 0}
           seatCount={members?.length ?? 0}
           isOwner={profile.role === 'owner'}

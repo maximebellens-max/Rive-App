@@ -1,0 +1,17 @@
+-- runAiPriorityForAgency (lib/rive/ai-priority.ts) rescorait JUSQU'ICI tous
+-- les prospects actifs ayant des notes/un historique/des réponses Meta à
+-- CHAQUE passage nocturne (cron daily-priority, tous les jours à 6h), que
+-- quelque chose ait changé ou non depuis la veille — un appel Claude par
+-- prospect, chaque nuit, indéfiniment. Avec un pipeline réaliste (quelques
+-- dizaines de prospects avec notes), ça suffit à épuiser le quota IA mensuel
+-- d'une agence Solo ou Équipe en quelques jours, rien qu'avec cette
+-- automatisation, avant même la moindre action manuelle de l'agent.
+--
+-- ai_priority_scored_at retient quand un prospect a été noté pour la
+-- dernière fois : le cron ne rappelle Claude pour ce prospect que si
+-- `leads.updated_at` (notes, critères...) ou la date du dernier échange
+-- (lead_history_entries) sont postérieurs à ce timestamp — sinon le score
+-- déjà calculé reste valable tel quel, aucun appel Claude. NULL = jamais
+-- encore noté, donc toujours rescoré au prochain passage (comportement
+-- inchangé pour un nouveau prospect).
+alter table leads add column if not exists ai_priority_scored_at timestamptz;

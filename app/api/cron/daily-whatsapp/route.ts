@@ -108,7 +108,7 @@ async function composeAppointmentBrief(
     entries ?? []
   )
 
-  const { text } = await generateWithClaude(prompt, { supabase, agencyId })
+  const { text } = await generateWithClaude(prompt, { supabase, agencyId, background: true })
   if (!text) return null
   return text.length > BRIEF_MAX_LENGTH ? `${text.slice(0, BRIEF_MAX_LENGTH)}…` : text
 }
