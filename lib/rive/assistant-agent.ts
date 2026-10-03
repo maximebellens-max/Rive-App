@@ -22,7 +22,7 @@ import { addLeadHistoryEntry, createProspectForAssistant, updateLeadField } from
 import { createAppointment } from '@/app/actions/appointments'
 import { feeForPrice } from '@/lib/rive/mandates'
 import { BOARD_TYPES } from '@/lib/rive/pipelines'
-
+import { aiUsageStatus, recordUsage } from '@/lib/rive/billing/usage'
 
 const MODEL = 'claude-haiku-4-5-20251001'
 const MAX_STEPS = 6
